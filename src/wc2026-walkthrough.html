@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIFA 2026 Predictor — How It Works</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold: #fcb900;
+    --green: #22c55e;
+    --blue: #60a5fa;
+    --purple: #a78bfa;
+    --red: #ef4444;
+    --bg: #08090f;
+    --surface: #111520;
+    --surface2: #181f2e;
+    --border: rgba(255,255,255,0.07);
+    --text: #e2e8f0;
+    --muted: #475569;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 540px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    padding: 14px 20px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--bg);
+  }
+  .header-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: var(--gold);
+  }
+  .step-counter {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  /* ── Progress bar ── */
+  .progress-track {
+    height: 3px;
+    background: rgba(255,255,255,0.06);
+    flex-shrink: 0;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), #ff6b00);
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── Slide area ── */
+  .slides {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    padding: 24px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    opacity: 0;
+    transform: translateX(40px);
+    transition: opacity 0.45s ease, transform 0.45s cubic-bezier(.4,0,.2,1);
+    pointer-events: none;
+    overflow-y: auto;
+  }
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: all;
+  }
+  .slide.exit {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+
+  /* ── Slide elements ── */
+  .slide-icon {
+    font-size: 40px;
+    text-align: center;
+    animation: pop 0.5s cubic-bezier(.34,1.56,.64,1) 0.2s both;
+  }
+  .slide-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    text-align: center;
+    line-height: 1;
+    animation: fadeUp 0.4s ease 0.15s both;
+  }
+  .slide-subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.6;
+    animation: fadeUp 0.4s ease 0.25s both;
+  }
+
+  @keyframes pop {
+    from { transform: scale(0.5); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+  @keyframes fadeUp {
+    from { transform: translateY(12px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  /* ── Mock UI components ── */
+  .mock-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    animation: fadeUp 0.4s ease 0.3s both;
+  }
+
+  .mock-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .mock-flag { font-size: 20px; }
+  .mock-team { flex: 1; font-weight: 600; font-size: 12px; }
+  .mock-score-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .score-inp {
+    width: 36px;
+    height: 34px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    color: #fff;
+  }
+  .score-inp.highlight {
+    border-color: var(--gold);
+    background: rgba(252,185,0,0.12);
+    color: var(--gold);
+    animation: pulse-border 1.5s ease infinite;
+  }
+  @keyframes pulse-border {
+    0%,100% { box-shadow: 0 0 0 0 rgba(252,185,0,0.4); }
+    50%      { box-shadow: 0 0 0 4px rgba(252,185,0,0); }
+  }
+
+  .dash { color: var(--muted); font-weight: 700; }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 5px;
+  }
+  .badge-green  { background: rgba(34,197,94,0.15);  color: var(--green);  border: 1px solid rgba(34,197,94,0.3); }
+  .badge-gold   { background: rgba(252,185,0,0.15);  color: var(--gold);   border: 1px solid rgba(252,185,0,0.3); }
+  .badge-blue   { background: rgba(96,165,250,0.15); color: var(--blue);   border: 1px solid rgba(96,165,250,0.3); }
+  .badge-red    { background: rgba(239,68,68,0.12);  color: var(--red);    border: 1px solid rgba(239,68,68,0.25); }
+  .badge-purple { background: rgba(167,139,250,0.12);color: var(--purple); border: 1px solid rgba(167,139,250,0.25); }
+
+  /* ── Scoring pills ── */
+  .scoring-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    animation: fadeUp 0.4s ease 0.3s both;
+  }
+  .score-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .score-pill-pts {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    line-height: 1;
+  }
+  .score-pill-label { font-size: 11px; color: var(--muted); }
+
+  /* ── Leaderboard rows ── */
+  .lb-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    margin-bottom: 6px;
+    animation: fadeUp 0.4s ease both;
+  }
+  .lb-rank { font-family: 'Bebas Neue', sans-serif; font-size: 20px; width: 24px; text-align: center; }
+  .lb-name { flex: 1; font-weight: 700; font-size: 13px; }
+  .lb-pts  { font-family: 'Bebas Neue', sans-serif; font-size: 22px; }
+  .view-btn {
+    padding: 4px 10px;
+    background: rgba(96,165,250,0.1);
+    border: 1px solid rgba(96,165,250,0.25);
+    border-radius: 6px;
+    color: var(--blue);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* ── Prediction view rows ── */
+  .pred-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 10px;
+    border-radius: 9px;
+    margin-bottom: 6px;
+    animation: fadeUp 0.4s ease both;
+  }
+  .pred-score-col { text-align: center; min-width: 48px; }
+  .pred-score-label { font-size: 9px; color: var(--muted); margin-bottom: 1px; }
+  .pred-score-val { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1px; }
+
+  /* ── Admin sync row ── */
+  .admin-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    border: none;
+  }
+  .admin-btn-gold   { background: var(--gold); color: #000; }
+  .admin-btn-blue   { background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.35); color: var(--blue); }
+
+  /* ── PIN display ── */
+  .pin-field {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text);
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .pin-dots { letter-spacing: 4px; font-size: 16px; color: var(--gold); }
+
+  /* ── Tip box ── */
+  .tip {
+    background: rgba(96,165,250,0.06);
+    border: 1px solid rgba(96,165,250,0.18);
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-size: 12px;
+    color: #7ea9d4;
+    line-height: 1.6;
+    animation: fadeUp 0.4s ease 0.4s both;
+  }
+  .tip strong { color: var(--blue); }
+
+  /* ── Nav buttons ── */
+  .nav {
+    display: flex;
+    gap: 10px;
+    padding: 14px 20px;
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .nav-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .nav-btn:active { transform: scale(0.97); }
+  .nav-prev { background: rgba(255,255,255,0.05); color: var(--muted); }
+  .nav-prev:disabled { opacity: 0.3; cursor: default; }
+  .nav-next { background: var(--gold); color: #000; }
+  .nav-next.done { background: var(--green); color: #000; }
+
+  /* ── Dot indicators ── */
+  .dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 20px 10px;
+    flex-shrink: 0;
+  }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: all 0.3s ease;
+  }
+  .dot.active { background: var(--gold); width: 18px; border-radius: 3px; }
+
+  /* ── Lock indicator ── */
+  .lock-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--red);
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: 5px;
+    padding: 2px 7px;
+  }
+  .countdown-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--blue);
+  }
+
+  /* ── Recovery box ── */
+  .recovery-code {
+    font-family: monospace;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: #fff;
+    text-align: center;
+    padding: 12px 0;
+    font-weight: 700;
+  }
+
+  .divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+  .row { display: flex; align-items: center; gap: 8px; }
+  .col { display: flex; flex-direction: column; gap: 8px; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="header">
+    <div class="header-title">⚽ WC 2026 PREDICTOR</div>
+    <div class="step-counter" id="stepCounter">1 / 8</div>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill" style="width:12.5%"></div>
+  </div>
+
+  <div class="slides" id="slides">
+
+    <!-- SLIDE 1: Intro -->
+    <div class="slide active" id="slide-0">
+      <div class="slide-icon">🏆</div>
+      <div class="slide-title">FIFA 2026<br>Predictor</div>
+      <div class="slide-subtitle">Compete with friends by predicting every match score.<br>Highest points at the end wins!</div>
+      <div class="mock-card" style="text-align:center;padding:20px;">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Open the app at</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold);letter-spacing:1px;">toto-app-oqdi.vercel.app</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">Works on any device — phone, tablet, computer</div>
+      </div>
+      <div class="tip">
+        <strong>No app download needed</strong> — just open the link in your browser. Works on iOS, Android, and desktop.
+      </div>
+    </div>
+
+    <!-- SLIDE 2: Create Account -->
+    <div class="slide" id="slide-1">
+      <div class="slide-icon">🔐</div>
+      <div class="slide-title">Create Your<br>Account</div>
+      <div class="slide-subtitle">Enter your name and choose a PIN to get started</div>
+      <div class="mock-card col">
+        <div class="pin-field">
+          <span style="color:var(--muted);font-size:12px;">Your name</span>
+          <span style="font-weight:700;">Ramin</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--green);">✓</span>
+        </div>
+        <div class="pin-field">
+          <span style="color:var(--muted);font-size:12px;">PIN</span>
+          <span class="pin-dots">●●●●</span>
+        </div>
+        <div style="background:rgba(252,185,0,0.08);border:1px solid rgba(252,185,0,0.25);border-radius:10px;padding:12px 14px;">
+          <div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:6px;">🔑 Your Recovery Code</div>
+          <div class="recovery-code">WC26-X7K2-M3PQ</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center;">Save this — needed if you forget your PIN</div>
+        </div>
+      </div>
+      <div class="tip">
+        <strong>Save your recovery code!</strong> Screenshot it or write it down — you'll need it if you forget your PIN.
+      </div>
+    </div>
+
+    <!-- SLIDE 3: Predict Scores -->
+    <div class="slide" id="slide-2">
+      <div class="slide-icon">⚽</div>
+      <div class="slide-title">Predict<br>Every Score</div>
+      <div class="slide-subtitle">Enter your predicted score for each match across all 12 groups</div>
+      <div class="mock-card col">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--green);letter-spacing:1px;margin-bottom:2px;">GROUP A — MY PREDICTIONS</div>
+
+        <div class="mock-input-row">
+          <span class="mock-flag">🇲🇽</span>
+          <span class="mock-team">Mexico</span>
+          <div class="mock-score-box">
+            <div class="score-inp highlight">2</div>
+            <span class="dash">–</span>
+            <div class="score-inp highlight">1</div>
+          </div>
+          <span class="mock-team" style="text-align:right;">South Africa</span>
+          <span class="mock-flag">🇿🇦</span>
+        </div>
+        <div style="text-align:center;font-size:10px;color:var(--blue);">⏱ locks in 25d</div>
+
+        <div class="mock-input-row">
+          <span class="mock-flag">🇲🇽</span>
+          <span class="mock-team">Mexico</span>
+          <div class="mock-score-box">
+            <div class="score-inp">—</div>
+            <span class="dash">–</span>
+            <div class="score-inp">—</div>
+          </div>
+          <span class="mock-team" style="text-align:right;">South Korea</span>
+          <span class="mock-flag">🇰🇷</span>
+        </div>
+        <div style="text-align:center;font-size:10px;color:var(--blue);">⏱ locks in 18d</div>
+
+        <div style="text-align:center;">
+          <span class="badge badge-purple">🤖 AI suggests 2–0</span>
+        </div>
+      </div>
+      <div class="tip">
+        Tap <strong>🤖</strong> on any match for an AI score suggestion. Predictions lock <strong>15 minutes before kickoff</strong>.
+      </div>
+    </div>
+
+    <!-- SLIDE 4: Podium Pick -->
+    <div class="slide" id="slide-3">
+      <div class="slide-icon">👑</div>
+      <div class="slide-title">Pick Your<br>Podium</div>
+      <div class="slide-subtitle">Who wins the World Cup? Pick 1st, 2nd and 3rd place for big bonus points</div>
+      <div class="mock-card col">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--gold);letter-spacing:1px;">MY PODIUM PICKS</div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;text-align:center;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:10px 6px;">
+            <div style="font-size:13px;color:#f59e0b;">🥇 1st</div>
+            <div style="font-size:22px;margin:4px 0;">🇧🇷</div>
+            <div style="font-size:11px;font-weight:700;">Brazil</div>
+            <div style="font-size:10px;color:var(--gold);margin-top:3px;">+100 pts</div>
+          </div>
+          <div style="flex:1;text-align:center;background:rgba(170,170,170,0.07);border:1px solid rgba(170,170,170,0.2);border-radius:10px;padding:10px 6px;">
+            <div style="font-size:13px;color:#aaa;">🥈 2nd</div>
+            <div style="font-size:22px;margin:4px 0;">🇫🇷</div>
+            <div style="font-size:11px;font-weight:700;">France</div>
+            <div style="font-size:10px;color:#aaa;margin-top:3px;">+50 pts</div>
+          </div>
+          <div style="flex:1;text-align:center;background:rgba(205,127,50,0.07);border:1px solid rgba(205,127,50,0.2);border-radius:10px;padding:10px 6px;">
+            <div style="font-size:13px;color:#cd7f32;">🥉 3rd</div>
+            <div style="font-size:22px;margin:4px 0;">🇦🇷</div>
+            <div style="font-size:11px;font-weight:700;">Argentina</div>
+            <div style="font-size:10px;color:#cd7f32;margin-top:3px;">+25 pts</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);text-align:center;">Locks June 11 at 17:00 UTC — first kickoff</div>
+      </div>
+      <div class="tip">
+        Get all 3 correct for <strong style="color:var(--gold);">+175 bonus points</strong>. Use the <strong>🤖 AI suggestion</strong> card for inspiration.
+      </div>
+    </div>
+
+    <!-- SLIDE 5: Scoring Rules -->
+    <div class="slide" id="slide-4">
+      <div class="slide-icon">📊</div>
+      <div class="slide-title">How Points<br>Work</div>
+      <div class="slide-subtitle">Points are awarded per match — rules are mutually exclusive</div>
+      <div class="scoring-grid">
+        <div class="score-pill">
+          <div class="score-pill-pts" style="color:var(--green);">8</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;">⭐ Exact Score</div>
+            <div class="score-pill-label">e.g. pred 2-1, actual 2-1</div>
+          </div>
+        </div>
+        <div class="score-pill">
+          <div class="score-pill-pts" style="color:var(--gold);">3</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;">📐 Correct GD</div>
+            <div class="score-pill-label">e.g. pred 3-2, actual 2-1</div>
+          </div>
+        </div>
+        <div class="score-pill">
+          <div class="score-pill-pts" style="color:var(--blue);">2</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;">✓ Right Outcome</div>
+            <div class="score-pill-label">Win/draw/loss correct</div>
+          </div>
+        </div>
+        <div class="score-pill">
+          <div class="score-pill-pts" style="color:var(--muted);">0</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;">❌ No Points</div>
+            <div class="score-pill-label">Wrong outcome</div>
+          </div>
+        </div>
+      </div>
+      <div class="mock-card" style="animation-delay:0.4s;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-align:center;">EXAMPLE MATCH — Mexico 2–1 South Africa</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:11px;">You predicted 2–1</span>
+            <span class="badge badge-green">⭐ +8 pts</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:11px;">You predicted 3–2</span>
+            <span class="badge badge-gold">📐 +3 pts</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:11px;">You predicted 3–0</span>
+            <span class="badge badge-blue">✓ +2 pts</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: Leaderboard -->
+    <div class="slide" id="slide-5">
+      <div class="slide-icon">🥇</div>
+      <div class="slide-title">Friends<br>Leaderboard</div>
+      <div class="slide-subtitle">See everyone's points update live after each match</div>
+      <div class="col" style="animation: fadeUp 0.4s ease 0.3s both;">
+        <div class="lb-row" style="border-color:rgba(252,185,0,0.2);background:rgba(252,185,0,0.05);animation-delay:0.3s;">
+          <div class="lb-rank" style="color:var(--gold);">🥇</div>
+          <div>
+            <div class="lb-name">Ramin <span style="color:var(--gold);font-size:10px;">(you)</span></div>
+            <div style="font-size:10px;color:var(--muted);">🥇 🇧🇷 Brazil</div>
+          </div>
+          <div class="view-btn">👁 View</div>
+          <div class="lb-pts" style="color:var(--gold);">163 <span style="font-size:11px;color:var(--muted);">pts</span></div>
+        </div>
+        <div class="lb-row" style="animation-delay:0.4s;">
+          <div class="lb-rank" style="color:#aaa;">🥈</div>
+          <div>
+            <div class="lb-name">Ali</div>
+            <div style="font-size:10px;color:var(--muted);">🥇 🇫🇷 France</div>
+          </div>
+          <div class="view-btn">👁 View</div>
+          <div class="lb-pts" style="color:#aaa;">125 <span style="font-size:11px;color:var(--muted);">pts</span></div>
+        </div>
+        <div class="lb-row" style="animation-delay:0.5s;">
+          <div class="lb-rank" style="color:#cd7f32;">🥉</div>
+          <div>
+            <div class="lb-name">Sara</div>
+            <div style="font-size:10px;color:var(--muted);">🥇 🇦🇷 Argentina</div>
+          </div>
+          <div class="view-btn">👁 View</div>
+          <div class="lb-pts" style="color:#cd7f32;">98 <span style="font-size:11px;color:var(--muted);">pts</span></div>
+        </div>
+      </div>
+      <div class="tip">
+        Tap <strong>👁 View</strong> on any player after matches kick off to see exactly what they predicted vs actual results.
+      </div>
+    </div>
+
+    <!-- SLIDE 7: View Predictions -->
+    <div class="slide" id="slide-6">
+      <div class="slide-icon">👁</div>
+      <div class="slide-title">See Others'<br>Predictions</div>
+      <div class="slide-subtitle">After kickoff, tap 👁 View on anyone in the leaderboard to see their picks</div>
+      <div class="mock-card col" style="padding:14px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="flex:1;">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold);letter-spacing:1px;">Ali's Predictions</div>
+            <div style="font-size:11px;color:var(--muted);">Locked matches only · 125 pts total</div>
+          </div>
+        </div>
+
+        <!-- Podium mini -->
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          <div style="flex:1;text-align:center;background:rgba(245,158,11,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:7px;padding:6px 4px;">
+            <div style="font-size:10px;color:#f59e0b;">🥇</div><div style="font-size:16px;">🇫🇷</div>
+            <div style="font-size:10px;font-weight:700;color:var(--red);">France ✗</div>
+          </div>
+          <div style="flex:1;text-align:center;background:rgba(170,170,170,0.05);border:1px solid rgba(170,170,170,0.15);border-radius:7px;padding:6px 4px;">
+            <div style="font-size:10px;color:#aaa;">🥈</div><div style="font-size:16px;">🇧🇷</div>
+            <div style="font-size:10px;font-weight:700;color:var(--red);">Brazil ✗</div>
+          </div>
+          <div style="flex:1;text-align:center;background:rgba(205,127,50,0.05);border:1px solid rgba(34,197,94,0.3);border-radius:7px;padding:6px 4px;">
+            <div style="font-size:10px;color:#cd7f32;">🥉</div><div style="font-size:16px;">🇦🇷</div>
+            <div style="font-size:10px;font-weight:700;color:var(--green);">Argentina +25</div>
+          </div>
+        </div>
+
+        <!-- Match rows -->
+        <div class="pred-row" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);animation-delay:0.35s;">
+          <span style="font-size:14px;">🇲🇽</span>
+          <span style="font-size:11px;flex:1;font-weight:600;">Mexico</span>
+          <div class="pred-score-col">
+            <div class="pred-score-label">predicted</div>
+            <div class="pred-score-val" style="color:#aaa;">2–1</div>
+          </div>
+          <span style="font-size:10px;color:var(--muted);">vs</span>
+          <div class="pred-score-col">
+            <div class="pred-score-label">actual</div>
+            <div class="pred-score-val" style="color:var(--green);">2–1</div>
+          </div>
+          <span style="font-size:11px;flex:1;text-align:right;font-weight:600;">S. Africa</span>
+          <span style="font-size:14px;">🇿🇦</span>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--green);min-width:30px;text-align:right;">+8</div>
+        </div>
+
+        <div class="pred-row" style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.18);animation-delay:0.45s;">
+          <span style="font-size:14px;">🇲🇽</span>
+          <span style="font-size:11px;flex:1;font-weight:600;">Mexico</span>
+          <div class="pred-score-col">
+            <div class="pred-score-label">predicted</div>
+            <div class="pred-score-val" style="color:#aaa;">0–0</div>
+          </div>
+          <span style="font-size:10px;color:var(--muted);">vs</span>
+          <div class="pred-score-col">
+            <div class="pred-score-label">actual</div>
+            <div class="pred-score-val" style="color:var(--green);">1–1</div>
+          </div>
+          <span style="font-size:11px;flex:1;text-align:right;font-weight:600;">S. Korea</span>
+          <span style="font-size:14px;">🇰🇷</span>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--muted);min-width:30px;text-align:right;">+3</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8: Admin -->
+    <div class="slide" id="slide-7">
+      <div class="slide-icon">🔧</div>
+      <div class="slide-title">Admin Enters<br>Results</div>
+      <div class="slide-subtitle">One person in the group is admin (PIN: 2026). They enter results after each match</div>
+      <div class="mock-card col">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="admin-btn admin-btn-gold">💾 Save Results</button>
+          <button class="admin-btn admin-btn-blue">🔄 Sync Live Feed</button>
+        </div>
+        <div style="background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.2);border-radius:8px;padding:9px 12px;font-size:11px;color:#7ea9d4;">
+          ✅ Synced: 6 group scores, 4 KO teams — edit any fields below then 💾 Save
+        </div>
+        <div class="mock-input-row">
+          <span class="mock-flag">🇲🇽</span>
+          <span class="mock-team">Mexico</span>
+          <div class="mock-score-box">
+            <div class="score-inp highlight">2</div>
+            <span class="dash">–</span>
+            <div class="score-inp highlight">1</div>
+          </div>
+          <span class="mock-team" style="text-align:right;">S. Africa</span>
+          <span class="mock-flag">🇿🇦</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);text-align:center;">Tap 🔄 Sync to auto-fill from live feed, or type manually</div>
+      </div>
+      <div class="tip">
+        After saving, <strong>everyone's scores update instantly</strong> — no refresh needed. The leaderboard recalculates automatically.
+      </div>
+    </div>
+
+  </div><!-- /slides -->
+
+  <!-- Dots -->
+  <div class="dots" id="dots"></div>
+
+  <!-- Nav -->
+  <div class="nav">
+    <button class="nav-btn nav-prev" id="prevBtn" onclick="navigate(-1)" disabled>← Back</button>
+    <button class="nav-btn nav-next" id="nextBtn" onclick="navigate(1)">Next →</button>
+  </div>
+
+</div>
+
+<script>
+  const TOTAL = 8;
+  let current = 0;
+
+  const dots = document.getElementById('dots');
+  for (let i=0; i<TOTAL; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i===0?' active':'');
+    d.onclick = () => goTo(i);
+    d.style.cursor = 'pointer';
+    dots.appendChild(d);
+  }
+
+  function updateDots() {
+    document.querySelectorAll('.dot').forEach((d,i) => {
+      d.className = 'dot' + (i===current?' active':'');
+    });
+  }
+
+  function updateProgress() {
+    document.getElementById('progressFill').style.width = ((current+1)/TOTAL*100)+'%';
+    document.getElementById('stepCounter').textContent = `${current+1} / ${TOTAL}`;
+    document.getElementById('prevBtn').disabled = current===0;
+    const nextBtn = document.getElementById('nextBtn');
+    if (current===TOTAL-1) {
+      nextBtn.textContent = '🎉 Start Predicting!';
+      nextBtn.className = 'nav-btn nav-next done';
+      nextBtn.onclick = () => window.open('https://toto-app-oqdi.vercel.app','_blank');
+    } else {
+      nextBtn.textContent = 'Next →';
+      nextBtn.className = 'nav-btn nav-next';
+      nextBtn.onclick = () => navigate(1);
+    }
+  }
+
+  function goTo(idx) {
+    if (idx === current) return;
+    const slides = document.querySelectorAll('.slide');
+
+    // Clear any pending transitions
+    slides.forEach(s => {
+      s.className = 'slide';
+    });
+
+    const prev = current;
+    current = idx;
+
+    // Set exit on previous, active on new
+    slides[prev].className = 'slide exit';
+    slides[current].className = 'slide active';
+
+    // Clean up exit class after animation completes
+    setTimeout(() => {
+      slides[prev].className = 'slide';
+    }, 450);
+
+    updateDots();
+    updateProgress();
+  }
+
+  function navigate(dir) {
+    const next = current + dir;
+    if (next<0||next>=TOTAL) return;
+    goTo(next);
+  }
+
+  // Keyboard nav
+  document.addEventListener('keydown', e=>{
+    if (e.key==='ArrowRight'||e.key===' ') navigate(1);
+    if (e.key==='ArrowLeft') navigate(-1);
+  });
+
+  // Touch/swipe
+  let touchX = 0;
+  document.addEventListener('touchstart', e=>{ touchX = e.touches[0].clientX; });
+  document.addEventListener('touchend', e=>{
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx)>50) navigate(dx<0?1:-1);
+  });
+
+  updateProgress();
+</script>
+</body>
+</html>
