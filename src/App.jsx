@@ -6,7 +6,8 @@ import {
   sbGetLeaderboard, sbUpsertLeaderboard,
   sbGetSaveHistory, sbAddSaveHistory,
   saveSession, getSession, clearSession,
-  generateRecoveryCode
+  generateRecoveryCode,
+  lsGet, lsSet, lsDel, stGet, stSet, detectStorage,
 } from './storage.js';
 import { fetchLiveFeed, parseFeed, applyFeedToState } from './liveFeed.js';
 
@@ -470,16 +471,12 @@ export default function App(){
       }
       const lb=await sbGetLeaderboard(); if(lb) setLeaderboard(lb);
       const actual=await sbGetActualResults();
-      if(actual?.matches)    setActualMatches(actual.matches);
-      if(actual?.knockout)   setActualKO(actual.knockout);
-      if(actual?.actualPodium) setActualPodium(p=>({...p,...actual.actualPodium}));
-      if(actual?.koKickoffs) setKoKickoffs(actual.koKickoffs);
-      if(actual)             setAdminHasSaved(true); // admin has saved at least once
-      // Load save history
-      const hist = await sbGetSaveHistory();
-      if(hist) setSaveHistory(hist);
-      const livePreds = await stGet("wc26_ai_preds", true);
-      if(livePreds) setLivePredictions(livePreds);
+      if(actual?.matches)       setActualMatches(actual.matches);
+      if(actual?.knockout)      setActualKO(actual.knockout);
+      if(actual?.actual_podium) setActualPodium(p=>({...p,...actual.actual_podium}));
+      if(actual?.ko_kickoffs)   setKoKickoffs(actual.ko_kickoffs);
+      if(actual?.live_predictions) setLivePredictions(actual.live_predictions);
+      if(actual)                setAdminHasSaved(true);
       // Load last backup timestamp
       const backup = await stGet(`wc26_backup_meta_${session?.username||""}`);
       if(backup?.at) setLastBackupAt(backup.at);
@@ -701,7 +698,7 @@ export default function App(){
       };
       const newHistory = [snapshot, ...saveHistory].slice(0, MAX_HISTORY);
       setSaveHistory(newHistory);
-      await sbAddSaveHistory(snapshot.label, snapshot.matches, snapshot.knockout, snapshot.actualPodium, snapshot.koKickoffs);
+      await sbAddSaveHistory(snapshot.label, snapshot.matches, snapshot.knockout, snapshot.actualPodium||snapshot.actual_podium, snapshot.koKickoffs||snapshot.ko_kickoffs);
       await sbSaveActualResults(actualMatches, actualKO, newPodium, koKickoffs, livePredictions);
       // livePredictions saved with actual results
 
@@ -733,14 +730,14 @@ export default function App(){
     setRollbackTarget(null);
     setActualMatches(snapshot.matches);
     setActualKO(snapshot.knockout);
-    setActualPodium(snapshot.actualPodium||{});
-    if(snapshot.koKickoffs) setKoKickoffs(snapshot.koKickoffs);
-    await sbSaveActualResults(snapshot.matches, snapshot.knockout, snapshot.actualPodium||{}, snapshot.koKickoffs||{});
+    setActualPodium(snapshot.actual_podium || snapshot.actualPodium || {});
+    if(snapshot.ko_kickoffs || snapshot.koKickoffs) setKoKickoffs(snapshot.ko_kickoffs || snapshot.koKickoffs);
+    await sbSaveActualResults(snapshot.matches, snapshot.knockout, snapshot.actual_podium || snapshot.actualPodium || {}, snapshot.ko_kickoffs || snapshot.koKickoffs || {}, livePredictions);
     const lb=await sbGetLeaderboard();
     for(const e of lb){
       const p=await sbGetPrediction(e.username);
       if(p){
-        e.points=calcTotal(p.matches||[],snapshot.matches,p.knockout||[],snapshot.knockout,p.podium,snapshot.actualPodium||{});
+        e.points=calcTotal(p.matches||[],snapshot.matches,p.knockout||[],snapshot.knockout,p.podium,snapshot.actual_podium||snapshot.actualPodium||{});
         e.champion=p.podium?.first||"?";
       }
     }
@@ -2192,7 +2189,7 @@ export default function App(){
                     Save History (last {saveHistory.length})
                   </div>
                   {saveHistory.map((snap,i)=>(
-                    <div key={snap.at} style={{
+                    <div key={snap.saved_at||snap.at} style={{
                       display:"flex",alignItems:"center",gap:10,
                       padding:"9px 12px",borderRadius:8,marginBottom:6,
                       background:i===0?"rgba(34,197,94,0.05)":"rgba(255,255,255,0.02)",

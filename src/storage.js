@@ -136,3 +136,29 @@ export function generateRecoveryCode() {
   for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)]
   return code
 }
+
+// ─── localStorage helpers (for backup, session, AI predictions) ───────────────
+// Some personal/device data still uses localStorage for simplicity
+
+export function lsGet(key) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
+}
+export function lsSet(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+export function lsDel(key) {
+  try { localStorage.removeItem(key); } catch {}
+}
+
+// stGet/stSet: personal data → localStorage, shared data → Supabase actual_results
+export async function stGet(key, shared=false) {
+  if (!shared) return lsGet(key);
+  // For shared keys, read from actual_results live_predictions field
+  // This is handled directly in the component — return null here
+  return null;
+}
+export async function stSet(key, val, shared=false) {
+  if (!shared) { lsSet(key, val); return; }
+  // shared stSet is handled via sbSaveActualResults
+}
+export async function detectStorage() { return 'supabase'; }
