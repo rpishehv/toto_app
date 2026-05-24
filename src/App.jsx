@@ -2514,8 +2514,7 @@ export default function App(){
                 )}
 
                 {adminActiveRound==="Final"&&(
-                  <div style={{marginTop:4,padding:"14px 16px",
-                    marginTop:16,padding:"14px 16px",
+                  <div style={{marginTop:16,padding:"14px 16px",
                     background:"rgba(252,185,0,0.07)",border:"1px solid rgba(252,185,0,0.2)",
                     borderRadius:10,
                   }}>
