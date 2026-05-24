@@ -713,8 +713,8 @@ export default function App(){
         }
         const lb=await sbGetLeaderboard(); if(lb) setLeaderboard(lb);
         const actual=await sbGetActualResults();
-        if(actual?.matches)          setActualMatches(actual.matches);
-        if(actual?.knockout)         setActualKO(actual.knockout);
+        if(actual?.matches?.length)       setActualMatches(actual.matches);
+        if(actual?.knockout?.length)       setActualKO(actual.knockout);
         if(actual?.actual_podium)    setActualPodium(p=>({...p,...actual.actual_podium}));
         if(actual?.ko_kickoffs)      setKoKickoffs(actual.ko_kickoffs);
         if(actual?.live_predictions) setLivePredictions(actual.live_predictions);
