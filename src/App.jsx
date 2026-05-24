@@ -759,7 +759,9 @@ export default function App(){
   useEffect(()=>{
     if(!userName) return;
     const pts=calcTotal(matches,actualMatches,knockout,actualKO,podium,actualPodium);
-    sbUpsertLeaderboard(userName,podium,pts).then(lb=>setLeaderboard(lb));
+    sbUpsertLeaderboard(userName,podium,pts)
+      .then(lb=>{ if(lb) setLeaderboard(lb); })
+      .catch(e=>console.error('Leaderboard update error:', e));
   },[actualMatches,actualKO,actualPodium]);
 
 
