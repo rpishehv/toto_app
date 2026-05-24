@@ -404,6 +404,232 @@ function calcTotal(pM,aM,pK,aK,predPodium,actualPodium){
   return t;
 }
 
+function ScoreInput({value,onChange,readOnly=false}){
+  return(
+    <input type="number" min="0" max="20" readOnly={readOnly}
+      value={value===null?"":value}
+      onChange={e=>!readOnly&&onChange(e.target.value===""?null:Math.max(0,parseInt(e.target.value)||0))}
+      style={{
+        width:42,textAlign:"center",outline:"none",
+        background:readOnly?"rgba(255,255,255,0.03)":"rgba(255,255,255,0.09)",
+        border:"1px solid rgba(255,255,255,0.15)",borderRadius:6,
+        color:readOnly?"#555":"#fff",fontSize:17,fontWeight:700,
+        padding:"4px 0",fontFamily:"inherit",cursor:readOnly?"default":"text",
+      }}
+    />
+  );
+}
+
+function PointsBadge({result}){
+  const [hover,setHover]=useState(false);
+  if(!result||result.points===0)return null;
+  const{points,label,color}=result;
+  return(
+    <div style={{position:"relative",flexShrink:0}}
+      onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)}>
+      <div style={{
+        background:`${color}22`,border:`1px solid ${color}55`,borderRadius:6,
+        padding:"2px 8px",fontSize:11,fontWeight:700,color,cursor:"default",whiteSpace:"nowrap",
+      }}>+{points}pts</div>
+      {hover&&(
+        <div style={{
+          position:"absolute",right:0,top:"115%",background:"#161b27",
+          border:"1px solid rgba(255,255,255,0.13)",borderRadius:9,padding:"9px 13px",
+          zIndex:999,boxShadow:"0 12px 40px rgba(0,0,0,0.65)",
+          fontSize:12,color:"#bbb",whiteSpace:"nowrap",
+        }}>{label} <span style={{color,fontWeight:700,marginLeft:8}}>+{points} pts</span></div>
+      )}
+    </div>
+  );
+}
+
+const DEFAULT_AI_PREDICTIONS = {
+  "Mexico||South Africa":{"h":2,"a":0,"r":"Mexico's experience and home-continent advantage"},
+  "South Korea||Czechia":{"h":1,"a":1,"r":"Evenly matched European vs Asian sides"},
+  "Mexico||South Korea":{"h":2,"a":1,"r":"Mexico's clinical finishing edges it"},
+  "South Africa||Czechia":{"h":0,"a":2,"r":"Czechia's technical quality too strong"},
+  "Mexico||Czechia":{"h":2,"a":0,"r":"Mexico dominate to secure top spot"},
+  "South Africa||South Korea":{"h":0,"a":2,"r":"South Korea's pace and pressing wins"},
+  "Canada||Bosnia-Herzegovina":{"h":2,"a":1,"r":"Canada's physical intensity at home"},
+  "Qatar||Switzerland":{"h":0,"a":3,"r":"Switzerland's quality overwhelming for Qatar"},
+  "Canada||Qatar":{"h":3,"a":0,"r":"Canada too strong for host nation"},
+  "Bosnia-Herzegovina||Switzerland":{"h":1,"a":2,"r":"Swiss tactical discipline prevails"},
+  "Canada||Switzerland":{"h":1,"a":1,"r":"Switzerland resist Canada's pressure"},
+  "Bosnia-Herzegovina||Qatar":{"h":2,"a":0,"r":"Bosnia's firepower too much for Qatar"},
+  "Brazil||Morocco":{"h":2,"a":0,"r":"Brazil's attacking depth too powerful"},
+  "Haiti||Scotland":{"h":0,"a":2,"r":"Scotland's organised defence and set pieces"},
+  "Brazil||Haiti":{"h":4,"a":0,"r":"Brazil expected to dominate heavily"},
+  "Morocco||Scotland":{"h":2,"a":1,"r":"Morocco's African Cup experience shows"},
+  "Brazil||Scotland":{"h":3,"a":0,"r":"Brazil secure group with comfortable win"},
+  "Morocco||Haiti":{"h":2,"a":0,"r":"Morocco's defensive solidity and counter-attack"},
+  "USA||Paraguay":{"h":2,"a":1,"r":"USA's home crowd and quality advantage"},
+  "Australia||Turkey":{"h":1,"a":1,"r":"Both sides strong and hard to separate"},
+  "USA||Australia":{"h":2,"a":1,"r":"USA's MLS experience and home advantage"},
+  "Paraguay||Turkey":{"h":1,"a":2,"r":"Turkey's European quality edges it"},
+  "USA||Turkey":{"h":1,"a":1,"r":"Turkey make it hard for USA at home"},
+  "Paraguay||Australia":{"h":1,"a":1,"r":"Tight match with neither dominant"},
+  "Germany||Curacao":{"h":5,"a":0,"r":"Germany's full strength too powerful"},
+  "Ivory Coast||Ecuador":{"h":1,"a":1,"r":"Competitive match between physical sides"},
+  "Germany||Ivory Coast":{"h":2,"a":1,"r":"Germany's efficiency wins tough game"},
+  "Ecuador||Curacao":{"h":3,"a":0,"r":"Ecuador's South American quality dominates"},
+  "Germany||Ecuador":{"h":2,"a":0,"r":"Germany secure top spot with clean sheet"},
+  "Ivory Coast||Curacao":{"h":3,"a":0,"r":"Ivory Coast's pace and skill too much"},
+  "Netherlands||Japan":{"h":2,"a":1,"r":"Netherlands' individual quality edges it"},
+  "Sweden||Tunisia":{"h":2,"a":0,"r":"Sweden's physicality and organisation wins"},
+  "Netherlands||Sweden":{"h":2,"a":1,"r":"Netherlands dominate Scandinavian rivals"},
+  "Japan||Tunisia":{"h":2,"a":0,"r":"Japan's technical quality and intensity"},
+  "Netherlands||Tunisia":{"h":3,"a":0,"r":"Netherlands wrap up group with big win"},
+  "Japan||Sweden":{"h":1,"a":2,"r":"Sweden's physicality too much for Japan"},
+  "Belgium||Egypt":{"h":3,"a":0,"r":"Belgium's golden generation still strong"},
+  "Iran||New Zealand":{"h":1,"a":0,"r":"Iran's WC experience edges NZ"},
+  "Belgium||Iran":{"h":2,"a":0,"r":"Belgium's quality in attack too strong"},
+  "Egypt||New Zealand":{"h":2,"a":1,"r":"Salah's experience key for Egypt"},
+  "Belgium||New Zealand":{"h":3,"a":0,"r":"Belgium dominate to top group"},
+  "Egypt||Iran":{"h":1,"a":1,"r":"Tight tactical battle between Asian/African sides"},
+  "Spain||Cape Verde":{"h":4,"a":0,"r":"Spain's tiki-taka too much for Cape Verde"},
+  "Saudi Arabia||Uruguay":{"h":0,"a":2,"r":"Uruguay's South American experience wins"},
+  "Spain||Saudi Arabia":{"h":3,"a":0,"r":"Spain's possession game dominates"},
+  "Cape Verde||Uruguay":{"h":0,"a":2,"r":"Uruguay's quality too strong"},
+  "Spain||Uruguay":{"h":2,"a":1,"r":"Spain edge tense group decider"},
+  "Cape Verde||Saudi Arabia":{"h":1,"a":1,"r":"Evenly matched battle for third place"},
+  "France||Senegal":{"h":2,"a":1,"r":"France's depth edges African champions"},
+  "Iraq||Norway":{"h":0,"a":2,"r":"Haaland's Norway too strong for Iraq"},
+  "France||Iraq":{"h":4,"a":0,"r":"France expected to win comfortably"},
+  "Senegal||Norway":{"h":1,"a":2,"r":"Norway's finishing power through Haaland"},
+  "France||Norway":{"h":2,"a":1,"r":"France vs Haaland — France edge it"},
+  "Senegal||Iraq":{"h":2,"a":0,"r":"Senegal's physical and technical quality"},
+  "Argentina||Algeria":{"h":2,"a":0,"r":"World champions too strong at every position"},
+  "Austria||Jordan":{"h":3,"a":0,"r":"Austria's European quality comfortable"},
+  "Argentina||Austria":{"h":2,"a":1,"r":"Argentina's individual brilliance wins"},
+  "Algeria||Jordan":{"h":2,"a":0,"r":"Algeria's AFCON form shows"},
+  "Argentina||Jordan":{"h":4,"a":0,"r":"Argentina wrap up with big win"},
+  "Algeria||Austria":{"h":1,"a":1,"r":"Tight contest for second place"},
+  "Portugal||DR Congo":{"h":3,"a":0,"r":"Ronaldo's experience and Portugal's depth"},
+  "Uzbekistan||Colombia":{"h":0,"a":2,"r":"Colombia's South American quality decisive"},
+  "Portugal||Uzbekistan":{"h":4,"a":0,"r":"Portugal expected to dominate"},
+  "DR Congo||Colombia":{"h":1,"a":2,"r":"Colombia's quality edges it"},
+  "Portugal||Colombia":{"h":2,"a":1,"r":"Portugal edge competitive match"},
+  "DR Congo||Uzbekistan":{"h":2,"a":1,"r":"DR Congo's physical approach wins"},
+  "England||Croatia":{"h":2,"a":1,"r":"England revenge for 2018 — stronger squad now"},
+  "Ghana||Panama":{"h":2,"a":0,"r":"Ghana's African Cup form and quality"},
+  "England||Ghana":{"h":3,"a":0,"r":"England's depth too much for Ghana"},
+  "Croatia||Panama":{"h":3,"a":0,"r":"Croatia's technical quality dominates"},
+  "England||Panama":{"h":4,"a":0,"r":"England wrap up with big win like 2018"},
+  "Croatia||Ghana":{"h":1,"a":1,"r":"Ghana make it hard — draw for both"},
+};
+
+function getAIPrediction(home, away, livePreds) {
+  const merged = { ...DEFAULT_AI_PREDICTIONS, ...(livePreds||{}) };
+  if (merged[`${home}||${away}`]) return merged[`${home}||${away}`];
+  if (merged[`${away}||${home}`]) {
+    const p = merged[`${away}||${home}`];
+    return { h: p.a, a: p.h, r: p.r };
+  }
+  return null;
+}
+
+function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
+  const locked = isMatchLocked(match, kickoffs);
+  const countdown = !locked ? timeUntilLock(match, kickoffs) : null;
+  const done=match.homeScore!==null&&match.awayScore!==null;
+  const h=match.homeScore,a=match.awayScore;
+  const winner=done?(h>a?match.home:a>h?match.away:null):null;
+  const result=actual?calcMatchPoints(match,actual):null;
+  const actDone=actual&&actual.homeScore!==null;
+  const aiPred=getAIPrediction(match.home,match.away,livePreds);
+  const [showAI,setShowAI]=useState(false);
+  return(
+    <div style={{
+      background:locked?"rgba(239,68,68,0.04)":done?"rgba(252,185,0,0.05)":"rgba(255,255,255,0.025)",
+      border:`1px solid ${locked?"rgba(239,68,68,0.2)":done?"rgba(252,185,0,0.2)":"rgba(255,255,255,0.07)"}`,
+      borderRadius:11,padding:"10px 13px",marginBottom:8,
+    }}>
+      <div style={{display:"flex",alignItems:"center",gap:7}}>
+        <span style={{fontSize:17}}>{FLAGS[match.home]||"🏳️"}</span>
+        <span style={{flex:1,fontWeight:600,fontSize:12,color:winner===match.home?"#fcb900":locked?"#888":"#ddd"}}>{match.home}</span>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+          <div style={{display:"flex",alignItems:"center",gap:4}}>
+            <ScoreInput value={match.homeScore} onChange={v=>onUpdate({...match,homeScore:v})} readOnly={locked}/>
+            <span style={{color:"#444",fontWeight:700,fontSize:12}}>–</span>
+            <ScoreInput value={match.awayScore} onChange={v=>onUpdate({...match,awayScore:v})} readOnly={locked}/>
+          </div>
+          {actDone&&<div style={{fontSize:10,color:"#555",fontFamily:"monospace"}}>actual: {actual.homeScore}–{actual.awayScore}</div>}
+          {!locked&&countdown&&<div style={{fontSize:10,color:"#60a5fa"}}>⏱ locks in {countdown}</div>}
+        </div>
+        <span style={{flex:1,textAlign:"right",fontWeight:600,fontSize:12,color:winner===match.away?"#fcb900":locked?"#888":"#ddd"}}>{match.away}</span>
+        <span style={{fontSize:17}}>{FLAGS[match.away]||"🏳️"}</span>
+        {locked&&!result&&<span style={{fontSize:12,flexShrink:0}}>🔒</span>}
+        {result&&<PointsBadge result={result}/>}
+        {aiPred&&!locked&&(
+          <button onClick={()=>setShowAI(p=>!p)} style={{
+            flexShrink:0,padding:"2px 7px",background:"rgba(139,92,246,0.12)",
+            border:"1px solid rgba(139,92,246,0.3)",borderRadius:5,
+            color:"#a78bfa",fontSize:10,cursor:"pointer",fontFamily:"inherit",fontWeight:700,
+          }}>🤖</button>
+        )}
+      </div>
+      {showAI&&aiPred&&(
+        <div style={{marginTop:8,padding:"8px 10px",borderRadius:8,background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.2)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+            <span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>🤖 AI suggests:</span>
+            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>{aiPred.h} – {aiPred.a}</span>
+            {!locked&&<button onClick={()=>{onUpdate({...match,homeScore:aiPred.h,awayScore:aiPred.a});setShowAI(false);}} style={{marginLeft:"auto",padding:"3px 10px",background:"rgba(139,92,246,0.2)",border:"1px solid rgba(139,92,246,0.4)",borderRadius:5,color:"#c4b5fd",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Use this</button>}
+          </div>
+          <div style={{fontSize:10,color:"#7c6db3",fontStyle:"italic"}}>{aiPred.r}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StandingsTable({teams,matches}){
+  const rows=calcStandings(teams,matches);
+  return(
+    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginTop:6}}>
+      <thead>
+        <tr style={{color:"#444"}}>
+          {["#","Team","P","W","D","L","GD","Pts"].map(h=>(
+            <th key={h} style={{padding:"3px 5px",textAlign:h==="Team"?"left":"center",fontWeight:500}}>{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r,i)=>(
+          <tr key={r.team} style={{background:i<2?"rgba(252,185,0,0.07)":"transparent",borderTop:"1px solid rgba(255,255,255,0.04)"}}>
+            <td style={{padding:"4px 5px",textAlign:"center",color:i<2?"#fcb900":"#444",fontWeight:700}}>{i+1}</td>
+            <td style={{padding:"4px 5px",fontWeight:600}}>{FLAGS[r.team]} {r.team}</td>
+            {[r.p,r.w,r.d,r.l,r.gd>0?`+${r.gd}`:r.gd,r.pts].map((v,j)=>(
+              <td key={j} style={{padding:"4px 5px",textAlign:"center",color:j===5?"#fcb900":"#999",fontWeight:j===5?700:400}}>{v}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function ScoringBar(){
+  return(
+    <div style={{background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:11,padding:"11px 15px",marginBottom:20,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+      <span style={{fontSize:11,fontWeight:700,color:"#fcb900",marginRight:2}}>📋 Scoring:</span>
+      {[
+        {pts:100,text:"1st place",color:"#f59e0b",icon:"🥇"},
+        {pts:50,text:"2nd place",color:"#aaa",icon:"🥈"},
+        {pts:25,text:"3rd place",color:"#cd7f32",icon:"🥉"},
+        {pts:8,text:"Exact score",color:"#22c55e",icon:"⭐"},
+        {pts:3,text:"Correct GD",color:"#fcb900",icon:"📐"},
+        {pts:2,text:"Correct outcome",color:"#60a5fa",icon:"✓"},
+      ].map((r,i)=>(
+        <div key={i} style={{display:"flex",alignItems:"center",gap:5,background:`${r.color}12`,border:`1px solid ${r.color}30`,borderRadius:7,padding:"5px 11px"}}>
+          <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:17,color:r.color,lineHeight:1}}>{r.pts}</span>
+          <span style={{fontSize:11,color:"#777"}}>{r.icon} {r.text}</span>
+        </div>
+      ))}
+      <span style={{fontSize:10,color:"#444",marginLeft:"auto"}}>Rules are mutually exclusive</span>
+    </div>
+  );
+}
+
 export default function App(){
   const [tab,setTab]=useState("groups");
   const [userName,setUserName]=useState("");
