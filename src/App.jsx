@@ -2343,7 +2343,7 @@ export default function App(){
                 }}>
                   {syncStatus.msg}
                   {syncStatus.ok&&syncStatus.msg.includes("Synced")&&(
-                    <span style={{color:"#888",marginLeft:8,fontSize:11}}>— review changes then 💾 Save</span>
+                    <span style={{color:"#888",marginLeft:8,fontSize:11}}>— edit any fields below then 💾 Save</span>
                   )}
                 </div>
               )}
@@ -2574,7 +2574,7 @@ export default function App(){
                   Knockout Results
                 </h3>
                 <p style={{fontSize:11,color:"#555",marginTop:0,marginBottom:14}}>
-                  Team names auto-fill from standings. Enter scores as each match is played. Winners cascade to the next round automatically.
+                  Enter team names and scores manually, or use <strong style={{color:"#60a5fa"}}>🔄 Sync Live Feed</strong> to auto-populate — then edit any field before saving.
                 </p>
 
                 {/* Round selector */}
