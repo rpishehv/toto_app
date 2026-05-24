@@ -404,6 +404,21 @@ function calcTotal(pM,aM,pK,aK,predPodium,actualPodium){
   return t;
 }
 
+function calcStandings(teams,matches){
+  const tbl=Object.fromEntries(teams.map(t=>[t,{p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0}]));
+  for(const m of matches){
+    if(m.homeScore===null||m.awayScore===null)continue;
+    const h=m.homeScore,a=m.awayScore;
+    tbl[m.home].p++;tbl[m.away].p++;
+    tbl[m.home].gf+=h;tbl[m.home].ga+=a;tbl[m.away].gf+=a;tbl[m.away].ga+=h;
+    if(h>a){tbl[m.home].w++;tbl[m.home].pts+=3;tbl[m.away].l++;}
+    else if(h<a){tbl[m.away].w++;tbl[m.away].pts+=3;tbl[m.home].l++;}
+    else{tbl[m.home].d++;tbl[m.home].pts++;tbl[m.away].d++;tbl[m.away].pts++;}
+  }
+  return Object.entries(tbl).map(([team,s])=>({team,...s,gd:s.gf-s.ga}))
+    .sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf);
+}
+
 function ScoreInput({value,onChange,readOnly=false}){
   return(
     <input type="number" min="0" max="20" readOnly={readOnly}
