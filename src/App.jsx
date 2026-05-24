@@ -407,6 +407,7 @@ function calcTotal(pM,aM,pK,aK,predPodium,actualPodium){
 export default function App(){
   const [tab,setTab]=useState("groups");
   const [userName,setUserName]=useState("");
+  const [appError,setAppError]=useState(null);
   const [nameInput,setNameInput]=useState("");
   const [pinInput,setPinInput]=useState("");
   const [pinConfirm,setPinConfirm]=useState("");
@@ -463,23 +464,26 @@ export default function App(){
   // Initial load — detect storage then check session and load data
   useEffect(()=>{
     (async()=>{
-      await detectStorage(); // MUST run before any stGet/stSet calls
-      // Check for saved session (remember me)
-      const session = await stGet("wc26_session");
-      if (session?.username && session?.expiry > Date.now()) {
-        setUserName(session.username);
+      try {
+        await detectStorage();
+        const session = await stGet("wc26_session");
+        if (session?.username && session?.expiry > Date.now()) {
+          setUserName(session.username);
+        }
+        const lb=await sbGetLeaderboard(); if(lb) setLeaderboard(lb);
+        const actual=await sbGetActualResults();
+        if(actual?.matches)          setActualMatches(actual.matches);
+        if(actual?.knockout)         setActualKO(actual.knockout);
+        if(actual?.actual_podium)    setActualPodium(p=>({...p,...actual.actual_podium}));
+        if(actual?.ko_kickoffs)      setKoKickoffs(actual.ko_kickoffs);
+        if(actual?.live_predictions) setLivePredictions(actual.live_predictions);
+        if(actual)                   setAdminHasSaved(true);
+        const hist = await sbGetSaveHistory();
+        if(hist) setSaveHistory(hist);
+      } catch(e) {
+        console.error('Initial load error:', e);
+        setAppError(`Load failed: ${e.message}`);
       }
-      const lb=await sbGetLeaderboard(); if(lb) setLeaderboard(lb);
-      const actual=await sbGetActualResults();
-      if(actual?.matches)       setActualMatches(actual.matches);
-      if(actual?.knockout)      setActualKO(actual.knockout);
-      if(actual?.actual_podium) setActualPodium(p=>({...p,...actual.actual_podium}));
-      if(actual?.ko_kickoffs)   setKoKickoffs(actual.ko_kickoffs);
-      if(actual?.live_predictions) setLivePredictions(actual.live_predictions);
-      if(actual)                setAdminHasSaved(true);
-      // Load last backup timestamp
-      const backup = await stGet(`wc26_backup_meta_${session?.username||""}`);
-      if(backup?.at) setLastBackupAt(backup.at);
     })();
     const nowInterval=setInterval(()=>setNow(Date.now()),60*1000);
     return ()=>clearInterval(nowInterval);
@@ -488,15 +492,17 @@ export default function App(){
   useEffect(()=>{
     if(!userName)return;
     (async()=>{
-      const p=await sbGetPrediction(userName);
-      if(p){
-        if(p.matches)  setMatches(p.matches);
-        if(p.knockout) setKnockout(p.knockout);
-        if(p.podium)   setPodium(p.podium);
+      try {
+        const p=await sbGetPrediction(userName);
+        if(p){
+          if(p.matches)  setMatches(p.matches);
+          if(p.knockout) setKnockout(p.knockout);
+          if(p.podium)   setPodium(p.podium);
+        }
+      } catch(e) {
+        console.error('Load predictions error:', e);
+        setAppError(`Predictions load failed: ${e.message}`);
       }
-      // Load last backup timestamp for this user
-      const meta = await stGet(`wc26_backup_meta_${userName}`);
-      if(meta?.at) setLastBackupAt(meta.at);
     })();
   },[userName]);
 
@@ -781,32 +787,44 @@ export default function App(){
     if(pinInput.length<4){setPinError("PIN must be at least 4 characters.");return;}
     if(pinInput!==pinConfirm){setPinError("PINs don't match — try again.");return;}
     setPinError("Creating account…");
-    const code = generateRecoveryCode();
-    await sbCreateUser(n, pinInput, code);
-    setRecoveryCode(code);
-    setPinStep("show-recovery"); // show recovery code before entering app
+    try {
+      const code = generateRecoveryCode();
+      await sbCreateUser(n, pinInput, code);
+      setRecoveryCode(code);
+      setPinStep("show-recovery");
+    } catch(e) {
+      setPinError(`Error creating account: ${e.message}`);
+    }
   };
 
   // Confirm recovery code seen — proceed to app
   const confirmRecoverySeen=async()=>{
     const n=nameInput.trim();
-    if (rememberMe) await saveSession(n);
-    setUserName(n);
-    setRecoveryCode("");
+    try {
+      if (rememberMe) await saveSession(n);
+      setUserName(n);
+      setRecoveryCode("");
+    } catch(e) {
+      setAppError(`Login error: ${e.message}`);
+    }
   };
 
   // Step 2b: returning user — verify PIN from storage
   const submitExistingPin=async()=>{
     const n=nameInput.trim();
     setPinError("Verifying…");
-    const user=await sbGetUser(n);
-    if(user && pinInput===user.pin){
-      if (rememberMe) await saveSession(n);
-      setUserName(n);
-      setRecoveryCode("");
-    } else {
-      setPinError("Incorrect PIN. Try again.");
-      setPinInput("");
+    try {
+      const user=await sbGetUser(n);
+      if(user && pinInput===user.pin){
+        if (rememberMe) await saveSession(n);
+        setUserName(n);
+        setRecoveryCode("");
+      } else {
+        setPinError("Incorrect PIN. Try again.");
+        setPinInput("");
+      }
+    } catch(e) {
+      setPinError(`Verification error: ${e.message}`);
     }
   };
 
@@ -1112,6 +1130,14 @@ export default function App(){
         ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:4px}
         *{box-sizing:border-box}
       `}</style>
+
+      {/* Global error banner — shows if any async error occurs */}
+      {appError&&(
+        <div style={{background:"#7f1d1d",color:"#fca5a5",padding:"12px 20px",fontSize:13,lineHeight:1.6,position:"relative",zIndex:1000}}>
+          ⚠️ {appError}
+          <button onClick={()=>setAppError(null)} style={{marginLeft:16,background:"transparent",border:"1px solid #fca5a5",borderRadius:4,color:"#fca5a5",padding:"2px 8px",cursor:"pointer",fontSize:11}}>✕</button>
+        </div>
+      )}
 
       {/* HEADER */}
       <div style={{padding:"12px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",
