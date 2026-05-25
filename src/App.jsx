@@ -1913,8 +1913,8 @@ export default function App(){
           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,letterSpacing:1,color:"#888",marginBottom:10}}>⚽ MATCH PREDICTIONS</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:8}}>
             {[
-              {pts:8, label:"Exact Score (win)", icon:"⭐",desc:"Correct scoreline, non-draw",   color:"#22c55e",ex:"Pred 2-1 / Actual 2-1"},
-              {pts:8, label:"Exact Score (draw)",icon:"⭐",desc:"Correct draw scoreline",         color:"#22c55e",ex:"Pred 1-1 / Actual 1-1"},
+              {pts:6, label:"Exact Score (win)", icon:"⭐",desc:"Correct scoreline, non-draw",   color:"#22c55e",ex:"Pred 2-1 / Actual 2-1"},
+              {pts:6, label:"Exact Score (draw)",icon:"⭐",desc:"Correct draw scoreline",         color:"#22c55e",ex:"Pred 1-1 / Actual 1-1"},
               {pts:3, label:"Correct GD",        icon:"📐",desc:"Right goal difference, wrong score",color:"#fcb900",ex:"Pred 3-2 / Actual 2-1"},
               {pts:2, label:"Correct Winner",    icon:"✓", desc:"Right outcome, wrong score/GD", color:"#60a5fa",ex:"Pred 3-1 / Actual 2-1"},
               {pts:2, label:"Draw Predicted",    icon:"✓", desc:"Draw correct, wrong score",     color:"#60a5fa",ex:"Pred 2-2 / Actual 1-1"},
@@ -1946,7 +1946,7 @@ export default function App(){
               </div>
               <div>
                 <div style={{fontWeight:700,fontSize:12,marginBottom:2}}>🏆 Max per match</div>
-                <div style={{fontSize:11,color:"#555"}}>Exact score = 8 pts</div>
+                <div style={{fontSize:11,color:"#555"}}>Exact score = 6 pts</div>
                 <div style={{fontSize:10,color:"#444",fontFamily:"monospace",marginTop:3}}>Rules are mutually exclusive</div>
               </div>
             </div>
@@ -2812,7 +2812,7 @@ export default function App(){
             {
               icon:"📊", title:"Scoring Rules",
               items:[
-                ["Exact score","You predicted the precise scoreline (e.g. 2-1) → 8 pts"],
+                ["Exact score","You predicted the precise scoreline (e.g. 2-1) → 6 pts"],
                 ["Correct goal difference","Right margin, wrong scores (e.g. predicted 3-2, actual 2-1) → 3 pts"],
                 ["Correct outcome only","Right winner or draw, wrong everything else → 2 pts"],
                 ["Wrong prediction","None of the above → 0 pts"],
