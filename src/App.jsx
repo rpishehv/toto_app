@@ -11,6 +11,7 @@ import {
   lsGet, lsSet, lsDel, stGet, stSet, detectStorage,
 } from './storage.js';
 import { fetchLiveFeed, parseFeed, applyFeedToState } from './liveFeed.js';
+import GROUP_INSIGHTS from './insights.js';
 
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
@@ -535,11 +536,20 @@ const DEFAULT_AI_PREDICTIONS = {
 };
 
 function getAIPrediction(home, away, livePreds) {
+  // Check group stage insights first
+  const insightKey = `${home}||${away}`;
+  const insightKeyRev = `${away}||${home}`;
+  const groupInsight = GROUP_INSIGHTS[insightKey] || (GROUP_INSIGHTS[insightKeyRev] ? {
+    ...GROUP_INSIGHTS[insightKeyRev], h: GROUP_INSIGHTS[insightKeyRev].a, a: GROUP_INSIGHTS[insightKeyRev].h
+  } : null);
+  if (groupInsight) return groupInsight;
+
+  // Fall back to live predictions (KO or admin-generated)
   const merged = { ...DEFAULT_AI_PREDICTIONS, ...(livePreds||{}) };
-  if (merged[`${home}||${away}`]) return merged[`${home}||${away}`];
-  if (merged[`${away}||${home}`]) {
-    const p = merged[`${away}||${home}`];
-    return { h: p.a, a: p.h, r: p.r };
+  if (merged[insightKey]) return merged[insightKey];
+  if (merged[insightKeyRev]) {
+    const p = merged[insightKeyRev];
+    return { h: p.a, a: p.h, r: p.r, insight: p.insight, key: p.key, confidence: p.confidence };
   }
   return null;
 }
@@ -585,13 +595,29 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
         )}
       </div>
       {showAI&&aiPred&&(
-        <div style={{marginTop:8,padding:"8px 10px",borderRadius:8,background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.2)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-            <span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>🤖 AI suggests:</span>
+        <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.2)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>🤖 AI Prediction:</span>
             <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>{aiPred.h} – {aiPred.a}</span>
-            {!locked&&<button onClick={()=>{onUpdate({...match,homeScore:aiPred.h,awayScore:aiPred.a});setShowAI(false);}} style={{marginLeft:"auto",padding:"3px 10px",background:"rgba(139,92,246,0.2)",border:"1px solid rgba(139,92,246,0.4)",borderRadius:5,color:"#c4b5fd",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Use this</button>}
+            {aiPred.confidence&&(
+              <span style={{fontSize:9,color:"#6d5a9c",marginLeft:"auto",
+                background:"rgba(139,92,246,0.15)",borderRadius:4,padding:"2px 6px"}}>
+                {aiPred.confidence} confidence
+              </span>
+            )}
+            {!locked&&<button onClick={()=>{onUpdate({...match,homeScore:aiPred.h,awayScore:aiPred.a});setShowAI(false);}} style={{padding:"3px 10px",background:"rgba(139,92,246,0.2)",border:"1px solid rgba(139,92,246,0.4)",borderRadius:5,color:"#c4b5fd",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Use</button>}
           </div>
-          <div style={{fontSize:10,color:"#7c6db3",fontStyle:"italic"}}>{aiPred.r}</div>
+          {aiPred.insight&&(
+            <div style={{fontSize:11,color:"#8b7dbf",lineHeight:1.6,marginBottom:6}}>{aiPred.insight}</div>
+          )}
+          {aiPred.key&&(
+            <div style={{fontSize:10,color:"#6d5a9c",fontStyle:"italic",borderTop:"1px solid rgba(139,92,246,0.15)",paddingTop:6}}>
+              🔑 Key factor: {aiPred.key}
+            </div>
+          )}
+          {!aiPred.insight&&aiPred.r&&(
+            <div style={{fontSize:10,color:"#7c6db3",fontStyle:"italic"}}>{aiPred.r}</div>
+          )}
         </div>
       )}
     </div>
@@ -943,20 +969,27 @@ export default function App(){
     const newPreds = { ...livePredictions };
     for (const m of koMatches) {
       const key = `${m.home}||${m.away}`;
-      if (newPreds[key]) { done++; continue; } // skip already generated
+      if (newPreds[key]) { done++; continue; }
       try {
-        const res = await fetch('/api/predict', {
+        const res = await fetch('/api/insight', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ home: m.home, away: m.away, round: m.round }),
         });
         if (!res.ok) throw new Error(await res.text());
         const pred = await res.json();
-        newPreds[key] = { h: pred.h, a: pred.a, r: pred.r };
+        // Store full insight data
+        newPreds[key] = {
+          h: pred.h, a: pred.a,
+          r: pred.insight || pred.r || "",
+          insight: pred.insight,
+          key: pred.key,
+          confidence: pred.confidence,
+        };
         done++;
-        setAiGenStatus({ ok:true, msg:`Generating... ${done}/${koMatches.length}` });
+        setAiGenStatus({ ok:true, msg:`Generating insights... ${done}/${koMatches.length}` });
       } catch(e) {
-        console.error(`AI pred failed for ${key}:`, e);
+        console.error(`Insight failed for ${key}:`, e);
         failed++;
       }
     }
@@ -964,7 +997,7 @@ export default function App(){
     await sbSaveActualResults(actualMatches, actualKO, actualPodium, koKickoffs, newPreds);
     setAiGenStatus({
       ok: failed === 0,
-      msg: `✅ Generated ${done} KO predictions${failed > 0 ? ` (${failed} failed)` : ""}. Saved for all users.`
+      msg: `✅ Generated ${done} KO insights${failed > 0 ? ` (${failed} failed)` : ""}. Tap 🤖 on any KO match to see the analysis.`
     });
     setGeneratingAI(false);
   };
