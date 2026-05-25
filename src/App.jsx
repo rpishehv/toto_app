@@ -2387,7 +2387,12 @@ export default function App(){
                       </div>
                       <div style={{textAlign:"center",padding:"0 8px"}}>
                         <div style={{fontSize:11,color:"#555"}}>{draws} draws</div>
-                        <div style={{fontSize:10,color:"#444"}}>{played.length} played</div>
+                        <div style={{fontSize:10,color:"#444"}}>{rows.filter(r=>r.r1&&r.r2).length} compared</div>
+                        {rows.filter(r=>!r.r1||!r.r2).length>0&&(
+                          <div style={{fontSize:9,color:"#333",marginTop:2}}>
+                            {rows.filter(r=>!r.r1||!r.r2).length} skipped<br/>(missing pred)
+                          </div>
+                        )}
                       </div>
                       <div style={{flex:1,textAlign:"center"}}>
                         <div style={{fontWeight:700,fontSize:13}}>{h2hUsers[1]}</div>
@@ -2399,18 +2404,20 @@ export default function App(){
                     {rows.slice(0,8).map(({actual,r1,r2},i)=>(
                       <div key={i} style={{display:"flex",alignItems:"center",gap:6,
                         padding:"6px 8px",marginBottom:4,borderRadius:7,
-                        background:"rgba(255,255,255,0.02)"}}>
+                        background:!r1||!r2?"rgba(255,255,255,0.01)":"rgba(255,255,255,0.02)",
+                        opacity:!r1||!r2?0.4:1}}>
                         <div style={{
                           width:28,textAlign:"center",fontFamily:"'Bebas Neue',sans-serif",fontSize:13,
-                          color:r1?.points>r2?.points?"#fcb900":r1?.points===r2?.points?"#555":"#333"
-                        }}>{r1?`+${r1.points}`:"-"}</div>
+                          color:r1&&r2?(r1.points>r2.points?"#fcb900":r1.points===r2.points?"#888":"#333"):"#333"
+                        }}>{r1?`+${r1.points}`:"—"}</div>
                         <div style={{flex:1,fontSize:10,color:"#666",textAlign:"center"}}>
                           {FLAGS[actual.home]||"🏳️"} {actual.homeScore}–{actual.awayScore} {FLAGS[actual.away]||"🏳️"}
+                          {(!r1||!r2)&&<div style={{fontSize:9,color:"#333"}}>no prediction</div>}
                         </div>
                         <div style={{
                           width:28,textAlign:"center",fontFamily:"'Bebas Neue',sans-serif",fontSize:13,
-                          color:r2?.points>r1?.points?"#60a5fa":r1?.points===r2?.points?"#555":"#333"
-                        }}>{r2?`+${r2.points}`:"-"}</div>
+                          color:r1&&r2?(r2.points>r1.points?"#60a5fa":r1.points===r2.points?"#888":"#333"):"#333"
+                        }}>{r2?`+${r2.points}`:"—"}</div>
                       </div>
                     ))}
                   </div>
@@ -2764,30 +2771,64 @@ export default function App(){
                     ))}
                   </div>
 
-                  {/* Champion picks breakdown */}
+                  {/* Podium picks breakdown */}
                   {leaderboard.length>0&&(()=>{
-                    const champCounts = {};
+                    // Build counts for each place from leaderboard podium field
+                    const placeCounts = { first:{}, second:{}, third:{} };
                     leaderboard.forEach(e=>{
-                      const c = e.champion||"?";
-                      champCounts[c]=(champCounts[c]||0)+1;
+                      const p = e.podium || {};
+                      ['first','second','third'].forEach(place=>{
+                        const t = p[place] || (place==='first' ? (e.champion||'?') : '?');
+                        placeCounts[place][t] = (placeCounts[place][t]||0)+1;
+                      });
                     });
-                    const sorted = Object.entries(champCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+                    const places = [
+                      {key:'first',  label:'🥇 1st Place', color:'#f59e0b', pts:100},
+                      {key:'second', label:'🥈 2nd Place', color:'#aaa',    pts:50},
+                      {key:'third',  label:'🥉 3rd Place', color:'#cd7f32', pts:25},
+                    ];
+
                     return(
                       <div style={{background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:11,padding:"14px"}}>
-                        <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>🏆 Champion Picks</div>
-                        {sorted.map(([team,count],i)=>(
-                          <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                            <span style={{fontSize:14}}>{FLAGS[team]||"🏳️"}</span>
-                            <span style={{fontSize:12,flex:1,fontWeight:600}}>{team}</span>
-                            <div style={{flex:2,height:6,background:"rgba(255,255,255,0.05)",borderRadius:3,overflow:"hidden"}}>
-                              <div style={{width:`${(count/leaderboard.length)*100}%`,
-                                height:"100%",background:"#fcb900",borderRadius:3}}/>
+                        <div style={{fontSize:12,fontWeight:700,marginBottom:14}}>👑 Podium Picks</div>
+                        {places.map(place=>{
+                          const counts = placeCounts[place.key];
+                          const sorted = Object.entries(counts)
+                            .filter(([t])=>t!=='?')
+                            .sort((a,b)=>b[1]-a[1]).slice(0,5);
+                          const unknown = counts['?']||0;
+                          return(
+                            <div key={place.key} style={{marginBottom:16}}>
+                              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                                <span style={{fontSize:12,fontWeight:700,color:place.color}}>{place.label}</span>
+                                <span style={{fontSize:10,color:"#444"}}>+{place.pts}pts if correct</span>
+                              </div>
+                              {sorted.map(([team,count],i)=>(
+                                <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+                                  <span style={{fontSize:13}}>{FLAGS[team]||"🏳️"}</span>
+                                  <span style={{fontSize:11,flex:1,fontWeight:600}}>{team}</span>
+                                  <div style={{flex:2,height:5,background:"rgba(255,255,255,0.05)",borderRadius:3,overflow:"hidden"}}>
+                                    <div style={{width:`${(count/leaderboard.length)*100}%`,
+                                      height:"100%",background:place.color,borderRadius:3}}/>
+                                  </div>
+                                  <span style={{fontSize:10,color:"#555",width:40,textAlign:"right"}}>
+                                    {count} ({Math.round(count/leaderboard.length*100)}%)
+                                  </span>
+                                </div>
+                              ))}
+                              {sorted.length===0&&(
+                                <div style={{fontSize:11,color:"#333"}}>No picks yet</div>
+                              )}
+                              {unknown>0&&(
+                                <div style={{fontSize:10,color:"#333",marginTop:3}}>
+                                  + {unknown} player{unknown>1?'s':''} haven't picked yet
+                                </div>
+                              )}
+                              {place.key!=='third'&&<div style={{height:1,background:"rgba(255,255,255,0.05)",marginTop:10}}/>}
                             </div>
-                            <span style={{fontSize:11,color:"#555",width:30,textAlign:"right"}}>
-                              {count} ({Math.round(count/leaderboard.length*100)}%)
-                            </span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     );
                   })()}
