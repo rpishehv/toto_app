@@ -652,6 +652,7 @@ export default function App(){
   const [appError,setAppError]=useState(null);
   const [recentPoints,setRecentPoints]=useState(null); // points earned notification
   const [predictionCount,setPredictionCount]=useState({done:0,total:0}); // completion indicator
+  const [showPredReminder,setShowPredReminder]=useState(false);
   const [nameInput,setNameInput]=useState("");
   const [pinInput,setPinInput]=useState("");
   const [pinConfirm,setPinConfirm]=useState("");
@@ -799,6 +800,14 @@ export default function App(){
             setKnockout(merged);
           }
           if(p.podium) setPodium(p.podium);
+
+          // Check completion — show reminder if less than 50% predicted
+          const totalPreds = ALL_MATCHES.length;
+          const donePreds = (p.matches||[]).filter(m=>m.homeScore!==null&&m.awayScore!==null).length;
+          if(donePreds < totalPreds * 0.5) setShowPredReminder(true);
+        } else {
+          // New user with no predictions — always show reminder
+          setShowPredReminder(true);
         }
       } catch(e) {
         console.error('Load predictions error:', e);
@@ -1517,6 +1526,59 @@ export default function App(){
           animation:"fadeUp 0.3s ease",whiteSpace:"nowrap",
         }}>
           🎉 +{recentPoints} pts just added!
+        </div>
+      )}
+
+      {/* Prediction reminder modal */}
+      {showPredReminder&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",
+          display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}}>
+          <div style={{background:"#141922",border:"1px solid rgba(252,185,0,0.3)",
+            borderRadius:16,padding:"24px 22px",maxWidth:360,width:"100%"}}>
+            <div style={{fontSize:32,textAlign:"center",marginBottom:8}}>⚠️</div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:"#fcb900",
+              textAlign:"center",letterSpacing:1,marginBottom:10}}>
+              Fill In Your Predictions!
+            </div>
+            <div style={{fontSize:13,color:"#aaa",lineHeight:1.7,marginBottom:8,textAlign:"center"}}>
+              You've predicted{" "}
+              <strong style={{color:"#fff"}}>
+                {matches.filter(m=>m.homeScore!==null).length}/{ALL_MATCHES.length}
+              </strong>{" "}
+              group matches.
+            </div>
+            <div style={{
+              background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",
+              borderRadius:9,padding:"10px 14px",marginBottom:18,fontSize:12,color:"#fca5a5",
+              textAlign:"center",lineHeight:1.6,
+            }}>
+              🔒 Predictions lock <strong>15 minutes before kickoff</strong>.<br/>
+              First match kicks off <strong>June 11, 2026</strong> — don't miss it!
+            </div>
+            {/* Progress bar */}
+            <div style={{marginBottom:18}}>
+              <div style={{height:6,background:"rgba(255,255,255,0.06)",borderRadius:3,overflow:"hidden",marginBottom:4}}>
+                <div style={{
+                  width:`${Math.round(matches.filter(m=>m.homeScore!==null).length/ALL_MATCHES.length*100)}%`,
+                  height:"100%",background:"#fcb900",borderRadius:3,transition:"width 0.5s",
+                }}/>
+              </div>
+              <div style={{fontSize:10,color:"#555",textAlign:"right"}}>
+                {Math.round(matches.filter(m=>m.homeScore!==null).length/ALL_MATCHES.length*100)}% complete
+              </div>
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>{setShowPredReminder(false);setTab("groups");}} style={{
+                flex:2,padding:"12px",background:"#fcb900",border:"none",borderRadius:9,
+                color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",
+              }}>⚽ Go to Predictions</button>
+              <button onClick={()=>setShowPredReminder(false)} style={{
+                flex:1,padding:"12px",background:"rgba(255,255,255,0.05)",
+                border:"1px solid rgba(255,255,255,0.1)",borderRadius:9,
+                color:"#666",fontSize:13,cursor:"pointer",fontFamily:"inherit",
+              }}>Later</button>
+            </div>
+          </div>
         </div>
       )}
 
