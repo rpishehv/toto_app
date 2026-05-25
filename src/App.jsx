@@ -736,9 +736,21 @@ export default function App(){
       try {
         const p=await sbGetPrediction(userName);
         if(p){
-          if(p.matches)  setMatches(p.matches);
-          if(p.knockout) setKnockout(p.knockout);
-          if(p.podium)   setPodium(p.podium);
+          if(p.matches) setMatches(p.matches);
+          if(p.knockout) {
+            // Merge saved predictions with current actual team names
+            const merged = p.knockout.map(m => {
+              const actual = actualKO.find(a => a.id === m.id);
+              if (!actual) return m;
+              return {
+                ...m,
+                home: (actual.home && actual.home !== "TBD") ? actual.home : m.home,
+                away: (actual.away && actual.away !== "TBD") ? actual.away : m.away,
+              };
+            });
+            setKnockout(merged);
+          }
+          if(p.podium) setPodium(p.podium);
         }
       } catch(e) {
         console.error('Load predictions error:', e);
@@ -796,6 +808,24 @@ export default function App(){
       if(hist) setSaveHistory(hist);
     })();
   },[adminMode]);
+
+  // When admin sets team names in actualKO, sync them into user's knockout predictions
+  // Only updates home/away team names — never touches user's predicted scores
+  useEffect(()=>{
+    if(!userName) return;
+    setKnockout(prev => prev.map(m => {
+      const actual = actualKO.find(a => a.id === m.id);
+      if (!actual) return m;
+      const hasRealHome = actual.home && actual.home !== "TBD";
+      const hasRealAway = actual.away && actual.away !== "TBD";
+      if (!hasRealHome && !hasRealAway) return m;
+      return {
+        ...m,
+        home: hasRealHome ? actual.home : m.home,
+        away: hasRealAway ? actual.away : m.away,
+      };
+    }));
+  },[actualKO]);
 
   // Reset all results to blank
   const adminResetToBlank = async () => {
