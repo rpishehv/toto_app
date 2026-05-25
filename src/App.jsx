@@ -2650,6 +2650,7 @@ export default function App(){
                   color:aiGenStatus.ok?"#a78bfa":"#fca5a5",
                 }}>{aiGenStatus.msg}</div>
               )}
+              {syncStatus&&(
                 <div style={{
                   padding:"9px 14px",marginBottom:16,borderRadius:8,fontSize:12,
                   background:syncStatus.ok?"rgba(96,165,250,0.08)":"rgba(239,68,68,0.08)",

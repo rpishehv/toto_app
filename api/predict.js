@@ -55,7 +55,10 @@ Rules:
 
     if (!response.ok) {
       const err = await response.text();
-      return new Response(JSON.stringify({ error: `Claude API error: ${err}` }), { status: 500 });
+      let errData;
+      try { errData = JSON.parse(err); } catch { errData = { raw: err }; }
+      const msg = errData?.error?.message || errData?.raw || err;
+      return new Response(JSON.stringify({ error: `Claude API error: ${msg}` }), { status: 500 });
     }
 
     const data = await response.json();
