@@ -682,6 +682,14 @@ export default function App(){
   const [recentPoints,setRecentPoints]=useState(null); // points earned notification
   const [predictionCount,setPredictionCount]=useState({done:0,total:0}); // completion indicator
   const [showPredReminder,setShowPredReminder]=useState(false);
+  const [liveMatches,setLiveMatches]=useState([]);
+  const [liveLoading,setLiveLoading]=useState(false);
+  const [liveError,setLiveError]=useState(null);
+  const [selectedFixture,setSelectedFixture]=useState(null);
+  const [fixtureStats,setFixtureStats]=useState(null);
+  const [fixtureEvents,setFixtureEvents]=useState([]);
+  const [liveLastUpdated,setLiveLastUpdated]=useState(null);
+  const [todayMatches,setTodayMatches]=useState([]);
   const [nameInput,setNameInput]=useState("");
   const [pinInput,setPinInput]=useState("");
   const [pinConfirm,setPinConfirm]=useState("");
@@ -1037,6 +1045,54 @@ export default function App(){
     }
     setSyncing(false);
   };
+
+  // ── Live Match Functions ────────────────────────────────────────────────────
+  const fetchLiveMatches = async () => {
+    setLiveLoading(true);
+    setLiveError(null);
+    try {
+      // Fetch live matches
+      const liveRes = await fetch('/api/live?type=live');
+      const liveData = await liveRes.json();
+
+      // Fetch today's matches
+      const todayRes = await fetch('/api/live?type=today');
+      const todayData = await todayRes.json();
+
+      if (liveData.error) throw new Error(liveData.error);
+
+      setLiveMatches(liveData.response || []);
+      setTodayMatches(todayData.response || []);
+      setLiveLastUpdated(new Date());
+    } catch(e) {
+      setLiveError(e.message);
+    }
+    setLiveLoading(false);
+  };
+
+  const fetchFixtureDetails = async (fixtureId) => {
+    setFixtureStats(null);
+    setFixtureEvents([]);
+    try {
+      const [statsRes, eventsRes] = await Promise.all([
+        fetch(`/api/live?type=stats&fixtureId=${fixtureId}`),
+        fetch(`/api/live?type=events&fixtureId=${fixtureId}`),
+      ]);
+      const [stats, events] = await Promise.all([statsRes.json(), eventsRes.json()]);
+      setFixtureStats(stats.response || []);
+      setFixtureEvents(events.response || []);
+    } catch(e) {
+      console.error('Fixture details error:', e);
+    }
+  };
+
+  // Auto-refresh live data every 60 seconds when on live tab
+  useEffect(()=>{
+    if(tab!=="live") return;
+    fetchLiveMatches();
+    const interval = setInterval(fetchLiveMatches, 60000);
+    return ()=>clearInterval(interval);
+  },[tab]);
 
   const buildChangeDiff = (prevMatches, newMatches, prevKO, newKO, prevPodium, newPodium) => {
     const changes = [];
@@ -1525,6 +1581,7 @@ export default function App(){
     {id:"groups",label:"⚽ Groups"},{id:"knockout",label:"🏆 Knockout"},
     {id:"champion",label:"👑 My Pick"},{id:"scoring",label:"📊 Scoring"},
     {id:"leaderboard",label:"🥇 Board"},{id:"stats",label:"📈 Stats"},
+    {id:"live",label:"🔴 Live"},
     {id:"admin",label:"🔧 Admin"},
     {id:"help",label:"❓ Help"},
   ];
@@ -2873,6 +2930,283 @@ export default function App(){
             </div>
           );
         })()}
+
+        {/* ── LIVE ── */}
+        {tab==="live"&&<div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+            <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,color:"#ef4444",margin:0}}>
+              🔴 Live
+            </h2>
+            {liveLastUpdated&&(
+              <span style={{fontSize:10,color:"#555"}}>
+                Updated {liveLastUpdated.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}
+              </span>
+            )}
+            <button onClick={fetchLiveMatches} disabled={liveLoading} style={{
+              marginLeft:"auto",padding:"6px 14px",
+              background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.25)",
+              borderRadius:7,color:"#ef4444",fontSize:12,fontWeight:700,
+              cursor:liveLoading?"wait":"pointer",fontFamily:"inherit",
+            }}>{liveLoading?"⏳ Loading…":"🔄 Refresh"}</button>
+          </div>
+
+          {liveError&&(
+            <div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",
+              borderRadius:9,padding:"12px 14px",marginBottom:16,fontSize:12,color:"#fca5a5"}}>
+              ❌ {liveError}
+              {liveError.includes('API key')&&(
+                <div style={{marginTop:6,fontSize:11,color:"#888"}}>
+                  Add RAPIDAPI_KEY to Vercel environment variables.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Live matches */}
+          {liveMatches.length>0&&(
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#ef4444",marginBottom:10,
+                display:"flex",alignItems:"center",gap:6}}>
+                <div style={{width:7,height:7,borderRadius:"50%",background:"#ef4444",
+                  animation:"pulse 1.5s ease infinite"}}/>
+                LIVE NOW
+              </div>
+              {liveMatches.map(f=>{
+                const home = f.teams?.home;
+                const away = f.teams?.away;
+                const score = f.goals;
+                const status = f.fixture?.status;
+                const isSelected = selectedFixture?.fixture?.id===f.fixture?.id;
+                return(
+                  <div key={f.fixture?.id}>
+                    <div onClick={()=>{
+                      if(isSelected){setSelectedFixture(null);return;}
+                      setSelectedFixture(f);
+                      fetchFixtureDetails(f.fixture?.id);
+                    }} style={{
+                      display:"flex",alignItems:"center",gap:10,
+                      padding:"14px",marginBottom:8,borderRadius:11,cursor:"pointer",
+                      background:isSelected?"rgba(239,68,68,0.08)":"rgba(239,68,68,0.04)",
+                      border:`1px solid ${isSelected?"rgba(239,68,68,0.35)":"rgba(239,68,68,0.15)"}`,
+                    }}>
+                      <div style={{flex:1}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{fontSize:13}}>{FLAGS[home?.name]||"🏳️"}</span>
+                          <span style={{fontWeight:700,fontSize:13,
+                            color:score?.home>score?.away?"#fcb900":"#ccc"}}>{home?.name}</span>
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}>
+                          <span style={{fontSize:13}}>{FLAGS[away?.name]||"🏳️"}</span>
+                          <span style={{fontWeight:700,fontSize:13,
+                            color:score?.away>score?.home?"#fcb900":"#ccc"}}>{away?.name}</span>
+                        </div>
+                      </div>
+                      <div style={{textAlign:"center"}}>
+                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,
+                          color:"#fff",lineHeight:1,letterSpacing:2}}>
+                          {score?.home ?? "-"} – {score?.away ?? "-"}
+                        </div>
+                        <div style={{fontSize:10,color:"#ef4444",fontWeight:700,marginTop:2}}>
+                          {status?.elapsed ? `${status.elapsed}'` : status?.short}
+                        </div>
+                      </div>
+                      <div style={{fontSize:10,color:"#555",textAlign:"right"}}>
+                        {isSelected?"▲":"▼"}
+                      </div>
+                    </div>
+
+                    {/* Expanded match details */}
+                    {isSelected&&(
+                      <div style={{marginBottom:12,padding:"14px",
+                        background:"rgba(255,255,255,0.025)",borderRadius:10,
+                        border:"1px solid rgba(255,255,255,0.07)"}}>
+
+                        {/* Events timeline */}
+                        {fixtureEvents.length>0&&(
+                          <div style={{marginBottom:14}}>
+                            <div style={{fontSize:11,fontWeight:700,color:"#fcb900",marginBottom:8}}>
+                              📋 Match Events
+                            </div>
+                            {fixtureEvents.map((ev,i)=>{
+                              const isHome = ev.team?.id===home?.id;
+                              const icon = ev.type==="Goal"?"⚽":ev.type==="Card"?
+                                (ev.detail==="Yellow Card"?"🟨":"🟥"):"🔄";
+                              return(
+                                <div key={i} style={{display:"flex",alignItems:"center",gap:8,
+                                  padding:"5px 0",borderTop:i>0?"1px solid rgba(255,255,255,0.04)":"none"}}>
+                                  <span style={{fontSize:10,color:"#555",width:28,textAlign:"center",flexShrink:0}}>
+                                    {ev.time?.elapsed}'
+                                  </span>
+                                  {!isHome&&<div style={{flex:1}}/>}
+                                  <span style={{fontSize:12}}>{icon}</span>
+                                  <div style={{flex:1}}>
+                                    <div style={{fontSize:11,fontWeight:600}}>{ev.player?.name}</div>
+                                    {ev.assist?.name&&ev.type==="Goal"&&(
+                                      <div style={{fontSize:10,color:"#555"}}>Assist: {ev.assist.name}</div>
+                                    )}
+                                    {ev.detail&&ev.type!=="Goal"&&(
+                                      <div style={{fontSize:10,color:"#555"}}>{ev.detail}</div>
+                                    )}
+                                  </div>
+                                  {isHome&&<div style={{flex:1}}/>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Match stats */}
+                        {fixtureStats.length>=2&&(()=>{
+                          const homeStats = fixtureStats[0]?.statistics||[];
+                          const awayStats = fixtureStats[1]?.statistics||[];
+                          const keyStats = ["Ball Possession","Total Shots","Shots on Goal",
+                            "Corner Kicks","Fouls","Yellow Cards"];
+                          return(
+                            <div>
+                              <div style={{fontSize:11,fontWeight:700,color:"#60a5fa",marginBottom:8}}>
+                                📊 Match Stats
+                              </div>
+                              <div style={{display:"flex",justifyContent:"space-between",
+                                marginBottom:8,fontSize:10,color:"#555"}}>
+                                <span style={{fontWeight:700,color:"#ccc"}}>{home?.name}</span>
+                                <span style={{fontWeight:700,color:"#ccc"}}>{away?.name}</span>
+                              </div>
+                              {keyStats.map(statName=>{
+                                const hStat = homeStats.find(s=>s.type===statName);
+                                const aStat = awayStats.find(s=>s.type===statName);
+                                if(!hStat&&!aStat) return null;
+                                const hVal = hStat?.value||0;
+                                const aVal = aStat?.value||0;
+                                const hNum = parseInt(String(hVal).replace("%",""))||0;
+                                const aNum = parseInt(String(aVal).replace("%",""))||0;
+                                const total = hNum+aNum||1;
+                                return(
+                                  <div key={statName} style={{marginBottom:8}}>
+                                    <div style={{display:"flex",justifyContent:"space-between",
+                                      fontSize:10,marginBottom:3}}>
+                                      <span style={{color:"#fcb900",fontWeight:700}}>{hVal}</span>
+                                      <span style={{color:"#555",fontSize:9}}>{statName}</span>
+                                      <span style={{color:"#60a5fa",fontWeight:700}}>{aVal}</span>
+                                    </div>
+                                    <div style={{display:"flex",height:4,borderRadius:2,overflow:"hidden",
+                                      background:"rgba(255,255,255,0.05)"}}>
+                                      <div style={{width:`${(hNum/total)*100}%`,
+                                        background:"#fcb900",borderRadius:"2px 0 0 2px"}}/>
+                                      <div style={{width:`${(aNum/total)*100}%`,
+                                        background:"#60a5fa",borderRadius:"0 2px 2px 0"}}/>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Your prediction for this match */}
+                        {(()=>{
+                          const nm = home?.name; const am = away?.name;
+                          const pred = matches.find(m=>
+                            (m.home===nm&&m.away===am)||(m.home===am&&m.away===nm)
+                          );
+                          if(!pred||pred.homeScore===null) return null;
+                          const actual = {homeScore:score?.home,awayScore:score?.away};
+                          const result = actual.homeScore!==null ? calcMatchPoints(pred,actual) : null;
+                          return(
+                            <div style={{marginTop:12,padding:"10px 12px",
+                              background:`${result?.color||"rgba(255,255,255,0.03)"}10`,
+                              border:`1px solid ${result?.color||"rgba(255,255,255,0.07)"}25`,
+                              borderRadius:8}}>
+                              <div style={{fontSize:10,color:"#555",marginBottom:4}}>Your prediction</div>
+                              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                                <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#aaa"}}>
+                                  {pred.homeScore}–{pred.awayScore}
+                                </span>
+                                {result&&(
+                                  <span style={{fontSize:11,color:result.color,fontWeight:700}}>
+                                    {result.label} {result.points>0?`+${result.points}pts`:""}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Today's matches */}
+          {todayMatches.length>0&&(
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#555",marginBottom:10}}>
+                📅 TODAY'S MATCHES
+              </div>
+              {todayMatches.filter(f=>f.fixture?.status?.short!=="1H"&&
+                f.fixture?.status?.short!=="2H"&&f.fixture?.status?.short!=="HT").map(f=>{
+                const home = f.teams?.home;
+                const away = f.teams?.away;
+                const kickoff = f.fixture?.date ? new Date(f.fixture.date) : null;
+                const status = f.fixture?.status?.short;
+                const finished = ["FT","AET","PEN"].includes(status);
+                return(
+                  <div key={f.fixture?.id} style={{
+                    display:"flex",alignItems:"center",gap:10,
+                    padding:"12px 14px",marginBottom:6,borderRadius:10,
+                    background:finished?"rgba(34,197,94,0.04)":"rgba(255,255,255,0.025)",
+                    border:`1px solid ${finished?"rgba(34,197,94,0.15)":"rgba(255,255,255,0.07)"}`,
+                  }}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:600}}>
+                        {FLAGS[home?.name]||"🏳️"} {home?.name}
+                      </div>
+                      <div style={{fontSize:12,fontWeight:600,marginTop:4}}>
+                        {FLAGS[away?.name]||"🏳️"} {away?.name}
+                      </div>
+                    </div>
+                    <div style={{textAlign:"center"}}>
+                      {finished?(
+                        <>
+                          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,
+                            color:"#22c55e",letterSpacing:1}}>
+                            {f.goals?.home} – {f.goals?.away}
+                          </div>
+                          <div style={{fontSize:9,color:"#22c55e"}}>{status}</div>
+                        </>
+                      ):(
+                        <>
+                          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#fcb900"}}>
+                            {kickoff?.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}
+                          </div>
+                          <div style={{fontSize:9,color:"#555"}}>KO</div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {!liveLoading&&!liveError&&liveMatches.length===0&&todayMatches.length===0&&(
+            <div style={{textAlign:"center",padding:"40px 20px"}}>
+              <div style={{fontSize:32,marginBottom:12}}>😴</div>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#555",letterSpacing:1}}>
+                No matches right now
+              </div>
+              <div style={{fontSize:12,color:"#444",marginTop:8}}>
+                The tournament starts June 11, 2026.<br/>
+                Live scores will appear here during matches.
+              </div>
+            </div>
+          )}
+
+          <div style={{fontSize:10,color:"#333",textAlign:"center",marginTop:16}}>
+            Powered by API-Football · Auto-refreshes every 60s during matches
+          </div>
+        </div>}
 
         {/* ── ADMIN ── */}
         {tab==="admin"&&<div>
