@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { supabase } from './supabase.js';
 import {
   sbGetUser, sbCreateUser, sbResetPin, sbVerifyRecovery, sbClearUser,
   sbGetPrediction, sbSavePrediction,
@@ -649,6 +650,8 @@ export default function App(){
   const [tab,setTab]=useState("groups");
   const [userName,setUserName]=useState("");
   const [appError,setAppError]=useState(null);
+  const [recentPoints,setRecentPoints]=useState(null); // points earned notification
+  const [predictionCount,setPredictionCount]=useState({done:0,total:0}); // completion indicator
   const [nameInput,setNameInput]=useState("");
   const [pinInput,setPinInput]=useState("");
   const [pinConfirm,setPinConfirm]=useState("");
@@ -678,7 +681,9 @@ export default function App(){
   const [rollbackTarget,setRollbackTarget]=useState(null);
   const [showResetConfirm,setShowResetConfirm]=useState(false);
   const [showUserResetConfirm,setShowUserResetConfirm]=useState(false);
-  const [viewingUser,setViewingUser]=useState(null); // {username, predictions} for leaderboard view
+  const [viewingUser,setViewingUser]=useState(null);
+  const [h2hUsers,setH2hUsers]=useState([null,null]); // [user1, user2] for head-to-head
+  const [h2hData,setH2hData]=useState(null); // loaded predictions for h2h // {username, predictions} for leaderboard view
   const MAX_HISTORY=5;
   const [podium,setPodium]=useState({first:null,second:null,third:null});
   const [actualPodium,setActualPodium]=useState({first:null,second:null,third:null});
@@ -731,6 +736,47 @@ export default function App(){
     const nowInterval=setInterval(()=>setNow(Date.now()),60*1000);
     return ()=>clearInterval(nowInterval);
   },[]);
+
+  // ── Real-time subscriptions ─────────────────────────────────────────────────
+  useEffect(()=>{
+    // Subscribe to actual_results changes (admin saves scores)
+    const resultsSub = supabase
+      .channel('actual_results_changes')
+      .on('postgres_changes', { event:'UPDATE', schema:'public', table:'actual_results' }, payload=>{
+        const d = payload.new;
+        if(d.matches?.length)    setActualMatches(d.matches);
+        if(d.knockout?.length)   setActualKO(d.knockout);
+        if(d.actual_podium)      setActualPodium(p=>({...p,...d.actual_podium}));
+        if(d.ko_kickoffs)        setKoKickoffs(d.ko_kickoffs);
+        if(d.live_predictions)   setLivePredictions(d.live_predictions);
+        setAdminHasSaved(true);
+      })
+      .subscribe();
+
+    // Subscribe to leaderboard changes
+    const lbSub = supabase
+      .channel('leaderboard_changes')
+      .on('postgres_changes', { event:'*', schema:'public', table:'leaderboard' }, async ()=>{
+        const lb = await sbGetLeaderboard();
+        if(lb) setLeaderboard(lb);
+      })
+      .subscribe();
+
+    return ()=>{
+      supabase.removeChannel(resultsSub);
+      supabase.removeChannel(lbSub);
+    };
+  },[]);
+
+  // ── Prediction completion counter ───────────────────────────────────────────
+  useEffect(()=>{
+    const total = ALL_MATCHES.length + KNOCKOUT_TEMPLATE.length;
+    const donePreds = [
+      ...matches.filter(m=>m.homeScore!==null&&m.awayScore!==null),
+      ...knockout.filter(m=>m.homeScore!==null&&m.awayScore!==null&&m.home!=="TBD"),
+    ].length;
+    setPredictionCount({done:donePreds, total});
+  },[matches,knockout]);
 
   useEffect(()=>{
     if(!userName)return;
@@ -1071,8 +1117,13 @@ export default function App(){
   // Recalc and update own leaderboard entry whenever actual results change
   useEffect(()=>{
     if(!userName) return;
-    const pts=calcTotal(matches,actualMatches,knockout,actualKO,podium,actualPodium);
-    sbUpsertLeaderboard(userName,podium,pts)
+    const prevPts = predictionCount._prevPts || 0;
+    const newPts = calcTotal(matches,actualMatches,knockout,actualKO,podium,actualPodium);
+    if(prevPts > 0 && newPts > prevPts) {
+      setRecentPoints(newPts - prevPts);
+      setTimeout(()=>setRecentPoints(null), 5000);
+    }
+    sbUpsertLeaderboard(userName,podium,newPts)
       .then(lb=>{ if(lb) setLeaderboard(lb); })
       .catch(e=>console.error('Leaderboard update error:', e));
   },[actualMatches,actualKO,actualPodium]);
@@ -1455,6 +1506,20 @@ export default function App(){
         </div>
       )}
 
+      {/* Points earned toast notification */}
+      {recentPoints&&(
+        <div style={{
+          position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",
+          zIndex:10000,background:"#22c55e",color:"#000",
+          fontFamily:"'Bebas Neue',sans-serif",fontSize:20,letterSpacing:1,
+          padding:"12px 24px",borderRadius:12,
+          boxShadow:"0 8px 32px rgba(34,197,94,0.4)",
+          animation:"fadeUp 0.3s ease",whiteSpace:"nowrap",
+        }}>
+          🎉 +{recentPoints} pts just added!
+        </div>
+      )}
+
       {/* HEADER */}
       <div style={{padding:"12px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",
         borderBottom:"1px solid rgba(255,255,255,0.07)",background:"rgba(0,0,0,0.4)",
@@ -1490,6 +1555,22 @@ export default function App(){
             border:"none",borderRadius:7,color:"#000",fontWeight:700,fontSize:12,cursor:"pointer",
             transition:"all 0.3s",fontFamily:"inherit"}}>{saved?"✓ Saved!":"Save"}</button>
         </div>
+        {/* Prediction completion bar */}
+        {predictionCount.total>0&&(
+          <div style={{padding:"6px 16px 0",display:"flex",alignItems:"center",gap:8}}>
+            <div style={{flex:1,height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,overflow:"hidden"}}>
+              <div style={{
+                width:`${Math.round(predictionCount.done/predictionCount.total*100)}%`,
+                height:"100%",background:predictionCount.done===predictionCount.total?"#22c55e":"#fcb900",
+                borderRadius:2,transition:"width 0.5s",
+              }}/>
+            </div>
+            <div style={{fontSize:10,color:predictionCount.done===predictionCount.total?"#22c55e":"#555",flexShrink:0}}>
+              {predictionCount.done}/{predictionCount.total} predicted
+              {predictionCount.done<predictionCount.total&&" ⚠️"}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* User reset predictions confirmation */}
@@ -2188,13 +2269,92 @@ export default function App(){
             borderRadius:11,border:"1px solid rgba(255,255,255,0.06)"}}>
             <div style={{fontWeight:700,marginBottom:7,fontSize:12}}>📋 How to compete</div>
             <ol style={{color:"#444",fontSize:11,margin:0,paddingLeft:16,lineHeight:2.1}}>
-              <li>Everyone opens this same artifact</li>
+              <li>Everyone opens this same app URL</li>
               <li>Enter your name + PIN and predict all match scores</li>
               <li>Hit <strong style={{color:"#fcb900"}}>Save</strong> to appear on the board</li>
               <li>Admin enters results as matches are played — scores update automatically</li>
               <li>Highest score at the end wins 🏆</li>
             </ol>
           </div>
+
+          {/* Head-to-head comparison */}
+          {actualMatches.some(m=>m.homeScore!==null)&&(
+            <div style={{marginTop:20,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"14px"}}>
+              <div style={{fontWeight:700,fontSize:12,marginBottom:10}}>⚔️ Head-to-Head Comparison</div>
+              <div style={{display:"flex",gap:8,marginBottom:10}}>
+                {[0,1].map(i=>(
+                  <select key={i} value={h2hUsers[i]||""} onChange={async e=>{
+                    const name = e.target.value;
+                    const newUsers = [...h2hUsers];
+                    newUsers[i] = name || null;
+                    setH2hUsers(newUsers);
+                    if(newUsers[0]&&newUsers[1]){
+                      const [p1,p2] = await Promise.all([sbGetPrediction(newUsers[0]),sbGetPrediction(newUsers[1])]);
+                      setH2hData({[newUsers[0]]:p1,[newUsers[1]]:p2});
+                    }
+                  }} style={{flex:1,padding:"8px 10px",background:"rgba(255,255,255,0.05)",
+                    border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,
+                    color:"#fff",fontSize:12,fontFamily:"inherit",outline:"none"}}>
+                    <option value="">Select player {i+1}…</option>
+                    {leaderboard.map(e=><option key={e.username} value={e.username}>{e.username}</option>)}
+                  </select>
+                ))}
+              </div>
+              {h2hUsers[0]&&h2hUsers[1]&&h2hData&&(()=>{
+                const p1 = h2hData[h2hUsers[0]];
+                const p2 = h2hData[h2hUsers[1]];
+                const played = actualMatches.filter(m=>m.homeScore!==null);
+                let w1=0,w2=0,draws=0;
+                const rows = played.map(actual=>{
+                  const pred1 = p1?.matches?.find(m=>m.id===actual.id);
+                  const pred2 = p2?.matches?.find(m=>m.id===actual.id);
+                  const r1 = pred1 ? calcMatchPoints(pred1,actual) : null;
+                  const r2 = pred2 ? calcMatchPoints(pred2,actual) : null;
+                  if(r1&&r2){ if(r1.points>r2.points)w1++; else if(r2.points>r1.points)w2++; else draws++; }
+                  return {actual,r1,r2};
+                });
+                return(
+                  <div>
+                    {/* Score summary */}
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,
+                      background:"rgba(255,255,255,0.03)",borderRadius:8,padding:"10px 12px"}}>
+                      <div style={{flex:1,textAlign:"center"}}>
+                        <div style={{fontWeight:700,fontSize:13}}>{h2hUsers[0]}</div>
+                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:"#fcb900"}}>{w1}</div>
+                        <div style={{fontSize:10,color:"#555"}}>matches won</div>
+                      </div>
+                      <div style={{textAlign:"center",padding:"0 8px"}}>
+                        <div style={{fontSize:11,color:"#555"}}>{draws} draws</div>
+                        <div style={{fontSize:10,color:"#444"}}>{played.length} played</div>
+                      </div>
+                      <div style={{flex:1,textAlign:"center"}}>
+                        <div style={{fontWeight:700,fontSize:13}}>{h2hUsers[1]}</div>
+                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:"#60a5fa"}}>{w2}</div>
+                        <div style={{fontSize:10,color:"#555"}}>matches won</div>
+                      </div>
+                    </div>
+                    {/* Per-match comparison */}
+                    {rows.slice(0,8).map(({actual,r1,r2},i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:6,
+                        padding:"6px 8px",marginBottom:4,borderRadius:7,
+                        background:"rgba(255,255,255,0.02)"}}>
+                        <div style={{
+                          width:28,textAlign:"center",fontFamily:"'Bebas Neue',sans-serif",fontSize:13,
+                          color:r1?.points>r2?.points?"#fcb900":r1?.points===r2?.points?"#555":"#333"
+                        }}>{r1?`+${r1.points}`:"-"}</div>
+                        <div style={{flex:1,fontSize:10,color:"#666",textAlign:"center"}}>
+                          {FLAGS[actual.home]||"🏳️"} {actual.homeScore}–{actual.awayScore} {FLAGS[actual.away]||"🏳️"}
+                        </div>
+                        <div style={{
+                          width:28,textAlign:"center",fontFamily:"'Bebas Neue',sans-serif",fontSize:13,
+                          color:r2?.points>r1?.points?"#60a5fa":r1?.points===r2?.points?"#555":"#333"
+                        }}>{r2?`+${r2.points}`:"-"}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}</div>
+          )}
 
           {/* User prediction view modal */}
           {viewingUser&&(()=>{
@@ -2607,7 +2767,7 @@ export default function App(){
           ):(
             <div>
               {/* Action bar */}
-              <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:10,marginBottom:syncStatus?8:20}}>
+              <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:10,marginBottom:10}}>
                 <button onClick={adminSaveWithConfirm} style={{
                   padding:"10px 24px",background:adminSaved?"#22c55e":"#fcb900",
                   border:"none",borderRadius:8,color:"#000",fontWeight:700,
@@ -2621,14 +2781,6 @@ export default function App(){
                   cursor:syncing?"wait":"pointer",fontFamily:"inherit",
                   opacity:syncing?0.7:1,
                 }}>{syncing?"⏳ Syncing…":"🔄 Sync Live Feed"}</button>
-                <button onClick={generateKOPredictions} disabled={generatingAI} style={{
-                  padding:"10px 18px",
-                  background:generatingAI?"rgba(167,139,250,0.06)":"rgba(167,139,250,0.1)",
-                  border:"1px solid rgba(167,139,250,0.3)",borderRadius:8,
-                  color:"#a78bfa",fontSize:13,fontWeight:700,
-                  cursor:generatingAI?"wait":"pointer",fontFamily:"inherit",
-                  opacity:generatingAI?0.7:1,
-                }}>{generatingAI?"⏳ Generating…":"🤖 Generate KO AI Predictions"}</button>
                 <button onClick={()=>setShowResetConfirm(true)} style={{
                   padding:"10px 16px",background:"rgba(239,68,68,0.1)",
                   border:"1px solid rgba(239,68,68,0.3)",borderRadius:8,
@@ -2639,6 +2791,23 @@ export default function App(){
                     border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,
                     color:"#555",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
                   🔒 Lock
+                </button>
+              </div>
+
+              {/* AI Predictions row */}
+              <div style={{marginBottom:syncStatus||aiGenStatus?8:20}}>
+                <button onClick={generateKOPredictions} disabled={generatingAI} style={{
+                  width:"100%",padding:"11px 18px",
+                  background:generatingAI?"rgba(167,139,250,0.06)":"rgba(167,139,250,0.08)",
+                  border:"1px solid rgba(167,139,250,0.25)",borderRadius:8,
+                  color:"#a78bfa",fontSize:13,fontWeight:700,
+                  cursor:generatingAI?"wait":"pointer",fontFamily:"inherit",
+                  opacity:generatingAI?0.7:1,textAlign:"left",
+                }}>
+                  {generatingAI?"⏳ Generating KO predictions…":"🤖 Generate KO AI Predictions"}
+                  {!generatingAI&&<span style={{fontSize:11,color:"#6d5a9c",marginLeft:8,fontWeight:400}}>
+                    — fills 🤖 suggestions for all knockout matches with known teams
+                  </span>}
                 </button>
               </div>
               {/* Sync status */}
@@ -2800,6 +2969,44 @@ export default function App(){
                   ))}
                 </div>
               )}
+
+              {/* Participation Report */}
+              <div style={{marginBottom:24}}>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"#555",letterSpacing:1,marginBottom:10}}>
+                  Participation Report
+                </div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
+                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:9,padding:"10px",textAlign:"center"}}>
+                    <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#fcb900"}}>{leaderboard.length}</div>
+                    <div style={{fontSize:10,color:"#555"}}>Total players</div>
+                  </div>
+                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:9,padding:"10px",textAlign:"center"}}>
+                    <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#22c55e"}}>
+                      {leaderboard.filter(e=>e.points>0).length}
+                    </div>
+                    <div style={{fontSize:10,color:"#555"}}>With predictions</div>
+                  </div>
+                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:9,padding:"10px",textAlign:"center"}}>
+                    <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#ef4444"}}>
+                      {leaderboard.filter(e=>e.points===0).length}
+                    </div>
+                    <div style={{fontSize:10,color:"#555"}}>Not predicted</div>
+                  </div>
+                </div>
+                {leaderboard.filter(e=>e.points===0).length>0&&(
+                  <div style={{background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.15)",borderRadius:8,padding:"10px 12px"}}>
+                    <div style={{fontSize:11,color:"#ef4444",fontWeight:700,marginBottom:6}}>⚠️ Haven't predicted yet:</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      {leaderboard.filter(e=>e.points===0).map(e=>(
+                        <span key={e.username} style={{fontSize:11,color:"#888",background:"rgba(255,255,255,0.04)",
+                          border:"1px solid rgba(255,255,255,0.08)",borderRadius:5,padding:"3px 8px"}}>
+                          {e.username}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* User Management — PIN Reset */}
               <div style={{marginBottom:24}}>
