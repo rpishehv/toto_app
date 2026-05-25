@@ -600,12 +600,15 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
             <span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>🤖 AI Prediction:</span>
             <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>{aiPred.h} – {aiPred.a}</span>
             {aiPred.confidence&&(
-              <span style={{fontSize:9,color:"#6d5a9c",marginLeft:"auto",
+              <span style={{fontSize:9,color:"#6d5a9c",
                 background:"rgba(139,92,246,0.15)",borderRadius:4,padding:"2px 6px"}}>
                 {aiPred.confidence} confidence
               </span>
             )}
-            {!locked&&<button onClick={()=>{onUpdate({...match,homeScore:aiPred.h,awayScore:aiPred.a});setShowAI(false);}} style={{padding:"3px 10px",background:"rgba(139,92,246,0.2)",border:"1px solid rgba(139,92,246,0.4)",borderRadius:5,color:"#c4b5fd",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Use</button>}
+            <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
+              {!locked&&<button onClick={()=>{onUpdate({...match,homeScore:aiPred.h,awayScore:aiPred.a});setShowAI(false);}} style={{padding:"3px 10px",background:"rgba(139,92,246,0.2)",border:"1px solid rgba(139,92,246,0.4)",borderRadius:5,color:"#c4b5fd",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Use</button>}
+              <button onClick={()=>setShowAI(false)} style={{padding:"3px 8px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:5,color:"#555",fontSize:11,cursor:"pointer",fontFamily:"inherit",lineHeight:1}}>✕</button>
+            </div>
           </div>
           {aiPred.insight&&(
             <div style={{fontSize:11,color:"#8b7dbf",lineHeight:1.6,marginBottom:6}}>{aiPred.insight}</div>
