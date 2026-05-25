@@ -668,7 +668,9 @@ export default function App(){
   const [saved,setSaved]=useState(false);
   const [adminSaved,setAdminSaved]=useState(false);
   const [syncing,setSyncing]=useState(false);
-  const [syncStatus,setSyncStatus]=useState(null); // {ok, msg, stats}
+  const [syncStatus,setSyncStatus]=useState(null);
+  const [generatingAI,setGeneratingAI]=useState(false);
+  const [aiGenStatus,setAiGenStatus]=useState(null); // {ok, msg, stats}
   const [adminHasSaved,setAdminHasSaved]=useState(false); // true once admin saves any results
   const [saveHistory,setSaveHistory]=useState([]); // last 5 admin saves
   const [showConfirm,setShowConfirm]=useState(false); // confirmation dialog
@@ -872,6 +874,46 @@ export default function App(){
   // Admin: save all actual results + recalc leaderboard
   // Build human-readable diff of what changed
   // ── Live Feed Sync ─────────────────────────────────────────────────────────
+  // ── AI KO Prediction Generator ─────────────────────────────────────────────
+  const generateKOPredictions = async () => {
+    setGeneratingAI(true);
+    setAiGenStatus(null);
+    const koMatches = actualKO.filter(m => m.home !== "TBD" && m.away !== "TBD");
+    if (koMatches.length === 0) {
+      setAiGenStatus({ ok:false, msg:"No KO teams set yet — fill R32 first." });
+      setGeneratingAI(false);
+      return;
+    }
+    let done = 0, failed = 0;
+    const newPreds = { ...livePredictions };
+    for (const m of koMatches) {
+      const key = `${m.home}||${m.away}`;
+      if (newPreds[key]) { done++; continue; } // skip already generated
+      try {
+        const res = await fetch('/api/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ home: m.home, away: m.away, round: m.round }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const pred = await res.json();
+        newPreds[key] = { h: pred.h, a: pred.a, r: pred.r };
+        done++;
+        setAiGenStatus({ ok:true, msg:`Generating... ${done}/${koMatches.length}` });
+      } catch(e) {
+        console.error(`AI pred failed for ${key}:`, e);
+        failed++;
+      }
+    }
+    setLivePredictions(newPreds);
+    await sbSaveActualResults(actualMatches, actualKO, actualPodium, koKickoffs, newPreds);
+    setAiGenStatus({
+      ok: failed === 0,
+      msg: `✅ Generated ${done} KO predictions${failed > 0 ? ` (${failed} failed)` : ""}. Saved for all users.`
+    });
+    setGeneratingAI(false);
+  };
+
   const syncFromLiveFeed = async () => {
     setSyncing(true);
     setSyncStatus(null);
@@ -1386,7 +1428,8 @@ export default function App(){
   const TABS=[
     {id:"groups",label:"⚽ Groups"},{id:"knockout",label:"🏆 Knockout"},
     {id:"champion",label:"👑 My Pick"},{id:"scoring",label:"📊 Scoring"},
-    {id:"leaderboard",label:"🥇 Board"},{id:"admin",label:"🔧 Admin"},
+    {id:"leaderboard",label:"🥇 Board"},{id:"stats",label:"📈 Stats"},
+    {id:"admin",label:"🔧 Admin"},
     {id:"help",label:"❓ Help"},
   ];
 
@@ -2305,6 +2348,233 @@ export default function App(){
           })()}
         </div>}
 
+        {/* ── STATS ── */}
+        {tab==="stats"&&(()=>{
+          // ── Personal stats ──────────────────────────────────────────────
+          const playedMatches = actualMatches.filter(m=>m.homeScore!==null);
+          const playedKO = actualKO.filter(m=>m.homeScore!==null&&m.home!=="TBD");
+          const allPlayed = [...playedMatches, ...playedKO];
+
+          const myResults = allPlayed.map(actual=>{
+            const pred = [...matches,...knockout].find(m=>m.id===actual.id);
+            return pred ? calcMatchPoints(pred,actual) : null;
+          }).filter(Boolean);
+
+          const exact   = myResults.filter(r=>r.points===6).length;
+          const gd      = myResults.filter(r=>r.points===3).length;
+          const outcome = myResults.filter(r=>r.points===2).length;
+          const wrong   = myResults.filter(r=>r.points===0).length;
+          const total   = myResults.length;
+          const myPts   = myResults.reduce((s,r)=>s+r.points,0);
+          const accuracy = total>0 ? Math.round(((exact+gd+outcome)/total)*100) : 0;
+
+          // Best/worst matches
+          const matchDetails = allPlayed.map(actual=>{
+            const pred = [...matches,...knockout].find(m=>m.id===actual.id);
+            const result = pred ? calcMatchPoints(pred,actual) : null;
+            return result ? { actual, pred, result } : null;
+          }).filter(Boolean);
+          const best  = matchDetails.filter(m=>m.result.points===6).slice(0,3);
+          const worst = matchDetails.filter(m=>m.result.points===0).slice(0,3);
+
+          // ── Group analytics ─────────────────────────────────────────────
+          // Per-match: how many players got it right
+          const groupAnalytics = playedMatches.map(actual=>{
+            let exactCount=0, anyPointsCount=0, totalPreds=0;
+            leaderboard.forEach(e=>{
+              // We can only use what's on the leaderboard — points already calc'd
+              totalPreds++;
+            });
+            return { actual, exactCount, anyPointsCount, totalPreds };
+          });
+
+          // Points distribution
+          const ptsBands = {
+            elite: leaderboard.filter(e=>e.points>=100).length,
+            good:  leaderboard.filter(e=>e.points>=50&&e.points<100).length,
+            avg:   leaderboard.filter(e=>e.points>=20&&e.points<50).length,
+            low:   leaderboard.filter(e=>e.points<20).length,
+          };
+          const avgPts = leaderboard.length>0
+            ? Math.round(leaderboard.reduce((s,e)=>s+e.points,0)/leaderboard.length)
+            : 0;
+          const myRank = leaderboard.findIndex(e=>e.username===userName)+1;
+
+          const StatBox = ({value,label,color="#fcb900",sub=""})=>(
+            <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:11,padding:"12px 10px",textAlign:"center"}}>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color,lineHeight:1}}>{value}</div>
+              <div style={{fontSize:10,color:"#555",marginTop:3}}>{label}</div>
+              {sub&&<div style={{fontSize:10,color:"#444",marginTop:2}}>{sub}</div>}
+            </div>
+          );
+
+          return(
+            <div>
+              <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,color:"#fcb900",marginTop:0}}>
+                📈 Stats
+              </h2>
+
+              {total===0?(
+                <div style={{textAlign:"center",color:"#444",padding:"40px 20px",fontSize:13}}>
+                  Stats will appear here once matches kick off and results are entered.
+                </div>
+              ):(
+                <>
+                  {/* ── My Stats ── */}
+                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"#555",letterSpacing:1,marginBottom:10}}>
+                    My Performance
+                  </div>
+
+                  {/* Overview row */}
+                  <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+                    <StatBox value={myPts} label="Total Pts" color="#fcb900"/>
+                    <StatBox value={`#${myRank}`} label="Rank" color={myRank===1?"#fcb900":myRank===2?"#aaa":myRank===3?"#cd7f32":"#60a5fa"}/>
+                    <StatBox value={`${accuracy}%`} label="Accuracy" color="#22c55e"/>
+                    <StatBox value={total} label="Predicted"/>
+                  </div>
+
+                  {/* Breakdown bar */}
+                  <div style={{marginBottom:16}}>
+                    <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>
+                      {[
+                        {count:exact,   label:"⭐ Exact",    color:"#22c55e", pts:6},
+                        {count:gd,      label:"📐 GD",       color:"#fcb900", pts:3},
+                        {count:outcome, label:"✓ Outcome",   color:"#60a5fa", pts:2},
+                        {count:wrong,   label:"❌ Wrong",     color:"#ef4444", pts:0},
+                      ].map((b,i)=>(
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:6,
+                          background:`${b.color}12`,border:`1px solid ${b.color}25`,
+                          borderRadius:8,padding:"7px 11px",flex:1,minWidth:70}}>
+                          <div>
+                            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:b.color,lineHeight:1}}>{b.count}</div>
+                            <div style={{fontSize:10,color:"#555"}}>{b.label}</div>
+                          </div>
+                          <div style={{marginLeft:"auto",fontSize:10,color:"#444"}}>×{b.pts}pts</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Visual bar */}
+                    {total>0&&(
+                      <div style={{display:"flex",height:8,borderRadius:4,overflow:"hidden",gap:1}}>
+                        {exact>0&&<div style={{flex:exact,background:"#22c55e"}}/>}
+                        {gd>0&&<div style={{flex:gd,background:"#fcb900"}}/>}
+                        {outcome>0&&<div style={{flex:outcome,background:"#60a5fa"}}/>}
+                        {wrong>0&&<div style={{flex:wrong,background:"rgba(239,68,68,0.3)"}}/>}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Best predictions */}
+                  {best.length>0&&(
+                    <div style={{marginBottom:16}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#22c55e",marginBottom:8}}>⭐ Best Predictions</div>
+                      {best.map(({actual,pred},i)=>(
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:8,
+                          padding:"7px 10px",marginBottom:5,borderRadius:8,
+                          background:"rgba(34,197,94,0.06)",border:"1px solid rgba(34,197,94,0.15)"}}>
+                          <span style={{fontSize:12}}>{FLAGS[actual.home]||"🏳️"}</span>
+                          <span style={{flex:1,fontSize:11,fontWeight:600}}>{actual.home}</span>
+                          <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,color:"#22c55e"}}>
+                            {pred.homeScore}–{pred.awayScore}
+                          </span>
+                          <span style={{flex:1,textAlign:"right",fontSize:11,fontWeight:600}}>{actual.away}</span>
+                          <span style={{fontSize:12}}>{FLAGS[actual.away]||"🏳️"}</span>
+                          <span style={{fontSize:10,color:"#22c55e",marginLeft:4}}>+6pts</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Worst predictions */}
+                  {worst.length>0&&(
+                    <div style={{marginBottom:24}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#ef4444",marginBottom:8}}>❌ Missed Predictions</div>
+                      {worst.slice(0,3).map(({actual,pred},i)=>(
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:8,
+                          padding:"7px 10px",marginBottom:5,borderRadius:8,
+                          background:"rgba(239,68,68,0.04)",border:"1px solid rgba(239,68,68,0.12)"}}>
+                          <span style={{fontSize:12}}>{FLAGS[actual.home]||"🏳️"}</span>
+                          <span style={{flex:1,fontSize:11,fontWeight:600}}>{actual.home}</span>
+                          <div style={{textAlign:"center"}}>
+                            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:12,color:"#555"}}>
+                              pred {pred.homeScore}–{pred.awayScore}
+                            </div>
+                            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,color:"#22c55e"}}>
+                              {actual.homeScore}–{actual.awayScore}
+                            </div>
+                          </div>
+                          <span style={{flex:1,textAlign:"right",fontSize:11,fontWeight:600}}>{actual.away}</span>
+                          <span style={{fontSize:12}}>{FLAGS[actual.away]||"🏳️"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* ── Group Stats ── */}
+                  <div style={{height:1,background:"rgba(255,255,255,0.06)",marginBottom:16}}/>
+                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"#555",letterSpacing:1,marginBottom:12}}>
+                    Group Analytics
+                  </div>
+
+                  {/* Points distribution */}
+                  <div style={{marginBottom:16,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:11,padding:"14px"}}>
+                    <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>Points Distribution</div>
+                    <div style={{display:"flex",gap:8,marginBottom:10}}>
+                      <StatBox value={leaderboard.length} label="Players" color="#60a5fa"/>
+                      <StatBox value={avgPts} label="Avg Pts" color="#fcb900"/>
+                      <StatBox value={leaderboard[0]?.points||0} label="High Score" color="#22c55e"/>
+                      <StatBox value={leaderboard[leaderboard.length-1]?.points||0} label="Low Score" color="#ef4444"/>
+                    </div>
+                    {[
+                      {label:"100+ pts 🔥", count:ptsBands.elite, color:"#fcb900"},
+                      {label:"50–99 pts ✅", count:ptsBands.good,  color:"#22c55e"},
+                      {label:"20–49 pts 📊", count:ptsBands.avg,   color:"#60a5fa"},
+                      {label:"Under 20 pts", count:ptsBands.low,   color:"#ef4444"},
+                    ].map((b,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                        <div style={{fontSize:11,width:120,color:"#888"}}>{b.label}</div>
+                        <div style={{flex:1,height:6,background:"rgba(255,255,255,0.05)",borderRadius:3,overflow:"hidden"}}>
+                          <div style={{width:leaderboard.length>0?`${(b.count/leaderboard.length)*100}%`:"0%",
+                            height:"100%",background:b.color,borderRadius:3,transition:"width 0.5s"}}/>
+                        </div>
+                        <div style={{fontSize:11,color:"#555",width:20,textAlign:"right"}}>{b.count}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Champion picks breakdown */}
+                  {leaderboard.length>0&&(()=>{
+                    const champCounts = {};
+                    leaderboard.forEach(e=>{
+                      const c = e.champion||"?";
+                      champCounts[c]=(champCounts[c]||0)+1;
+                    });
+                    const sorted = Object.entries(champCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+                    return(
+                      <div style={{background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:11,padding:"14px"}}>
+                        <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>🏆 Champion Picks</div>
+                        {sorted.map(([team,count],i)=>(
+                          <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                            <span style={{fontSize:14}}>{FLAGS[team]||"🏳️"}</span>
+                            <span style={{fontSize:12,flex:1,fontWeight:600}}>{team}</span>
+                            <div style={{flex:2,height:6,background:"rgba(255,255,255,0.05)",borderRadius:3,overflow:"hidden"}}>
+                              <div style={{width:`${(count/leaderboard.length)*100}%`,
+                                height:"100%",background:"#fcb900",borderRadius:3}}/>
+                            </div>
+                            <span style={{fontSize:11,color:"#555",width:30,textAlign:"right"}}>
+                              {count} ({Math.round(count/leaderboard.length*100)}%)
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+            </div>
+          );
+        })()}
+
         {/* ── ADMIN ── */}
         {tab==="admin"&&<div>
           <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,color:"#fcb900",marginTop:0}}>
@@ -2351,6 +2621,14 @@ export default function App(){
                   cursor:syncing?"wait":"pointer",fontFamily:"inherit",
                   opacity:syncing?0.7:1,
                 }}>{syncing?"⏳ Syncing…":"🔄 Sync Live Feed"}</button>
+                <button onClick={generateKOPredictions} disabled={generatingAI} style={{
+                  padding:"10px 18px",
+                  background:generatingAI?"rgba(167,139,250,0.06)":"rgba(167,139,250,0.1)",
+                  border:"1px solid rgba(167,139,250,0.3)",borderRadius:8,
+                  color:"#a78bfa",fontSize:13,fontWeight:700,
+                  cursor:generatingAI?"wait":"pointer",fontFamily:"inherit",
+                  opacity:generatingAI?0.7:1,
+                }}>{generatingAI?"⏳ Generating…":"🤖 Generate KO AI Predictions"}</button>
                 <button onClick={()=>setShowResetConfirm(true)} style={{
                   padding:"10px 16px",background:"rgba(239,68,68,0.1)",
                   border:"1px solid rgba(239,68,68,0.3)",borderRadius:8,
@@ -2364,7 +2642,14 @@ export default function App(){
                 </button>
               </div>
               {/* Sync status */}
-              {syncStatus&&(
+              {aiGenStatus&&(
+                <div style={{
+                  padding:"9px 14px",marginBottom:8,borderRadius:8,fontSize:12,
+                  background:aiGenStatus.ok?"rgba(167,139,250,0.08)":"rgba(239,68,68,0.08)",
+                  border:`1px solid ${aiGenStatus.ok?"rgba(167,139,250,0.25)":"rgba(239,68,68,0.25)"}`,
+                  color:aiGenStatus.ok?"#a78bfa":"#fca5a5",
+                }}>{aiGenStatus.msg}</div>
+              )}
                 <div style={{
                   padding:"9px 14px",marginBottom:16,borderRadius:8,fontSize:12,
                   background:syncStatus.ok?"rgba(96,165,250,0.08)":"rgba(239,68,68,0.08)",
