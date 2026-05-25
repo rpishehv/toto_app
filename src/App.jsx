@@ -386,7 +386,7 @@ function calcMatchPoints(pred, actual) {
   const predOut = ph>pa?"W":ph<pa?"L":"D";
   const actOut  = ah>aa?"W":ah<aa?"L":"D";
   const correctOut = predOut===actOut;
-  if (exact)      return {points:8,label:"Exact score ⭐",     color:"#22c55e"};
+  if (exact)      return {points:6,label:"Exact score ⭐",     color:"#22c55e"};
   if (correctGD)  return {points:3,label:"Correct goal diff 📐",color:"#fcb900"};
   if (correctOut) return {points:2,label:"Correct outcome ✓",  color:"#60a5fa"};
   return            {points:0,label:"No points",               color:"#ef4444"};
@@ -631,7 +631,7 @@ function ScoringBar(){
         {pts:100,text:"1st place",color:"#f59e0b",icon:"🥇"},
         {pts:50,text:"2nd place",color:"#aaa",icon:"🥈"},
         {pts:25,text:"3rd place",color:"#cd7f32",icon:"🥉"},
-        {pts:8,text:"Exact score",color:"#22c55e",icon:"⭐"},
+        {pts:6,text:"Exact score",color:"#22c55e",icon:"⭐"},
         {pts:3,text:"Correct GD",color:"#fcb900",icon:"📐"},
         {pts:2,text:"Correct outcome",color:"#60a5fa",icon:"✓"},
       ].map((r,i)=>(
@@ -1941,7 +1941,7 @@ export default function App(){
               borderRadius:11,padding:"12px 14px",display:"flex",alignItems:"center",gap:12,
             }}>
               <div style={{textAlign:"center",flexShrink:0,width:52}}>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,color:"#fcb900",lineHeight:1}}>8</div>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,color:"#fcb900",lineHeight:1}}>6</div>
                 <div style={{fontSize:9,color:"#555"}}>max</div>
               </div>
               <div>
@@ -2817,7 +2817,7 @@ export default function App(){
                 ["Correct outcome only","Right winner or draw, wrong everything else → 2 pts"],
                 ["Wrong prediction","None of the above → 0 pts"],
                 ["Podium","🥇 1st place correct = 100 pts · 🥈 2nd = 50 pts · 🥉 3rd = 25 pts"],
-                ["Max per match","8 pts (exact score). Rules are mutually exclusive — no stacking."],
+                ["Max per match","6 pts (exact score). Rules are mutually exclusive — no stacking."],
               ]
             },
             {
