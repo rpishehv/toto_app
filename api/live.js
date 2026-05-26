@@ -58,6 +58,13 @@ export default async function handler(req) {
     const data = await response.json();
     if (data.errors && Object.keys(data.errors).length > 0) {
       const msg = Object.values(data.errors).join(', ');
+      // If it's a season availability error, return empty response instead of error
+      if (msg.toLowerCase().includes('season') || msg.toLowerCase().includes('2026')) {
+        return new Response(JSON.stringify({ response: [], results: 0, _seasonNotAvailable: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+        });
+      }
       return new Response(JSON.stringify({ error: msg }), { status: 400 });
     }
 
