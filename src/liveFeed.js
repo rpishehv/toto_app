@@ -162,20 +162,31 @@ export function parseFeed(data, appMatches, appKO) {
 
 // Apply parsed feed results to current app state
 export function applyFeedToState(parsed, appMatches, appKO, appPodium, koKickoffs) {
-  // Apply group scores
+  // Apply group scores — only fill if not already manually entered
   const newMatches = appMatches.map(m => {
     const score = parsed.groupScores[m.id]
     if (!score) return m
-    return { ...m, homeScore: score.homeScore, awayScore: score.awayScore }
+    // Don't overwrite manually entered scores
+    const homeScore = m.homeScore !== null ? m.homeScore : score.homeScore
+    const awayScore = m.awayScore !== null ? m.awayScore : score.awayScore
+    return { ...m, homeScore, awayScore }
   })
 
-  // Apply KO teams + scores
+  // Apply KO teams + scores — only fill empty fields
   const newKO = appKO.map(m => {
     const teams = parsed.koTeams[m.id]
     const score = parsed.koScores[m.id]
     let updated = { ...m }
-    if (teams) { updated.home = teams.home; updated.away = teams.away }
-    if (score) { updated.homeScore = score.homeScore; updated.awayScore = score.awayScore }
+    if (teams) {
+      // Only fill TBD team names, don't overwrite manually entered names
+      if (!updated.home || updated.home === 'TBD') updated.home = teams.home
+      if (!updated.away || updated.away === 'TBD') updated.away = teams.away
+    }
+    if (score) {
+      // Don't overwrite manually entered scores
+      if (updated.homeScore === null) updated.homeScore = score.homeScore
+      if (updated.awayScore === null) updated.awayScore = score.awayScore
+    }
     return updated
   })
 

@@ -1064,7 +1064,7 @@ export default function App(){
       setSyncStatus({
         ok: true,
         msg: parts.length > 0
-          ? `✅ Synced: ${parts.join(', ')}. Review then Save.`
+          ? `✅ Synced: ${parts.join(', ')}. Manually entered values preserved. Review then Save.`
           : '⏳ Feed connected — no results yet (tournament not started).'
       });
     } catch(e) {
