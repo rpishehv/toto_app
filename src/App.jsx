@@ -1051,16 +1051,12 @@ export default function App(){
     setLiveLoading(true);
     setLiveError(null);
     try {
-      // Fetch live matches
-      const liveRes = await fetch('/api/live?type=live');
-      const liveData = await liveRes.json();
-
-      // Fetch today's matches
-      const todayRes = await fetch('/api/live?type=today');
-      const todayData = await todayRes.json();
-
+      const [liveRes, todayRes] = await Promise.all([
+        fetch('/api/live?type=live'),
+        fetch('/api/live?type=today'),
+      ]);
+      const [liveData, todayData] = await Promise.all([liveRes.json(), todayRes.json()]);
       if (liveData.error) throw new Error(liveData.tip ? `${liveData.error} — ${liveData.tip}` : liveData.error);
-
       setLiveMatches(liveData.response || []);
       setTodayMatches(todayData.response || []);
       setLiveLastUpdated(new Date());
