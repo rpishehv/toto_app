@@ -690,7 +690,15 @@ export default function App(){
   const [fixtureEvents,setFixtureEvents]=useState([]);
   const [liveLastUpdated,setLiveLastUpdated]=useState(null);
   const [todayMatches,setTodayMatches]=useState([]);
-  const [matchAnalysis,setMatchAnalysis]=useState({}); // fixtureId → {text, loading}
+  const [matchAnalysis,setMatchAnalysis]=useState({});
+  const [bracketPred,setBracketPred]=useState(null);
+  const [bracketLoading,setBracketLoading]=useState(false);
+  const [commentary,setCommentary]=useState(null);
+  const [commentaryLoading,setCommentaryLoading]=useState(false);
+  const [whatIfTeam,setWhatIfTeam]=useState("");
+  const [whatIfPlace,setWhatIfPlace]=useState("first");
+  const [whatIfResult,setWhatIfResult]=useState(null);
+  const [whatIfLoading,setWhatIfLoading]=useState(false); // fixtureId → {text, loading}
   const [nameInput,setNameInput]=useState("");
   const [pinInput,setPinInput]=useState("");
   const [pinConfirm,setPinConfirm]=useState("");
@@ -1115,6 +1123,67 @@ export default function App(){
     } catch(e) {
       setMatchAnalysis(prev => ({...prev, [id]: {text:`Error: ${e.message}`, loading:false}}));
     }
+  };
+
+  // ── AI Tournament Features ─────────────────────────────────────────────────
+  const generateBracket = async () => {
+    setBracketLoading(true);
+    try {
+      const res = await fetch('/api/tournament', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ type:'bracket' }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setBracketPred(data);
+    } catch(e) { console.error('Bracket error:', e); }
+    setBracketLoading(false);
+  };
+
+  const generateCommentary = async () => {
+    setCommentaryLoading(true);
+    try {
+      const matchesPlayed = actualMatches.filter(m=>m.homeScore!==null).length;
+      const res = await fetch('/api/tournament', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          type:'commentary',
+          leaderboard,
+          actualResults: { matchesPlayed },
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setCommentary(data.commentary);
+    } catch(e) { console.error('Commentary error:', e); }
+    setCommentaryLoading(false);
+  };
+
+  const calculateWhatIf = async () => {
+    if (!whatIfTeam) return;
+    setWhatIfLoading(true);
+    setWhatIfResult(null);
+    try {
+      const lbWithPodium = await Promise.all(
+        leaderboard.map(async e => {
+          const p = await sbGetPrediction(e.username);
+          return { ...e, podium: p?.podium || {} };
+        })
+      );
+      const res = await fetch('/api/tournament', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          type:'whatif',
+          leaderboard: lbWithPodium,
+          whatIfTeam,
+          whatIfPlace,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setWhatIfResult(data);
+    } catch(e) { console.error('What-if error:', e); }
+    setWhatIfLoading(false);
   };
 
   // Load live data when tab is opened — manual refresh only (saves API quota)
@@ -1610,7 +1679,7 @@ export default function App(){
     {id:"groups",label:"⚽ Groups"},{id:"knockout",label:"🏆 Knockout"},
     {id:"champion",label:"👑 My Pick"},{id:"scoring",label:"📊 Scoring"},
     {id:"leaderboard",label:"🥇 Board"},{id:"stats",label:"📈 Stats"},
-    {id:"live",label:"🔴 Live"},
+    {id:"live",label:"🔴 Live"},{id:"ai",label:"🤖 AI"},
     {id:"admin",label:"🔧 Admin"},
     {id:"help",label:"❓ Help"},
   ];
@@ -3268,6 +3337,231 @@ export default function App(){
 
           <div style={{fontSize:10,color:"#333",textAlign:"center",marginTop:16}}>
             Powered by API-Football · Tap 🔄 Refresh to update · Free plan: 100 requests/day
+          </div>
+        </div>}
+
+        {/* ── AI ── */}
+        {tab==="ai"&&<div>
+          <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,color:"#a78bfa",marginTop:0}}>
+            🤖 AI Features
+          </h2>
+
+          {/* ── Feature 1: Tournament Bracket ── */}
+          <div style={{marginBottom:28}}>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#a78bfa",letterSpacing:1,marginBottom:4}}>
+              🏆 Tournament Bracket Predictor
+            </div>
+            <div style={{fontSize:11,color:"#555",marginBottom:12,lineHeight:1.6}}>
+              Claude predicts the full World Cup 2026 bracket — group winners, knockout rounds, and the champion. Compare with your own picks!
+            </div>
+            <button onClick={generateBracket} disabled={bracketLoading} style={{
+              width:"100%",padding:"12px",
+              background:bracketLoading?"rgba(139,92,246,0.05)":"rgba(139,92,246,0.12)",
+              border:"1px solid rgba(139,92,246,0.3)",borderRadius:9,
+              color:"#a78bfa",fontSize:13,fontWeight:700,
+              cursor:bracketLoading?"wait":"pointer",fontFamily:"inherit",
+            }}>{bracketLoading?"⏳ Predicting tournament…":"🔮 Generate AI Tournament Prediction"}</button>
+
+            {bracketPred&&(
+              <div style={{marginTop:14,background:"rgba(139,92,246,0.06)",border:"1px solid rgba(139,92,246,0.2)",borderRadius:11,padding:"14px"}}>
+                {/* Champion */}
+                <div style={{textAlign:"center",marginBottom:16,padding:"14px",
+                  background:"rgba(252,185,0,0.08)",border:"1px solid rgba(252,185,0,0.25)",borderRadius:10}}>
+                  <div style={{fontSize:10,color:"#555",marginBottom:4}}>🤖 AI Predicts World Cup 2026 Winner</div>
+                  <div style={{fontSize:36}}>{FLAGS[bracketPred.champion]||"🏳️"}</div>
+                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,color:"#fcb900",letterSpacing:1}}>{bracketPred.champion}</div>
+                  <div style={{fontSize:11,color:"#888",marginTop:6,fontStyle:"italic",lineHeight:1.5}}>{bracketPred.reasoning}</div>
+                </div>
+
+                {/* Podium */}
+                <div style={{display:"flex",gap:8,marginBottom:14}}>
+                  {[
+                    {label:"🥇 Champion",team:bracketPred.champion,color:"#f59e0b"},
+                    {label:"🥈 Runner-up",team:bracketPred.runnerUp,color:"#aaa"},
+                    {label:"🥉 3rd Place",team:bracketPred.thirdPlace,color:"#cd7f32"},
+                  ].map((p,i)=>(
+                    <div key={i} style={{flex:1,textAlign:"center",
+                      background:`${p.color}10`,border:`1px solid ${p.color}30`,
+                      borderRadius:8,padding:"8px 4px"}}>
+                      <div style={{fontSize:10,color:p.color,marginBottom:3}}>{p.label}</div>
+                      <div style={{fontSize:18}}>{FLAGS[p.team]||"🏳️"}</div>
+                      <div style={{fontSize:10,fontWeight:700,marginTop:2}}>{p.team}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Semi-finalists */}
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,color:"#555",marginBottom:6,fontWeight:700}}>Semi-Finalists</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {(bracketPred.semiFinalists||[]).map((t,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:4,
+                        padding:"4px 10px",background:"rgba(255,255,255,0.04)",
+                        border:"1px solid rgba(255,255,255,0.08)",borderRadius:6,fontSize:11}}>
+                        <span>{FLAGS[t]||"🏳️"}</span><span>{t}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Group winners */}
+                <div>
+                  <div style={{fontSize:11,color:"#555",marginBottom:6,fontWeight:700}}>Group Winners</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+                    {Object.entries(bracketPred.groupWinners||{}).map(([g,t])=>(
+                      <div key={g} style={{display:"flex",alignItems:"center",gap:6,
+                        padding:"4px 8px",background:"rgba(255,255,255,0.025)",
+                        border:"1px solid rgba(255,255,255,0.06)",borderRadius:6,fontSize:11}}>
+                        <span style={{color:"#555",width:12}}>G{g}</span>
+                        <span>{FLAGS[t]||"🏳️"}</span>
+                        <span style={{fontWeight:600}}>{t}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* How yours compares */}
+                {(podium?.first||podium?.second||podium?.third)&&(()=>{
+                  const match1 = podium.first===bracketPred.champion;
+                  const match2 = podium.second===bracketPred.runnerUp;
+                  const match3 = podium.third===bracketPred.thirdPlace;
+                  const matches = [match1,match2,match3].filter(Boolean).length;
+                  return(
+                    <div style={{marginTop:12,padding:"10px 12px",
+                      background:matches>0?"rgba(34,197,94,0.06)":"rgba(255,255,255,0.025)",
+                      border:`1px solid ${matches>0?"rgba(34,197,94,0.2)":"rgba(255,255,255,0.07)"}`,
+                      borderRadius:8,fontSize:11}}>
+                      <div style={{fontWeight:700,color:matches>0?"#22c55e":"#555",marginBottom:4}}>
+                        {matches===3?"🎯 Perfect match with AI!":matches>0?`✅ ${matches}/3 picks match AI`:"> Your picks differ from AI"}
+                      </div>
+                      <div style={{color:"#555"}}>
+                        🥇 You: {podium.first||"?"} {match1?"✓":"✗"} AI: {bracketPred.champion}<br/>
+                        🥈 You: {podium.second||"?"} {match2?"✓":"✗"} AI: {bracketPred.runnerUp}<br/>
+                        🥉 You: {podium.third||"?"} {match3?"✓":"✗"} AI: {bracketPred.thirdPlace}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+
+          <div style={{height:1,background:"rgba(255,255,255,0.06)",marginBottom:24}}/>
+
+          {/* ── Feature 2: Leaderboard Commentary ── */}
+          <div style={{marginBottom:28}}>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#a78bfa",letterSpacing:1,marginBottom:4}}>
+              🎙️ AI Pundit Commentary
+            </div>
+            <div style={{fontSize:11,color:"#555",marginBottom:12,lineHeight:1.6}}>
+              Claude gives its take on the current standings — who's flying, who's struggling, and who picked wisely.
+            </div>
+            <button onClick={generateCommentary} disabled={commentaryLoading||leaderboard.length===0} style={{
+              width:"100%",padding:"12px",
+              background:commentaryLoading?"rgba(139,92,246,0.05)":"rgba(139,92,246,0.12)",
+              border:"1px solid rgba(139,92,246,0.3)",borderRadius:9,
+              color:"#a78bfa",fontSize:13,fontWeight:700,
+              cursor:commentaryLoading||leaderboard.length===0?"wait":"pointer",fontFamily:"inherit",
+              opacity:leaderboard.length===0?0.4:1,
+            }}>{commentaryLoading?"⏳ Writing commentary…":"🎙️ Generate Leaderboard Commentary"}</button>
+
+            {leaderboard.length===0&&(
+              <div style={{fontSize:11,color:"#444",marginTop:6,textAlign:"center"}}>
+                Needs at least one player on the leaderboard
+              </div>
+            )}
+
+            {commentary&&(
+              <div style={{marginTop:12,padding:"14px 16px",
+                background:"rgba(139,92,246,0.06)",border:"1px solid rgba(139,92,246,0.2)",
+                borderRadius:10,fontSize:13,color:"#c4b5fd",lineHeight:1.8,fontStyle:"italic"}}>
+                "{commentary}"
+              </div>
+            )}
+          </div>
+
+          <div style={{height:1,background:"rgba(255,255,255,0.06)",marginBottom:24}}/>
+
+          {/* ── Feature 3: What-If Calculator ── */}
+          <div style={{marginBottom:20}}>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#a78bfa",letterSpacing:1,marginBottom:4}}>
+              🔮 What-If Calculator
+            </div>
+            <div style={{fontSize:11,color:"#555",marginBottom:12,lineHeight:1.6}}>
+              See how the leaderboard changes if a specific team wins, finishes 2nd, or 3rd.
+            </div>
+
+            <div style={{display:"flex",gap:8,marginBottom:8}}>
+              <select value={whatIfTeam} onChange={e=>setWhatIfTeam(e.target.value)} style={{
+                flex:2,padding:"10px 12px",background:"rgba(255,255,255,0.05)",
+                border:"1px solid rgba(139,92,246,0.25)",borderRadius:8,
+                color:whatIfTeam?"#fff":"#555",fontSize:12,fontFamily:"inherit",outline:"none",
+              }}>
+                <option value="">Select a team…</option>
+                {Object.values(GROUPS).flat().map(t=>(
+                  <option key={t} value={t}>{FLAGS[t]||"🏳️"} {t}</option>
+                ))}
+              </select>
+              <select value={whatIfPlace} onChange={e=>setWhatIfPlace(e.target.value)} style={{
+                flex:1,padding:"10px 12px",background:"rgba(255,255,255,0.05)",
+                border:"1px solid rgba(139,92,246,0.25)",borderRadius:8,
+                color:"#fff",fontSize:12,fontFamily:"inherit",outline:"none",
+              }}>
+                <option value="first">🥇 Wins WC</option>
+                <option value="second">🥈 Runner-up</option>
+                <option value="third">🥉 3rd Place</option>
+              </select>
+            </div>
+
+            <button onClick={calculateWhatIf} disabled={!whatIfTeam||whatIfLoading} style={{
+              width:"100%",padding:"12px",
+              background:!whatIfTeam||whatIfLoading?"rgba(139,92,246,0.05)":"rgba(139,92,246,0.12)",
+              border:"1px solid rgba(139,92,246,0.3)",borderRadius:9,
+              color:"#a78bfa",fontSize:13,fontWeight:700,
+              cursor:!whatIfTeam||whatIfLoading?"not-allowed":"pointer",fontFamily:"inherit",
+              opacity:!whatIfTeam?0.4:1,
+            }}>{whatIfLoading?"⏳ Calculating…":"🔮 Calculate What-If"}</button>
+
+            {whatIfResult&&(
+              <div style={{marginTop:12,background:"rgba(139,92,246,0.06)",border:"1px solid rgba(139,92,246,0.2)",borderRadius:11,padding:"14px"}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#a78bfa",marginBottom:8}}>
+                  {whatIfResult.scenario}
+                </div>
+
+                {/* Points gained */}
+                {(whatIfResult.pointsGained||[]).filter(e=>e.gained>0).length>0&&(
+                  <div style={{marginBottom:12}}>
+                    <div style={{fontSize:10,color:"#555",marginBottom:6}}>Who benefits:</div>
+                    {(whatIfResult.pointsGained||[]).filter(e=>e.gained>0).sort((a,b)=>b.gained-a.gained).map((e,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:8,
+                        padding:"6px 10px",marginBottom:4,borderRadius:7,
+                        background:"rgba(34,197,94,0.06)",border:"1px solid rgba(34,197,94,0.15)"}}>
+                        <span style={{fontSize:11,flex:1,fontWeight:600}}>{e.username}</span>
+                        <span style={{color:"#22c55e",fontFamily:"'Bebas Neue',sans-serif",fontSize:15}}>+{e.gained}pts</span>
+                        <span style={{fontSize:10,color:"#555"}}>→ {e.newTotal}pts (#{e.newRank})</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Summary */}
+                {whatIfResult.biggestWinner&&(
+                  <div style={{fontSize:11,color:"#888",lineHeight:1.6,
+                    borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:10,marginTop:4}}>
+                    🏆 Biggest winner: <strong style={{color:"#22c55e"}}>{whatIfResult.biggestWinner}</strong>
+                    {whatIfResult.biggestLoser&&<span> · 📉 Falls: <strong style={{color:"#ef4444"}}>{whatIfResult.biggestLoser}</strong></span>}
+                  </div>
+                )}
+
+                {whatIfResult.commentary&&(
+                  <div style={{fontSize:12,color:"#c4b5fd",fontStyle:"italic",lineHeight:1.6,
+                    marginTop:10,padding:"10px 12px",background:"rgba(139,92,246,0.05)",
+                    border:"1px solid rgba(139,92,246,0.1)",borderRadius:8}}>
+                    "{whatIfResult.commentary}"
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>}
 
