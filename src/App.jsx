@@ -690,6 +690,7 @@ export default function App(){
   const [fixtureEvents,setFixtureEvents]=useState([]);
   const [liveLastUpdated,setLiveLastUpdated]=useState(null);
   const [todayMatches,setTodayMatches]=useState([]);
+  const [matchAnalysis,setMatchAnalysis]=useState({}); // fixtureId → {text, loading}
   const [nameInput,setNameInput]=useState("");
   const [pinInput,setPinInput]=useState("");
   const [pinConfirm,setPinConfirm]=useState("");
@@ -1079,6 +1080,40 @@ export default function App(){
       setFixtureEvents(events.response || []);
     } catch(e) {
       console.error('Fixture details error:', e);
+    }
+  };
+
+  const analyseMatch = async (fixture) => {
+    const id = fixture.fixture?.id;
+    if (!id) return;
+    setMatchAnalysis(prev => ({...prev, [id]: {text:null, loading:true}}));
+    const homeName = fixture.teams?.home?.name;
+    const awayName = fixture.teams?.away?.name;
+    const pred = matches.find(m =>
+      (m.home===homeName&&m.away===awayName)||(m.home===awayName&&m.away===homeName)
+    );
+    const userPred = pred?.homeScore!==null ? {
+      home: pred.home===homeName ? pred.homeScore : pred.awayScore,
+      away: pred.home===homeName ? pred.awayScore : pred.homeScore,
+    } : null;
+    try {
+      const res = await fetch('/api/analyse', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          home: homeName, away: awayName,
+          homeScore: fixture.goals?.home,
+          awayScore: fixture.goals?.away,
+          elapsed: fixture.fixture?.status?.elapsed,
+          events: fixtureEvents,
+          stats: fixtureStats,
+          userPred,
+        }),
+      });
+      const data = await res.json();
+      setMatchAnalysis(prev => ({...prev, [id]: {text: data.analysis||data.error, loading:false}}));
+    } catch(e) {
+      setMatchAnalysis(prev => ({...prev, [id]: {text:`Error: ${e.message}`, loading:false}}));
     }
   };
 
@@ -3121,6 +3156,40 @@ export default function App(){
                                   </span>
                                 )}
                               </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* 🤖 AI Analysis button */}
+                        {(()=>{
+                          const id = f.fixture?.id;
+                          const analysis = matchAnalysis[id];
+                          return(
+                            <div style={{marginTop:12}}>
+                              <button onClick={()=>analyseMatch(f)} disabled={analysis?.loading}
+                                style={{
+                                  width:"100%",padding:"10px 14px",
+                                  background:analysis?.loading?"rgba(139,92,246,0.05)":"rgba(139,92,246,0.1)",
+                                  border:"1px solid rgba(139,92,246,0.25)",borderRadius:8,
+                                  color:"#a78bfa",fontSize:12,fontWeight:700,
+                                  cursor:analysis?.loading?"wait":"pointer",
+                                  fontFamily:"inherit",textAlign:"left",
+                                  display:"flex",alignItems:"center",gap:8,
+                                }}>
+                                <span>{analysis?.loading?"⏳":"🤖"}</span>
+                                <span>{analysis?.loading?"Analysing match…":analysis?.text?"🔄 Refresh AI Analysis":"AI Match Analysis"}</span>
+                              </button>
+                              {analysis?.text&&!analysis?.loading&&(
+                                <div style={{
+                                  marginTop:8,padding:"12px 14px",
+                                  background:"rgba(139,92,246,0.06)",
+                                  border:"1px solid rgba(139,92,246,0.15)",
+                                  borderRadius:8,fontSize:12,color:"#c4b5fd",
+                                  lineHeight:1.7,fontStyle:"italic",
+                                }}>
+                                  {analysis.text}
+                                </div>
+                              )}
                             </div>
                           );
                         })()}
