@@ -1059,7 +1059,7 @@ export default function App(){
       const todayRes = await fetch('/api/live?type=today');
       const todayData = await todayRes.json();
 
-      if (liveData.error) throw new Error(liveData.error);
+      if (liveData.error) throw new Error(liveData.tip ? `${liveData.error} — ${liveData.tip}` : liveData.error);
 
       setLiveMatches(liveData.response || []);
       setTodayMatches(todayData.response || []);
@@ -2953,10 +2953,10 @@ export default function App(){
           {liveError&&(
             <div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",
               borderRadius:9,padding:"12px 14px",marginBottom:16,fontSize:12,color:"#fca5a5"}}>
-              ❌ {liveError}
-              {liveError.includes('API key')&&(
-                <div style={{marginTop:6,fontSize:11,color:"#888"}}>
-                  Add RAPIDAPI_KEY to Vercel environment variables.
+              <div style={{fontWeight:700,marginBottom:4}}>❌ {liveError.split('—')[0]}</div>
+              {liveError.includes('—')&&(
+                <div style={{fontSize:11,color:"#888",marginTop:4}}>
+                  💡 {liveError.split('—')[1]?.trim()}
                 </div>
               )}
             </div>
