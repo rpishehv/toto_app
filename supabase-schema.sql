@@ -65,3 +65,16 @@ create policy "allow all predictions" on predictions for all using (true) with c
 create policy "allow all actual_results" on actual_results for all using (true) with check (true);
 create policy "allow all leaderboard" on leaderboard for all using (true) with check (true);
 create policy "allow all save_history" on save_history for all using (true) with check (true);
+
+-- AI Content (shared, single row)
+create table if not exists ai_content (
+  id integer primary key default 1,
+  bracket jsonb,
+  commentary text,
+  bracket_generated_by text,
+  commentary_generated_by text,
+  updated_at timestamptz default now()
+);
+
+-- Seed the single row
+insert into ai_content (id) values (1) on conflict (id) do nothing;

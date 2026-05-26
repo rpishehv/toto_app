@@ -169,6 +169,29 @@ export async function stSet(key, val, shared=false) {
 }
 export async function detectStorage() { return 'supabase'; }
 
+// ─── AI CONTENT ───────────────────────────────────────────────────────────────
+// Stores shared AI-generated content (bracket prediction, commentary)
+// Single row table — id=1 always
+
+export async function sbGetAIContent() {
+  const { data, error } = await supabase
+    .from('ai_content').select('*').eq('id', 1).maybeSingle()
+  if (error) console.error('sbGetAIContent error:', error.message)
+  return data || null
+}
+
+export async function sbSaveAIContent(bracket, commentary, bracketGeneratedBy, commentaryGeneratedBy) {
+  const { error } = await supabase.from('ai_content').upsert({
+    id: 1,
+    bracket: bracket || null,
+    commentary: commentary || null,
+    bracket_generated_by: bracketGeneratedBy || null,
+    commentary_generated_by: commentaryGeneratedBy || null,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'id' })
+  if (error) console.error('sbSaveAIContent error:', error.message)
+}
+
 // ─── RECOVERY CODE GENERATION ──────────────────────────────────────────────────
 
 export function generateRecoveryCode() {
