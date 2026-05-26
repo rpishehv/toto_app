@@ -691,6 +691,7 @@ export default function App(){
   const [fixtureEvents,setFixtureEvents]=useState([]);
   const [liveLastUpdated,setLiveLastUpdated]=useState(null);
   const [todayMatches,setTodayMatches]=useState([]);
+  const [refreshCooldown,setRefreshCooldown]=useState(0); // seconds remaining
   const [matchAnalysis,setMatchAnalysis]=useState({});
   const [simActive,setSimActive]=useState(false);
   const [simMinute,setSimMinute]=useState(0);
@@ -1081,6 +1082,7 @@ export default function App(){
 
   // ── Live Match Functions ────────────────────────────────────────────────────
   const fetchLiveMatches = async () => {
+    if (refreshCooldown > 0) return;
     setLiveLoading(true);
     setLiveError(null);
     try {
@@ -1093,11 +1095,22 @@ export default function App(){
       setLiveMatches(liveData.response || []);
       setTodayMatches(todayData.response || []);
       setLiveLastUpdated(new Date());
+      // Start 60s cooldown
+      setRefreshCooldown(60);
     } catch(e) {
       setLiveError(e.message);
     }
     setLiveLoading(false);
   };
+
+  // Cooldown countdown ticker
+  useEffect(()=>{
+    if (refreshCooldown <= 0) return;
+    const timer = setInterval(()=>{
+      setRefreshCooldown(c => Math.max(0, c-1));
+    }, 1000);
+    return ()=>clearInterval(timer);
+  },[refreshCooldown]);
 
   const fetchFixtureDetails = async (fixtureId) => {
     setFixtureStats(null);
@@ -3182,12 +3195,16 @@ export default function App(){
                 Updated {liveLastUpdated.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}
               </span>
             )}
-            <button onClick={fetchLiveMatches} disabled={liveLoading} style={{
+            <button onClick={fetchLiveMatches} disabled={liveLoading||refreshCooldown>0} style={{
               marginLeft:"auto",padding:"6px 14px",
-              background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.25)",
-              borderRadius:7,color:"#ef4444",fontSize:12,fontWeight:700,
-              cursor:liveLoading?"wait":"pointer",fontFamily:"inherit",
-            }}>{liveLoading?"⏳ Loading…":"🔄 Refresh"}</button>
+              background:refreshCooldown>0?"rgba(255,255,255,0.03)":"rgba(239,68,68,0.1)",
+              border:`1px solid ${refreshCooldown>0?"rgba(255,255,255,0.07)":"rgba(239,68,68,0.25)"}`,
+              borderRadius:7,color:refreshCooldown>0?"#444":"#ef4444",fontSize:12,fontWeight:700,
+              cursor:liveLoading||refreshCooldown>0?"not-allowed":"pointer",fontFamily:"inherit",
+              minWidth:90,textAlign:"center",
+            }}>
+              {liveLoading?"⏳ Loading…":refreshCooldown>0?`⏱ ${refreshCooldown}s`:"🔄 Refresh"}
+            </button>
           </div>
 
           {liveError&&(
