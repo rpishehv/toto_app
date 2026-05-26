@@ -17,7 +17,7 @@ export default async function handler(req) {
   const headers = { 'x-apisports-key': apiKey };
 
   const LEAGUE = 1;    // FIFA World Cup
-  const SEASON = 2024; // TODO: change to 2026 when tournament starts June 11
+  const SEASON = 2026;
 
   let endpoint = '';
   if (type === 'status') {

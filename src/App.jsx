@@ -1082,12 +1082,10 @@ export default function App(){
     }
   };
 
-  // Auto-refresh live data every 60 seconds when on live tab
+  // Load live data when tab is opened — manual refresh only (saves API quota)
   useEffect(()=>{
     if(tab!=="live") return;
     fetchLiveMatches();
-    const interval = setInterval(fetchLiveMatches, 60000);
-    return ()=>clearInterval(interval);
   },[tab]);
 
   const buildChangeDiff = (prevMatches, newMatches, prevKO, newKO, prevPodium, newPodium) => {
@@ -3200,7 +3198,7 @@ export default function App(){
           )}
 
           <div style={{fontSize:10,color:"#333",textAlign:"center",marginTop:16}}>
-            Powered by API-Football · Auto-refreshes every 60s during matches
+            Powered by API-Football · Tap 🔄 Refresh to update · Free plan: 100 requests/day
           </div>
         </div>}
 
