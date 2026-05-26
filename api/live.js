@@ -17,10 +17,12 @@ export default async function handler(req) {
   const headers = { 'x-apisports-key': apiKey };
 
   const LEAGUE = 1;    // FIFA World Cup
-  const SEASON = 2026;
+  const SEASON = 2024; // TODO: change to 2026 when tournament starts June 11
 
   let endpoint = '';
-  if (type === 'live') {
+  if (type === 'status') {
+    endpoint = `${BASE}/status`;
+  } else if (type === 'live') {
     endpoint = `${BASE}/fixtures?live=all&league=${LEAGUE}&season=${SEASON}`;
   } else if (type === 'today') {
     const today = new Date().toISOString().split('T')[0];
