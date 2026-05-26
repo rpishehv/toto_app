@@ -692,6 +692,12 @@ export default function App(){
   const [liveLastUpdated,setLiveLastUpdated]=useState(null);
   const [todayMatches,setTodayMatches]=useState([]);
   const [matchAnalysis,setMatchAnalysis]=useState({});
+  const [simActive,setSimActive]=useState(false);
+  const [simMinute,setSimMinute]=useState(0);
+  const [simEvents,setSimEvents]=useState([]);
+  const [simStats,setSimStats]=useState(null);
+  const [simAnalysis,setSimAnalysis]=useState(null);
+  const [simAnalysisLoading,setSimAnalysisLoading]=useState(false);
   const [bracketPred,setBracketPred]=useState(null);
   const [bracketLoading,setBracketLoading]=useState(false);
   const [bracketGeneratedBy,setBracketGeneratedBy]=useState(null);
@@ -1208,6 +1214,118 @@ export default function App(){
       setWhatIfResult(data);
     } catch(e) { console.error('What-if error:', e); }
     setWhatIfLoading(false);
+  };
+
+  // ── SIMULATION ─────────────────────────────────────────────────────────────
+  const SIM_MATCH = { home:"Mexico", away:"South Africa", homeScore:0, awayScore:0 };
+  const SIM_SCRIPT = [
+    { min:8,  type:"Card",   detail:"Yellow Card", player:"Moreno",     team:"Mexico",       side:"home" },
+    { min:23, type:"Goal",   player:"Lozano",      assist:"Vega",       team:"Mexico",       side:"home", h:1, a:0 },
+    { min:34, type:"Card",   detail:"Yellow Card", player:"Tau",        team:"South Africa", side:"away" },
+    { min:45, type:"Goal",   player:"Manyama",     assist:null,         team:"South Africa", side:"away", h:1, a:1 },
+    { min:58, type:"Sub",    player:"Jimenez",     off:"Guardado",      team:"Mexico",       side:"home" },
+    { min:67, type:"Goal",   player:"Jimenez",     assist:"Lozano",     team:"Mexico",       side:"home", h:2, a:1 },
+    { min:78, type:"Card",   detail:"Red Card",    player:"Hlatshwayo", team:"South Africa", side:"away" },
+    { min:88, type:"Goal",   player:"Martin",      assist:"Jimenez",    team:"Mexico",       side:"home", h:3, a:1 },
+    { min:90, type:"End" },
+  ];
+
+  const getSimScore = (minute) => {
+    let h=0, a=0;
+    for (const ev of SIM_SCRIPT) {
+      if (ev.min > minute) break;
+      if (ev.type==="Goal") { h=ev.h; a=ev.a; }
+    }
+    return { h, a };
+  };
+
+  const getSimStats = (minute) => {
+    const pct = Math.min(minute/90, 1);
+    return {
+      possession: { home: Math.round(55 + pct*5), away: Math.round(45 - pct*5) },
+      shots:      { home: Math.round(pct*14),       away: Math.round(pct*5) },
+      shotsOn:    { home: Math.round(pct*6),         away: Math.round(pct*2) },
+      corners:    { home: Math.round(pct*7),         away: Math.round(pct*3) },
+      fouls:      { home: Math.round(pct*9),         away: Math.round(pct*12) },
+    };
+  };
+
+  useEffect(()=>{
+    if (!simActive) return;
+    if (simMinute >= 90) { setSimActive(false); return; }
+    const tick = setInterval(()=>{
+      setSimMinute(m => {
+        const next = m + 1;
+        // Fire events at their minute
+        const fired = SIM_SCRIPT.filter(e => e.min === next);
+        if (fired.length > 0) {
+          setSimEvents(prev => [...prev, ...fired]);
+        }
+        setSimStats(getSimStats(next));
+        if (next >= 90) { setSimActive(false); }
+        return next;
+      });
+    }, 600); // 600ms per minute = ~54s for full match
+    return () => clearInterval(tick);
+  }, [simActive]);
+
+  const startSim = () => {
+    setSimMinute(0);
+    setSimEvents([]);
+    setSimStats(getSimStats(0));
+    setSimAnalysis(null);
+    setSimActive(true);
+  };
+
+  const stopSim = () => setSimActive(false);
+
+  const generateSimAnalysis = async () => {
+    setSimAnalysisLoading(true);
+    setSimAnalysis(null);
+    const score = getSimScore(simMinute);
+    const pred = matches.find(m =>
+      (m.home==="Mexico"&&m.away==="South Africa")||
+      (m.home==="South Africa"&&m.away==="Mexico")
+    );
+    const userPred = pred?.homeScore!==null ? { home:pred.homeScore, away:pred.awayScore } : null;
+    try {
+      const res = await fetch('/api/analyse', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          home:"Mexico", away:"South Africa",
+          homeScore: score.h, awayScore: score.a,
+          elapsed: simMinute,
+          events: simEvents.filter(e=>e.type!=="End").map(e=>({
+            time:{ elapsed:e.min },
+            type: e.type==="Sub"?"Substitution":e.type,
+            detail: e.detail,
+            player:{ name:e.player },
+            team:{ name:e.team },
+            assist: e.assist?{ name:e.assist }:null,
+          })),
+          stats: simStats ? [
+            { team:{name:"Mexico"}, statistics:[
+              {type:"Ball Possession",value:`${simStats.possession.home}%`},
+              {type:"Total Shots",value:simStats.shots.home},
+              {type:"Shots on Goal",value:simStats.shotsOn.home},
+              {type:"Corner Kicks",value:simStats.corners.home},
+              {type:"Fouls",value:simStats.fouls.home},
+            ]},
+            { team:{name:"South Africa"}, statistics:[
+              {type:"Ball Possession",value:`${simStats.possession.away}%`},
+              {type:"Total Shots",value:simStats.shots.away},
+              {type:"Shots on Goal",value:simStats.shotsOn.away},
+              {type:"Corner Kicks",value:simStats.corners.away},
+              {type:"Fouls",value:simStats.fouls.away},
+            ]},
+          ] : [],
+          userPred,
+        }),
+      });
+      const data = await res.json();
+      setSimAnalysis(data.analysis || data.error);
+    } catch(e) { setSimAnalysis(`Error: ${e.message}`); }
+    setSimAnalysisLoading(false);
   };
 
   // Load live data when tab is opened — manual refresh only (saves API quota)
@@ -3346,18 +3464,223 @@ export default function App(){
             </div>
           )}
 
-          {!liveLoading&&!liveError&&liveMatches.length===0&&todayMatches.length===0&&(
-            <div style={{textAlign:"center",padding:"40px 20px"}}>
-              <div style={{fontSize:32,marginBottom:12}}>😴</div>
-              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#555",letterSpacing:1}}>
-                No matches right now
+          {!liveLoading&&!liveError&&liveMatches.length===0&&todayMatches.length===0&&(()=>{
+            const score = getSimScore(simMinute);
+            const simEnded = simMinute >= 90;
+            const userPred = matches.find(m=>
+              (m.home==="Mexico"&&m.away==="South Africa")||
+              (m.home==="South Africa"&&m.away==="Mexico")
+            );
+            const predScore = userPred?.homeScore!==null
+              ? { h: userPred.home==="Mexico"?userPred.homeScore:userPred.awayScore,
+                  a: userPred.home==="Mexico"?userPred.awayScore:userPred.homeScore }
+              : null;
+            const liveResult = predScore && simMinute > 0
+              ? calcMatchPoints(
+                  { homeScore:predScore.h, awayScore:predScore.a },
+                  { homeScore:score.h, awayScore:score.a }
+                ) : null;
+
+            return(
+              <div>
+                {/* Demo banner */}
+                <div style={{
+                  background:"rgba(252,185,0,0.08)",border:"1px solid rgba(252,185,0,0.2)",
+                  borderRadius:9,padding:"8px 14px",marginBottom:16,
+                  display:"flex",alignItems:"center",gap:8,
+                }}>
+                  <span style={{fontSize:13}}>🎮</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"#fcb900"}}>Demo Mode</div>
+                    <div style={{fontSize:10,color:"#555"}}>Simulating Mexico vs South Africa · June 11 live experience</div>
+                  </div>
+                  <div style={{fontSize:10,color:"#444"}}>Real data from June 11</div>
+                </div>
+
+                {/* Match card */}
+                <div style={{
+                  padding:"18px 16px",borderRadius:14,marginBottom:12,
+                  background: simMinute>0 ? "rgba(239,68,68,0.06)" : "rgba(255,255,255,0.025)",
+                  border:`1px solid ${simMinute>0 ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.07)"}`,
+                }}>
+                  {/* Live badge */}
+                  {simMinute>0&&!simEnded&&(
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
+                      <div style={{width:7,height:7,borderRadius:"50%",background:"#ef4444",
+                        animation:"pulse 1s ease infinite"}}/>
+                      <span style={{fontSize:10,color:"#ef4444",fontWeight:700,letterSpacing:1}}>LIVE</span>
+                      <span style={{fontSize:11,color:"#ef4444",marginLeft:4}}>{simMinute}'</span>
+                    </div>
+                  )}
+                  {simEnded&&(
+                    <div style={{fontSize:10,color:"#22c55e",fontWeight:700,letterSpacing:1,marginBottom:10}}>✅ FULL TIME</div>
+                  )}
+
+                  {/* Score */}
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{flex:1}}>
+                      <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:6}}>
+                        <span style={{fontSize:20}}>🇲🇽</span>
+                        <span style={{fontWeight:700,fontSize:14,color:score.h>score.a?"#fcb900":"#ccc"}}>Mexico</span>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:7}}>
+                        <span style={{fontSize:20}}>🇿🇦</span>
+                        <span style={{fontWeight:700,fontSize:14,color:score.a>score.h?"#fcb900":"#ccc"}}>South Africa</span>
+                      </div>
+                    </div>
+                    <div style={{textAlign:"center",minWidth:80}}>
+                      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:42,
+                        color:"#fff",lineHeight:1,letterSpacing:3}}>
+                        {simMinute>0?score.h:"-"} – {simMinute>0?score.a:"-"}
+                      </div>
+                      {predScore&&simMinute>0&&(
+                        <div style={{fontSize:10,color:"#555",marginTop:2}}>
+                          your pred: {predScore.h}–{predScore.a}
+                          {liveResult&&liveResult.points>0&&(
+                            <span style={{color:liveResult.color,marginLeft:4,fontWeight:700}}>+{liveResult.points}pts</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Controls */}
+                  <div style={{display:"flex",gap:8,marginTop:14}}>
+                    {!simActive&&!simEnded&&(
+                      <button onClick={startSim} style={{
+                        flex:1,padding:"10px",background:"#ef4444",border:"none",
+                        borderRadius:8,color:"#fff",fontWeight:700,fontSize:13,
+                        cursor:"pointer",fontFamily:"inherit",
+                      }}>▶ {simMinute===0?"Start Simulation":"Resume"}</button>
+                    )}
+                    {simActive&&(
+                      <button onClick={stopSim} style={{
+                        flex:1,padding:"10px",background:"rgba(239,68,68,0.15)",
+                        border:"1px solid rgba(239,68,68,0.3)",borderRadius:8,
+                        color:"#ef4444",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",
+                      }}>⏸ Pause</button>
+                    )}
+                    {(simMinute>0)&&(
+                      <button onClick={startSim} style={{
+                        padding:"10px 14px",background:"rgba(255,255,255,0.05)",
+                        border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,
+                        color:"#666",fontSize:12,cursor:"pointer",fontFamily:"inherit",
+                      }}>↺ Restart</button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                {simMinute>0&&(
+                  <div style={{marginBottom:12}}>
+                    <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,overflow:"hidden"}}>
+                      <div style={{width:`${(simMinute/90)*100}%`,height:"100%",
+                        background:"#ef4444",borderRadius:2,transition:"width 0.5s"}}/>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#444",marginTop:2}}>
+                      <span>0'</span><span>45' HT</span><span>90'</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Events + Stats side by side */}
+                {simMinute>0&&(
+                  <div style={{display:"flex",gap:10,marginBottom:12}}>
+
+                    {/* Events */}
+                    <div style={{flex:1,background:"rgba(255,255,255,0.025)",
+                      border:"1px solid rgba(255,255,255,0.07)",borderRadius:10,padding:"10px"}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"#fcb900",marginBottom:8}}>📋 Events</div>
+                      {simEvents.filter(e=>e.type!=="End").length===0&&(
+                        <div style={{fontSize:10,color:"#333",textAlign:"center",padding:"8px 0"}}>No events yet</div>
+                      )}
+                      {simEvents.filter(e=>e.type!=="End").map((ev,i)=>{
+                        const icon = ev.type==="Goal"?"⚽":ev.type==="Card"?(ev.detail?.includes("Yellow")?"🟨":"🟥"):"🔄";
+                        const isHome = ev.side==="home";
+                        return(
+                          <div key={i} style={{display:"flex",alignItems:"flex-start",gap:5,
+                            padding:"4px 0",borderTop:i>0?"1px solid rgba(255,255,255,0.04)":"none",
+                            animation:"fadeIn 0.4s ease"}}>
+                            <span style={{fontSize:9,color:"#555",width:22,flexShrink:0,marginTop:1}}>{ev.min}'</span>
+                            <span style={{fontSize:11}}>{icon}</span>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontSize:10,fontWeight:600,
+                                color:isHome?"#fcb900":"#60a5fa",
+                                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"
+                              }}>{ev.player}</div>
+                              {ev.assist&&<div style={{fontSize:9,color:"#444"}}>↳ {ev.assist}</div>}
+                              {ev.type==="Sub"&&<div style={{fontSize:9,color:"#444"}}>↓ {ev.off}</div>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Stats */}
+                    {simStats&&(
+                      <div style={{flex:1,background:"rgba(255,255,255,0.025)",
+                        border:"1px solid rgba(255,255,255,0.07)",borderRadius:10,padding:"10px"}}>
+                        <div style={{fontSize:10,fontWeight:700,color:"#60a5fa",marginBottom:8}}>📊 Stats</div>
+                        {[
+                          {label:"Poss",h:`${simStats.possession.home}%`,a:`${simStats.possession.away}%`,hN:simStats.possession.home,aN:simStats.possession.away},
+                          {label:"Shots",h:simStats.shots.home,a:simStats.shots.away,hN:simStats.shots.home,aN:simStats.shots.away},
+                          {label:"On tgt",h:simStats.shotsOn.home,a:simStats.shotsOn.away,hN:simStats.shotsOn.home,aN:simStats.shotsOn.away},
+                          {label:"Corners",h:simStats.corners.home,a:simStats.corners.away,hN:simStats.corners.home,aN:simStats.corners.away},
+                          {label:"Fouls",h:simStats.fouls.home,a:simStats.fouls.away,hN:simStats.fouls.home,aN:simStats.fouls.away},
+                        ].map((s,i)=>{
+                          const total = s.hN+s.aN||1;
+                          return(
+                            <div key={i} style={{marginBottom:7}}>
+                              <div style={{display:"flex",justifyContent:"space-between",fontSize:9,marginBottom:2}}>
+                                <span style={{color:"#fcb900",fontWeight:700}}>{s.h}</span>
+                                <span style={{color:"#444"}}>{s.label}</span>
+                                <span style={{color:"#60a5fa",fontWeight:700}}>{s.a}</span>
+                              </div>
+                              <div style={{display:"flex",height:3,borderRadius:2,overflow:"hidden",background:"rgba(255,255,255,0.05)"}}>
+                                <div style={{width:`${(s.hN/total)*100}%`,background:"#fcb900",transition:"width 0.8s"}}/>
+                                <div style={{width:`${(s.aN/total)*100}%`,background:"#60a5fa",transition:"width 0.8s"}}/>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* AI Analysis */}
+                {simMinute>=20&&(
+                  <div style={{marginBottom:12}}>
+                    <button onClick={generateSimAnalysis} disabled={simAnalysisLoading} style={{
+                      width:"100%",padding:"10px 14px",
+                      background:simAnalysisLoading?"rgba(139,92,246,0.05)":"rgba(139,92,246,0.1)",
+                      border:"1px solid rgba(139,92,246,0.25)",borderRadius:8,
+                      color:"#a78bfa",fontSize:12,fontWeight:700,
+                      cursor:simAnalysisLoading?"wait":"pointer",
+                      fontFamily:"inherit",textAlign:"left",display:"flex",alignItems:"center",gap:8,
+                    }}>
+                      <span>{simAnalysisLoading?"⏳":"🤖"}</span>
+                      <span>{simAnalysisLoading?"Analysing match…":simAnalysis?"🔄 Refresh AI Analysis":"AI Match Analysis"}</span>
+                      <span style={{marginLeft:"auto",fontSize:10,color:"#6d5a9c",fontWeight:400}}>uses Anthropic API</span>
+                    </button>
+                    {simAnalysis&&!simAnalysisLoading&&(
+                      <div style={{marginTop:8,padding:"12px 14px",
+                        background:"rgba(139,92,246,0.06)",border:"1px solid rgba(139,92,246,0.15)",
+                        borderRadius:8,fontSize:12,color:"#c4b5fd",lineHeight:1.7,fontStyle:"italic"}}>
+                        {simAnalysis}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {simMinute===0&&(
+                  <div style={{textAlign:"center",padding:"20px",color:"#444",fontSize:12}}>
+                    Press ▶ Start Simulation to see how the live tab works on June 11
+                  </div>
+                )}
               </div>
-              <div style={{fontSize:12,color:"#444",marginTop:8}}>
-                The tournament starts June 11, 2026.<br/>
-                Live scores will appear here during matches.
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div style={{fontSize:10,color:"#333",textAlign:"center",marginTop:16}}>
             Powered by API-Football · Tap 🔄 Refresh to update · Free plan: 100 requests/day
