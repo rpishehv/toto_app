@@ -691,6 +691,7 @@ export default function App(){
   const [selectedFixture,setSelectedFixture]=useState(null);
   const [fixtureStats,setFixtureStats]=useState(null);
   const [fixtureEvents,setFixtureEvents]=useState([]);
+  const [fixtureLineups,setFixtureLineups]=useState([]);
   const [liveLastUpdated,setLiveLastUpdated]=useState(null);
   const [todayMatches,setTodayMatches]=useState([]);
   const [refreshCooldown,setRefreshCooldown]=useState(0); // seconds remaining
@@ -1117,14 +1118,19 @@ export default function App(){
   const fetchFixtureDetails = async (fixtureId) => {
     setFixtureStats(null);
     setFixtureEvents([]);
+    setFixtureLineups([]);
     try {
-      const [statsRes, eventsRes] = await Promise.all([
+      const [statsRes, eventsRes, lineupsRes] = await Promise.all([
         fetch(`/api/live?type=stats&fixtureId=${fixtureId}`),
         fetch(`/api/live?type=events&fixtureId=${fixtureId}`),
+        fetch(`/api/live?type=lineups&fixtureId=${fixtureId}`),
       ]);
-      const [stats, events] = await Promise.all([statsRes.json(), eventsRes.json()]);
+      const [stats, events, lineups] = await Promise.all([
+        statsRes.json(), eventsRes.json(), lineupsRes.json()
+      ]);
       setFixtureStats(stats.response || []);
       setFixtureEvents(events.response || []);
+      setFixtureLineups(lineups.response || []);
     } catch(e) {
       console.error('Fixture details error:', e);
     }
@@ -1229,6 +1235,122 @@ export default function App(){
       setWhatIfResult(data);
     } catch(e) { console.error('What-if error:', e); }
     setWhatIfLoading(false);
+  };
+
+  // ── FORMATION PITCH COMPONENT ───────────────────────────────────────────────
+  const FormationPitch = ({ homeTeam, awayTeam, homePlayers, awayPlayers,
+                            homeFormation, awayFormation, events=[], homeFlag, awayFlag }) => {
+    if (!homePlayers?.length && !awayPlayers?.length) return null;
+
+    // Apply substitutions from events
+    const applyEvents = (players, teamName, events) => {
+      let current = players.map(p => ({ ...p }));
+      const subs = events.filter(e =>
+        (e.type === "subst" || e.type === "Substitution") &&
+        e.team?.name === teamName
+      );
+      const reds = events.filter(e =>
+        e.type === "Card" && e.detail === "Red Card" &&
+        e.team?.name === teamName
+      );
+      // Apply subs
+      subs.forEach(sub => {
+        const outName = sub.player?.name || sub.assist?.name;
+        const inName  = sub.assist?.name || sub.player?.name;
+        const idx = current.findIndex(p => p.name === outName || p.player?.name === outName);
+        if (idx >= 0) {
+          current[idx] = { ...current[idx], name: inName, subbed: true };
+        }
+      });
+      // Apply red cards
+      reds.forEach(red => {
+        const name = red.player?.name;
+        const idx = current.findIndex(p => p.name === name || p.player?.name === name);
+        if (idx >= 0) current[idx] = { ...current[idx], redCard: true };
+      });
+      return current;
+    };
+
+    const homeCurrent = applyEvents(homePlayers, homeTeam, events);
+    const awayCurrent = applyEvents(awayPlayers, awayTeam, events);
+
+    const PW = 320, PH = 420;
+
+    const positionPlayers = (players, isHome) => {
+      // Group by grid row position
+      const byGrid = {};
+      players.forEach(p => {
+        const grid = p.grid || "1:1";
+        const row = parseInt(grid.split(":")[0]);
+        if (!byGrid[row]) byGrid[row] = [];
+        byGrid[row].push(p);
+      });
+      const rows = Object.keys(byGrid).sort((a,b)=>parseInt(a)-parseInt(b));
+      const positioned = [];
+      rows.forEach((row, ri) => {
+        const rowPlayers = byGrid[row];
+        const totalRows = rows.length;
+        // For home: row 1 = GK near top, last row = attackers near centre
+        // For away: mirror vertically
+        const yPct = isHome
+          ? 8 + (ri / (totalRows-1)) * 42
+          : 92 - (ri / (totalRows-1)) * 42;
+        rowPlayers.forEach((p, pi) => {
+          const xPct = rowPlayers.length === 1
+            ? 50
+            : 15 + (pi / (rowPlayers.length-1)) * 70;
+          positioned.push({ ...p, xPct, yPct });
+        });
+      });
+      return positioned;
+    };
+
+    const toX = xPct => 20 + xPct/100 * (PW-40);
+    const toY = yPct => 10 + yPct/100 * PH;
+
+    const renderDot = (p, color, textColor) => {
+      const x = toX(p.xPct);
+      const y = toY(p.yPct);
+      const name = (p.name || p.player?.name || "").split(" ").slice(-1)[0];
+      const fill = p.redCard ? "#ef4444" : color;
+      const opacity = p.redCard ? 0.3 : 1;
+      return (
+        `<g opacity="${opacity}">` +
+        `<circle cx="${x}" cy="${y}" r="13" fill="${fill}" stroke="rgba(0,0,0,0.4)" stroke-width="1.5"/>` +
+        `<text x="${x}" y="${y+4}" text-anchor="middle" fill="${textColor}" font-size="8" font-weight="700" font-family="system-ui">${p.number||""}</text>` +
+        (p.subbed ? `<circle cx="${x+10}" cy="${y-10}" r="5" fill="#22c55e" stroke="#000" stroke-width="0.5"/>` : "") +
+        (p.redCard ? `<text x="${x+10}" y="${y-8}" text-anchor="middle" font-size="10" font-family="system-ui">🟥</text>` : "") +
+        `<text x="${x}" y="${y+22}" text-anchor="middle" fill="${color}" font-size="7.5" font-family="system-ui">${name}</text>` +
+        `</g>`
+      );
+    };
+
+    const homePos = positionPlayers(homeCurrent, true);
+    const awayPos = positionPlayers(awayCurrent, false);
+
+    const svg = `<svg width="100%" viewBox="0 0 ${PW} ${PH+30}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="10" width="${PW-40}" height="${PH}" rx="4" fill="#1a4a2e" stroke="#2d6b45" stroke-width="0.5"/>
+      <rect x="20" y="10" width="${PW-40}" height="${PH}" rx="4" fill="none" stroke="#2d6b45" stroke-width="1.5"/>
+      <line x1="20" y1="${10+PH/2}" x2="${PW-20}" y2="${10+PH/2}" stroke="#2d6b45" stroke-width="1"/>
+      <circle cx="${PW/2}" cy="${10+PH/2}" r="35" fill="none" stroke="#2d6b45" stroke-width="1"/>
+      <rect x="${PW/2-80}" y="10" width="160" height="55" fill="none" stroke="#2d6b45" stroke-width="1"/>
+      <rect x="${PW/2-80}" y="${10+PH-55}" width="160" height="55" fill="none" stroke="#2d6b45" stroke-width="1"/>
+      <text x="${PW/2}" y="8" text-anchor="middle" fill="#fcb900" font-size="9" font-weight="700" font-family="system-ui">${homeFlag} ${homeTeam} ${homeFormation||""}</text>
+      ${homePos.map(p=>renderDot(p,"#fcb900","#000")).join("")}
+      ${awayPos.map(p=>renderDot(p,"#22c55e","#000")).join("")}
+      <text x="${PW/2}" y="${PH+26}" text-anchor="middle" fill="#22c55e" font-size="9" font-weight="700" font-family="system-ui">${awayFlag} ${awayTeam} ${awayFormation||""}</text>
+    </svg>`;
+
+    return (
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:10,fontWeight:700,color:"#555",marginBottom:6,letterSpacing:1}}>⚽ FORMATIONS</div>
+        <div dangerouslySetInnerHTML={{__html:svg}}/>
+        <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:4}}>
+          <span style={{fontSize:9,color:"#444"}}>🟥 = red card</span>
+          <span style={{fontSize:9,color:"#444"}}>🟢 = subbed on</span>
+        </div>
+      </div>
+    );
   };
 
   // ── WIN PROBABILITY ENGINE ──────────────────────────────────────────────────
@@ -3403,6 +3525,29 @@ export default function App(){
                         background:"rgba(255,255,255,0.025)",borderRadius:10,
                         border:"1px solid rgba(255,255,255,0.07)"}}>
 
+                        {/* Formation pitch from live lineup data */}
+                        {fixtureLineups.length>=2&&(()=>{
+                          const homeLineup = fixtureLineups[0];
+                          const awayLineup = fixtureLineups[1];
+                          return <FormationPitch
+                            homeTeam={homeLineup?.team?.name}
+                            awayTeam={awayLineup?.team?.name}
+                            homeFormation={homeLineup?.formation}
+                            awayFormation={awayLineup?.formation}
+                            homePlayers={homeLineup?.startXI?.map(p=>({
+                              ...p.player, grid:p.player?.grid,
+                              number:p.player?.number, name:p.player?.name,
+                            }))}
+                            awayPlayers={awayLineup?.startXI?.map(p=>({
+                              ...p.player, grid:p.player?.grid,
+                              number:p.player?.number, name:p.player?.name,
+                            }))}
+                            events={fixtureEvents}
+                            homeFlag={FLAGS[homeLineup?.team?.name]||"🏳️"}
+                            awayFlag={FLAGS[awayLineup?.team?.name]||"🏳️"}
+                          />;
+                        })()}
+
                         {/* Win probability bar */}
                         {(()=>{
                           const prob = calcWinProbability(
@@ -3819,6 +3964,55 @@ export default function App(){
                     )}
                   </div>
                 )}
+
+                {/* Formation graphic — updates on subs and red cards */}
+                {simMinute>0&&(()=>{
+                  // Mexico 4-3-3 starting XI with grid positions (row:col)
+                  const mexStart = [
+                    {name:"Ochoa",     number:13, grid:"1:1"},
+                    {name:"Gallardo",  number:23, grid:"2:1"},
+                    {name:"Montes",    number:3,  grid:"2:2"},
+                    {name:"Sanchez",   number:4,  grid:"2:3"},
+                    {name:"Arteaga",   number:2,  grid:"2:4"},
+                    {name:"Guardado",  number:18, grid:"3:1"},
+                    {name:"Herrera",   number:16, grid:"3:2"},
+                    {name:"Alvarez",   number:14, grid:"3:3"},
+                    {name:"Vega",      number:11, grid:"4:1"},
+                    {name:"Lozano",    number:22, grid:"4:2"},
+                    {name:"Martin",    number:9,  grid:"4:3"},
+                  ];
+                  // South Africa 4-4-2 starting XI
+                  const saStart = [
+                    {name:"Williams",   number:1,  grid:"1:1"},
+                    {name:"Mokoena",    number:5,  grid:"2:1"},
+                    {name:"Hlathi",     number:6,  grid:"2:2"},
+                    {name:"Hlatshwayo",number:15, grid:"2:3"},
+                    {name:"Mudau",      number:2,  grid:"2:4"},
+                    {name:"Tau",        number:10, grid:"3:1"},
+                    {name:"Shalulile",  number:8,  grid:"3:2"},
+                    {name:"Dolly",      number:11, grid:"3:3"},
+                    {name:"Mthembu",    number:7,  grid:"3:4"},
+                    {name:"Manyama",    number:9,  grid:"4:1"},
+                    {name:"Zwane",      number:17, grid:"4:2"},
+                  ];
+
+                  // Map sim events to FormationPitch event format
+                  const liveEvents = simEvents.filter(e=>e.type!=="End").map(e=>({
+                    type: e.type==="Sub" ? "Substitution" : e.type,
+                    detail: e.detail,
+                    team:{ name: e.side==="home" ? "Mexico" : "South Africa" },
+                    player:{ name: e.type==="Sub" ? e.player : e.player },
+                    assist:{ name: e.type==="Sub" ? e.off : null },
+                  }));
+
+                  return <FormationPitch
+                    homeTeam="Mexico"    awayTeam="South Africa"
+                    homeFormation="4-3-3" awayFormation="4-4-2"
+                    homePlayers={mexStart} awayPlayers={saStart}
+                    events={liveEvents}
+                    homeFlag="🇲🇽" awayFlag="🇿🇦"
+                  />;
+                })()}
 
                 {/* AI Analysis */}
                 {simMinute>=20&&(

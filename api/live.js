@@ -27,6 +27,8 @@ export default async function handler(req) {
   } else if (type === 'today') {
     const today = new Date().toISOString().split('T')[0];
     endpoint = `${BASE}/fixtures?date=${today}&league=${LEAGUE}&season=${SEASON}`;
+  } else if (type === 'lineups' && fixtureId) {
+    endpoint = `${BASE}/fixtures/lineups?fixture=${fixtureId}`;
   } else if (type === 'stats' && fixtureId) {
     endpoint = `${BASE}/fixtures/statistics?fixture=${fixtureId}`;
   } else if (type === 'events' && fixtureId) {
