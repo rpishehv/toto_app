@@ -569,29 +569,27 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
     <div style={{
       background:locked?"rgba(239,68,68,0.04)":done?"rgba(252,185,0,0.05)":"rgba(255,255,255,0.025)",
       border:`1px solid ${locked?"rgba(239,68,68,0.2)":done?"rgba(252,185,0,0.2)":"rgba(255,255,255,0.07)"}`,
-      borderRadius:11,padding:"10px 10px",marginBottom:8,
+      borderRadius:11,padding:"10px 13px",marginBottom:8,
     }}>
-      <div style={{display:"flex",alignItems:"center",gap:5}}>
-        <span style={{fontSize:16,flexShrink:0}}>{FLAGS[match.home]||"🏳️"}</span>
-        <span style={{flex:1,fontWeight:600,fontSize:11,color:winner===match.home?"#fcb900":locked?"#888":"#ddd",
-          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>{match.home}</span>
-        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,flexShrink:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:3}}>
+      <div style={{display:"flex",alignItems:"center",gap:7}}>
+        <span style={{fontSize:17}}>{FLAGS[match.home]||"🏳️"}</span>
+        <span style={{flex:1,fontWeight:600,fontSize:12,color:winner===match.home?"#fcb900":locked?"#888":"#ddd"}}>{match.home}</span>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+          <div style={{display:"flex",alignItems:"center",gap:4}}>
             <ScoreInput value={match.homeScore} onChange={v=>onUpdate({...match,homeScore:v})} readOnly={locked}/>
-            <span style={{color:"#444",fontWeight:700,fontSize:11}}>–</span>
+            <span style={{color:"#444",fontWeight:700,fontSize:12}}>–</span>
             <ScoreInput value={match.awayScore} onChange={v=>onUpdate({...match,awayScore:v})} readOnly={locked}/>
           </div>
-          {actDone&&<div style={{fontSize:9,color:"#555",fontFamily:"monospace"}}>{actual.homeScore}–{actual.awayScore}</div>}
-          {!locked&&countdown&&<div style={{fontSize:9,color:"#60a5fa"}}>⏱ {countdown}</div>}
+          {actDone&&<div style={{fontSize:10,color:"#555",fontFamily:"monospace"}}>actual: {actual.homeScore}–{actual.awayScore}</div>}
+          {!locked&&countdown&&<div style={{fontSize:10,color:"#60a5fa"}}>⏱ locks in {countdown}</div>}
         </div>
-        <span style={{flex:1,textAlign:"right",fontWeight:600,fontSize:11,color:winner===match.away?"#fcb900":locked?"#888":"#ddd",
-          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>{match.away}</span>
-        <span style={{fontSize:16,flexShrink:0}}>{FLAGS[match.away]||"🏳️"}</span>
-        {locked&&!result&&<span style={{fontSize:11,flexShrink:0}}>🔒</span>}
+        <span style={{flex:1,textAlign:"right",fontWeight:600,fontSize:12,color:winner===match.away?"#fcb900":locked?"#888":"#ddd"}}>{match.away}</span>
+        <span style={{fontSize:17}}>{FLAGS[match.away]||"🏳️"}</span>
+        {locked&&!result&&<span style={{fontSize:12,flexShrink:0}}>🔒</span>}
         {result&&<PointsBadge result={result}/>}
         {aiPred&&!locked&&(
           <button onClick={()=>setShowAI(p=>!p)} style={{
-            flexShrink:0,padding:"2px 6px",background:"rgba(139,92,246,0.12)",
+            flexShrink:0,padding:"2px 7px",background:"rgba(139,92,246,0.12)",
             border:"1px solid rgba(139,92,246,0.3)",borderRadius:5,
             color:"#a78bfa",fontSize:10,cursor:"pointer",fontFamily:"inherit",fontWeight:700,
           }}>🤖</button>
@@ -1833,16 +1831,12 @@ export default function App(){
   }
 
   const TABS=[
-    {id:"groups",   label:"⚽",  full:"⚽ Groups"},
-    {id:"knockout", label:"🏆",  full:"🏆 Knockout"},
-    {id:"champion", label:"👑",  full:"👑 My Pick"},
-    {id:"scoring",  label:"📊",  full:"📊 Scoring"},
-    {id:"leaderboard",label:"🥇",full:"🥇 Board"},
-    {id:"stats",    label:"📈",  full:"📈 Stats"},
-    {id:"live",     label:"🔴",  full:"🔴 Live"},
-    {id:"ai",       label:"🤖",  full:"🤖 AI"},
-    {id:"admin",    label:"🔧",  full:"🔧 Admin"},
-    {id:"help",     label:"❓",  full:"❓ Help"},
+    {id:"groups",label:"⚽ Groups"},{id:"knockout",label:"🏆 Knockout"},
+    {id:"champion",label:"👑 My Pick"},{id:"scoring",label:"📊 Scoring"},
+    {id:"leaderboard",label:"🥇 Board"},{id:"stats",label:"📈 Stats"},
+    {id:"live",label:"🔴 Live"},{id:"ai",label:"🤖 AI"},
+    {id:"admin",label:"🔧 Admin"},
+    {id:"help",label:"❓ Help"},
   ];
 
   return(
@@ -1852,16 +1846,11 @@ export default function App(){
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;700&display=swap');
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button{opacity:1;}
-        ::-webkit-scrollbar{width:4px;height:4px}
+        ::-webkit-scrollbar{width:4px}
         ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:4px}
-        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-        body{-webkit-text-size-adjust:100%;overscroll-behavior:none}
-        select{-webkit-appearance:auto}
-        button{touch-action:manipulation}
+        *{box-sizing:border-box}
       `}</style>
 
       {/* Global error banner — shows if any async error occurs */}
@@ -1940,44 +1929,43 @@ export default function App(){
       )}
 
       {/* HEADER */}
-      <div style={{background:"rgba(0,0,0,0.4)",backdropFilter:"blur(14px)",
-        position:"sticky",top:0,zIndex:100,borderBottom:"1px solid rgba(255,255,255,0.07)"}}>
-        {/* Main header row */}
-        <div style={{padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:18}}>⚽</span>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:2,color:"#fcb900",lineHeight:1}}>FIFA 2026</div>
+      <div style={{padding:"12px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",
+        borderBottom:"1px solid rgba(255,255,255,0.07)",background:"rgba(0,0,0,0.4)",
+        backdropFilter:"blur(14px)",position:"sticky",top:0,zIndex:100}}>
+        <div style={{display:"flex",alignItems:"center",gap:9}}>
+          <span style={{fontSize:20}}>⚽</span>
+          <div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,letterSpacing:2,color:"#fcb900",lineHeight:1}}>FIFA 2026</div>
             <div style={{fontSize:9,color:"#444"}}>Prediction Challenge</div>
           </div>
-          {myPts>0&&<div style={{background:"rgba(252,185,0,0.12)",border:"1px solid rgba(252,185,0,0.28)",
-            borderRadius:7,padding:"3px 9px",fontSize:11,fontWeight:700,color:"#fcb900",flexShrink:0}}>🏅 {myPts}pts</div>}
-          <span style={{fontSize:10,color:"#444",flexShrink:0,maxWidth:70,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>👤 {userName}</span>
-          <button onClick={savePreds} style={{padding:"6px 14px",background:saved?"#22c55e":"#fcb900",
-            border:"none",borderRadius:7,color:"#000",fontWeight:700,fontSize:12,cursor:"pointer",
-            transition:"all 0.3s",fontFamily:"inherit",flexShrink:0}}>{saved?"✓":"Save"}</button>
         </div>
-        {/* Action row */}
-        <div style={{padding:"0 14px 8px",display:"flex",gap:6}}>
+        <div style={{display:"flex",alignItems:"center",gap:9}}>
+          {myPts>0&&<div style={{background:"rgba(252,185,0,0.12)",border:"1px solid rgba(252,185,0,0.28)",
+            borderRadius:7,padding:"3px 11px",fontSize:12,fontWeight:700,color:"#fcb900"}}>🏅 {myPts} pts</div>}
+          <span style={{fontSize:11,color:"#444"}}>👤 {userName}</span>
+          <button onClick={()=>{clearSession();setUserName("");setNameInput("");setPinInput("");setPinConfirm("");setPinStep("name");setPinError("");}} style={{
+            padding:"5px 10px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",
+            borderRadius:6,color:"#555",fontSize:11,cursor:"pointer",fontFamily:"inherit",
+          }}>↩ Logout</button>
           <button onClick={exportPredictions} style={{
-            padding:"4px 9px",background:"transparent",border:"1px solid rgba(96,165,250,0.3)",
-            borderRadius:6,color:"#60a5fa",fontSize:10,cursor:"pointer",fontFamily:"inherit",
+            padding:"5px 10px",background:"transparent",border:"1px solid rgba(96,165,250,0.3)",
+            borderRadius:6,color:"#60a5fa",fontSize:11,cursor:"pointer",fontFamily:"inherit",
           }}>📤 Export</button>
           <button onClick={()=>setShowImport(p=>!p)} style={{
-            padding:"4px 9px",background:"transparent",border:"1px solid rgba(252,185,0,0.3)",
-            borderRadius:6,color:"#fcb900",fontSize:10,cursor:"pointer",fontFamily:"inherit",
+            padding:"5px 10px",background:"transparent",border:"1px solid rgba(252,185,0,0.3)",
+            borderRadius:6,color:"#fcb900",fontSize:11,cursor:"pointer",fontFamily:"inherit",
           }}>📥 Import</button>
           <button onClick={()=>setShowUserResetConfirm(true)} style={{
-            padding:"4px 9px",background:"transparent",border:"1px solid rgba(239,68,68,0.3)",
-            borderRadius:6,color:"#ef4444",fontSize:10,cursor:"pointer",fontFamily:"inherit",
+            padding:"5px 10px",background:"transparent",border:"1px solid rgba(239,68,68,0.3)",
+            borderRadius:6,color:"#ef4444",fontSize:11,cursor:"pointer",fontFamily:"inherit",
           }}>🗑 Reset</button>
-          <button onClick={()=>{clearSession();setUserName("");setNameInput("");setPinInput("");setPinConfirm("");setPinStep("name");setPinError("");}} style={{
-            padding:"4px 9px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",
-            borderRadius:6,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit",marginLeft:"auto",
-          }}>↩ Logout</button>
+          <button onClick={savePreds} style={{padding:"7px 15px",background:saved?"#22c55e":"#fcb900",
+            border:"none",borderRadius:7,color:"#000",fontWeight:700,fontSize:12,cursor:"pointer",
+            transition:"all 0.3s",fontFamily:"inherit"}}>{saved?"✓ Saved!":"Save"}</button>
         </div>
         {/* Prediction completion bar */}
         {predictionCount.total>0&&(
-          <div style={{padding:"0 14px 8px",display:"flex",alignItems:"center",gap:8}}>
+          <div style={{padding:"6px 16px 0",display:"flex",alignItems:"center",gap:8}}>
             <div style={{flex:1,height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,overflow:"hidden"}}>
               <div style={{
                 width:`${Math.round(predictionCount.done/predictionCount.total*100)}%`,
@@ -1986,7 +1974,7 @@ export default function App(){
               }}/>
             </div>
             <div style={{fontSize:10,color:predictionCount.done===predictionCount.total?"#22c55e":"#555",flexShrink:0}}>
-              {predictionCount.done}/{predictionCount.total}
+              {predictionCount.done}/{predictionCount.total} predicted
               {predictionCount.done<predictionCount.total&&" ⚠️"}
             </div>
           </div>
@@ -2090,26 +2078,18 @@ export default function App(){
       )}
 
       {/* TABS */}
-      <div style={{display:"flex",borderBottom:"1px solid rgba(255,255,255,0.07)",
-        background:"rgba(0,0,0,0.22)",overflowX:"auto",
-        WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
+      <div style={{display:"flex",borderBottom:"1px solid rgba(255,255,255,0.07)",background:"rgba(0,0,0,0.22)",overflowX:"auto"}}>
         {TABS.map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)} style={{
-            flexShrink:0,
-            padding: tab===t.id ? "10px 12px" : "10px 8px",
-            background:"transparent",border:"none",
+            flex:1,minWidth:70,padding:"12px 4px",background:"transparent",border:"none",
             borderBottom:`2px solid ${tab===t.id?"#fcb900":"transparent"}`,
-            color:tab===t.id?"#fcb900":"#555",
-            fontSize: tab===t.id ? 11 : 16,
-            fontWeight:600,
+            color:tab===t.id?"#fcb900":"#555",fontSize:11,fontWeight:600,
             cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",whiteSpace:"nowrap",
-          }}>
-            {tab===t.id ? t.full : t.label}
-          </button>
+          }}>{t.label}</button>
         ))}
       </div>
 
-      <div style={{maxWidth:820,margin:"0 auto",padding:"16px 12px"}}>
+      <div style={{maxWidth:820,margin:"0 auto",padding:"20px 13px"}}>
 
         {/* ── GROUPS ── */}
         {tab==="groups"&&<div>
