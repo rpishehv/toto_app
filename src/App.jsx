@@ -3490,320 +3490,247 @@ export default function App(){
                 display:"flex",alignItems:"center",gap:6}}>
                 <div style={{width:7,height:7,borderRadius:"50%",background:"#ef4444",
                   animation:"pulse 1.5s ease infinite"}}/>
-                LIVE NOW
+                LIVE NOW — {liveMatches.length} match{liveMatches.length>1?"es":""} in progress
               </div>
-              {liveMatches.map(f=>{
-                const home = f.teams?.home;
-                const away = f.teams?.away;
-                const score = f.goals;
-                const status = f.fixture?.status;
-                const isSelected = selectedFixture?.fixture?.id===f.fixture?.id;
-                return(
-                  <div key={f.fixture?.id}>
-                    <div onClick={()=>{
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+                {liveMatches.map(f=>{
+                  const home=f.teams?.home, away=f.teams?.away;
+                  const score=f.goals, status=f.fixture?.status;
+                  const isSelected=selectedFixture?.fixture?.id===f.fixture?.id;
+                  return(
+                    <div key={f.fixture?.id} onClick={()=>{
                       if(isSelected){setSelectedFixture(null);return;}
-                      setSelectedFixture(f);
-                      fetchFixtureDetails(f.fixture?.id);
+                      setSelectedFixture(f); fetchFixtureDetails(f.fixture?.id);
                     }} style={{
-                      display:"flex",alignItems:"center",gap:10,
-                      padding:"14px",marginBottom:8,borderRadius:11,cursor:"pointer",
-                      background:isSelected?"rgba(239,68,68,0.08)":"rgba(239,68,68,0.04)",
-                      border:`1px solid ${isSelected?"rgba(239,68,68,0.35)":"rgba(239,68,68,0.15)"}`,
+                      padding:"10px",borderRadius:10,cursor:"pointer",
+                      background:isSelected?"rgba(239,68,68,0.1)":"rgba(239,68,68,0.04)",
+                      border:`1.5px solid ${isSelected?"#ef4444":"rgba(239,68,68,0.15)"}`,
                     }}>
-                      <div style={{flex:1}}>
-                        <div style={{display:"flex",alignItems:"center",gap:8}}>
-                          <span style={{fontSize:13}}>{FLAGS[home?.name]||"🏳️"}</span>
-                          <span style={{fontWeight:700,fontSize:13,
-                            color:score?.home>score?.away?"#fcb900":"#ccc"}}>{home?.name}</span>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                        <div style={{display:"flex",alignItems:"center",gap:4}}>
+                          <div style={{width:5,height:5,borderRadius:"50%",background:"#ef4444",animation:"pulse 1.5s ease infinite"}}/>
+                          <span style={{fontSize:10,color:"#ef4444",fontWeight:700}}>
+                            {status?.elapsed?`${status.elapsed}'`:status?.short}
+                          </span>
                         </div>
-                        <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}>
-                          <span style={{fontSize:13}}>{FLAGS[away?.name]||"🏳️"}</span>
-                          <span style={{fontWeight:700,fontSize:13,
-                            color:score?.away>score?.home?"#fcb900":"#ccc"}}>{away?.name}</span>
+                        {isSelected&&<span style={{fontSize:9,color:"#555"}}>tap to close</span>}
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                        <div style={{display:"flex",alignItems:"center",gap:5,minWidth:0}}>
+                          <span style={{fontSize:14,flexShrink:0}}>{FLAGS[home?.name]||"🏳️"}</span>
+                          <span style={{fontSize:10,fontWeight:700,color:score?.home>score?.away?"#fcb900":"#ccc",
+                            overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                            {home?.name?.split(" ")[0]}
+                          </span>
+                        </div>
+                        <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,
+                          color:score?.home>score?.away?"#fcb900":"#fff",flexShrink:0}}>{score?.home??"-"}</span>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:5,minWidth:0}}>
+                          <span style={{fontSize:14,flexShrink:0}}>{FLAGS[away?.name]||"🏳️"}</span>
+                          <span style={{fontSize:10,fontWeight:700,color:score?.away>score?.home?"#fcb900":"#ccc",
+                            overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                            {away?.name?.split(" ")[0]}
+                          </span>
+                        </div>
+                        <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,
+                          color:score?.away>score?.home?"#fcb900":"#fff",flexShrink:0}}>{score?.away??"-"}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {selectedFixture&&(()=>{
+                const f=selectedFixture;
+                const home=f.teams?.home, away=f.teams?.away;
+                const score=f.goals, status=f.fixture?.status, id=f.fixture?.id;
+                const analysis=matchAnalysis[id];
+                return(
+                  <div style={{marginBottom:12,padding:"14px",
+                    background:"rgba(255,255,255,0.025)",borderRadius:12,
+                    border:"1px solid rgba(239,68,68,0.2)"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                      <div style={{flex:1}}>
+                        <div style={{display:"flex",alignItems:"center",gap:7}}>
+                          <span style={{fontSize:16}}>{FLAGS[home?.name]||"🏳️"}</span>
+                          <span style={{fontWeight:700,fontSize:13,color:score?.home>score?.away?"#fcb900":"#ccc"}}>{home?.name}</span>
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:7,marginTop:5}}>
+                          <span style={{fontSize:16}}>{FLAGS[away?.name]||"🏳️"}</span>
+                          <span style={{fontWeight:700,fontSize:13,color:score?.away>score?.home?"#fcb900":"#ccc"}}>{away?.name}</span>
                         </div>
                       </div>
                       <div style={{textAlign:"center"}}>
-                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,
-                          color:"#fff",lineHeight:1,letterSpacing:2}}>
-                          {score?.home ?? "-"} – {score?.away ?? "-"}
+                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:36,color:"#fff",lineHeight:1,letterSpacing:3}}>
+                          {score?.home??"-"} – {score?.away??"-"}
                         </div>
                         <div style={{fontSize:10,color:"#ef4444",fontWeight:700,marginTop:2}}>
-                          {status?.elapsed ? `${status.elapsed}'` : status?.short}
+                          {status?.elapsed?`${status.elapsed}'`:status?.short}
                         </div>
                       </div>
-                      <div style={{fontSize:10,color:"#555",textAlign:"right"}}>
-                        {isSelected?"▲":"▼"}
-                      </div>
                     </div>
-
-                    {/* Expanded match details */}
-                    {isSelected&&(
-                      <div style={{marginBottom:12,padding:"14px",
-                        background:"rgba(255,255,255,0.025)",borderRadius:10,
-                        border:"1px solid rgba(255,255,255,0.07)"}}>
-
-                        {/* Formation pitch from live lineup data */}
-                        {fixtureLineups.length>=2&&(()=>{
-                          const homeLineup = fixtureLineups[0];
-                          const awayLineup = fixtureLineups[1];
-                          return <FormationPitch
-                            homeTeam={homeLineup?.team?.name}
-                            awayTeam={awayLineup?.team?.name}
-                            homeFormation={homeLineup?.formation}
-                            awayFormation={awayLineup?.formation}
-                            homePlayers={homeLineup?.startXI?.map(p=>({
-                              ...p.player, grid:p.player?.grid,
-                              number:p.player?.number, name:p.player?.name,
-                            }))}
-                            awayPlayers={awayLineup?.startXI?.map(p=>({
-                              ...p.player, grid:p.player?.grid,
-                              number:p.player?.number, name:p.player?.name,
-                            }))}
-                            events={fixtureEvents}
-                            homeFlag={FLAGS[homeLineup?.team?.name]||"🏳️"}
-                            awayFlag={FLAGS[awayLineup?.team?.name]||"🏳️"}
-                          />;
-                        })()}
-
-                        {/* Win probability bar */}
-                        {(()=>{
-                          const prob = calcWinProbability(
-                            score?.home||0, score?.away||0,
-                            f.fixture?.status?.elapsed||0,
-                            fixtureEvents, fixtureStats.length>=2 ? {
-                              possession:{ home: parseInt(fixtureStats[0]?.statistics?.find(s=>s.type==="Ball Possession")?.value)||50 }
-                            } : null
-                          );
-                          return <WinProbBar
-                            home={prob.home} away={prob.away} draw={prob.draw}
-                            homeName={home?.name} awayName={away?.name}
-                            homeFlag={FLAGS[home?.name]||"🏳️"} awayFlag={FLAGS[away?.name]||"🏳️"}
-                          />;
-                        })()}
-
-                        {/* Events timeline */}
-                        {fixtureEvents.length>0&&(
-                          <div style={{marginBottom:14}}>
-                            <div style={{fontSize:11,fontWeight:700,color:"#fcb900",marginBottom:8}}>
-                              📋 Match Events
-                            </div>
-                            {fixtureEvents.map((ev,i)=>{
-                              const isHome = ev.team?.id===home?.id;
-                              const icon = ev.type==="Goal"?"⚽":ev.type==="Card"?
-                                (ev.detail==="Yellow Card"?"🟨":"🟥"):"🔄";
-                              return(
-                                <div key={i} style={{display:"flex",alignItems:"center",gap:8,
-                                  padding:"5px 0",borderTop:i>0?"1px solid rgba(255,255,255,0.04)":"none"}}>
-                                  <span style={{fontSize:10,color:"#555",width:28,textAlign:"center",flexShrink:0}}>
-                                    {ev.time?.elapsed}'
-                                  </span>
-                                  {!isHome&&<div style={{flex:1}}/>}
-                                  <span style={{fontSize:12}}>{icon}</span>
-                                  <div style={{flex:1}}>
-                                    <div style={{fontSize:11,fontWeight:600}}>{ev.player?.name}</div>
-                                    {ev.assist?.name&&ev.type==="Goal"&&(
-                                      <div style={{fontSize:10,color:"#555"}}>Assist: {ev.assist.name}</div>
-                                    )}
-                                    {ev.detail&&ev.type!=="Goal"&&(
-                                      <div style={{fontSize:10,color:"#555"}}>{ev.detail}</div>
-                                    )}
-                                  </div>
-                                  {isHome&&<div style={{flex:1}}/>}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {/* Match stats */}
-                        {fixtureStats.length>=2&&(()=>{
-                          const homeStats = fixtureStats[0]?.statistics||[];
-                          const awayStats = fixtureStats[1]?.statistics||[];
-                          const keyStats = ["Ball Possession","Total Shots","Shots on Goal",
-                            "Corner Kicks","Fouls","Yellow Cards"];
+                    {fixtureLineups.length>=2&&(()=>{
+                      const hl=fixtureLineups[0], al=fixtureLineups[1];
+                      return <FormationPitch
+                        homeTeam={hl?.team?.name} awayTeam={al?.team?.name}
+                        homeFormation={hl?.formation} awayFormation={al?.formation}
+                        homePlayers={hl?.startXI?.map(p=>({...p.player,grid:p.player?.grid,number:p.player?.number,name:p.player?.name}))}
+                        awayPlayers={al?.startXI?.map(p=>({...p.player,grid:p.player?.grid,number:p.player?.number,name:p.player?.name}))}
+                        events={fixtureEvents}
+                        homeFlag={FLAGS[hl?.team?.name]||"🏳️"} awayFlag={FLAGS[al?.team?.name]||"🏳️"}
+                      />;
+                    })()}
+                    {(()=>{
+                      const prob=calcWinProbability(score?.home||0,score?.away||0,
+                        f.fixture?.status?.elapsed||0,fixtureEvents,
+                        fixtureStats?.length>=2?{possession:{home:parseInt(fixtureStats[0]?.statistics?.find(s=>s.type==="Ball Possession")?.value)||50}}:null);
+                      return <WinProbBar home={prob.home} away={prob.away} draw={prob.draw}
+                        homeName={home?.name} awayName={away?.name}
+                        homeFlag={FLAGS[home?.name]||"🏳️"} awayFlag={FLAGS[away?.name]||"🏳️"}/>;
+                    })()}
+                    {fixtureEvents.length>0&&(
+                      <div style={{marginBottom:14}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"#fcb900",marginBottom:8}}>📋 Match Events</div>
+                        {fixtureEvents.map((ev,i)=>{
+                          const isHome=ev.team?.id===home?.id;
+                          const icon=ev.type==="Goal"?"⚽":ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):"🔄";
                           return(
-                            <div>
-                              <div style={{fontSize:11,fontWeight:700,color:"#60a5fa",marginBottom:8}}>
-                                📊 Match Stats
+                            <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",
+                              borderTop:i>0?"1px solid rgba(255,255,255,0.04)":"none"}}>
+                              <span style={{fontSize:10,color:"#555",width:28,textAlign:"center",flexShrink:0}}>{ev.time?.elapsed}'</span>
+                              {!isHome&&<div style={{flex:1}}/>}
+                              <span style={{fontSize:12}}>{icon}</span>
+                              <div style={{flex:1}}>
+                                <div style={{fontSize:11,fontWeight:600}}>{ev.player?.name}</div>
+                                {ev.assist?.name&&ev.type==="Goal"&&<div style={{fontSize:10,color:"#555"}}>Assist: {ev.assist.name}</div>}
                               </div>
-                              <div style={{display:"flex",justifyContent:"space-between",
-                                marginBottom:8,fontSize:10,color:"#555"}}>
-                                <span style={{fontWeight:700,color:"#ccc"}}>{home?.name}</span>
-                                <span style={{fontWeight:700,color:"#ccc"}}>{away?.name}</span>
-                              </div>
-                              {keyStats.map(statName=>{
-                                const hStat = homeStats.find(s=>s.type===statName);
-                                const aStat = awayStats.find(s=>s.type===statName);
-                                if(!hStat&&!aStat) return null;
-                                const hVal = hStat?.value||0;
-                                const aVal = aStat?.value||0;
-                                const hNum = parseInt(String(hVal).replace("%",""))||0;
-                                const aNum = parseInt(String(aVal).replace("%",""))||0;
-                                const total = hNum+aNum||1;
-                                return(
-                                  <div key={statName} style={{marginBottom:8}}>
-                                    <div style={{display:"flex",justifyContent:"space-between",
-                                      fontSize:10,marginBottom:3}}>
-                                      <span style={{color:"#fcb900",fontWeight:700}}>{hVal}</span>
-                                      <span style={{color:"#555",fontSize:9}}>{statName}</span>
-                                      <span style={{color:"#60a5fa",fontWeight:700}}>{aVal}</span>
-                                    </div>
-                                    <div style={{display:"flex",height:4,borderRadius:2,overflow:"hidden",
-                                      background:"rgba(255,255,255,0.05)"}}>
-                                      <div style={{width:`${(hNum/total)*100}%`,
-                                        background:"#fcb900",borderRadius:"2px 0 0 2px"}}/>
-                                      <div style={{width:`${(aNum/total)*100}%`,
-                                        background:"#60a5fa",borderRadius:"0 2px 2px 0"}}/>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                              {isHome&&<div style={{flex:1}}/>}
                             </div>
                           );
-                        })()}
-
-                        {/* Your prediction for this match */}
-                        {(()=>{
-                          const nm = home?.name; const am = away?.name;
-                          const pred = matches.find(m=>
-                            (m.home===nm&&m.away===am)||(m.home===am&&m.away===nm)
-                          );
-                          if(!pred||pred.homeScore===null) return null;
-                          const actual = {homeScore:score?.home,awayScore:score?.away};
-                          const result = actual.homeScore!==null ? calcMatchPoints(pred,actual) : null;
-                          return(
-                            <div style={{marginTop:12,padding:"10px 12px",
-                              background:`${result?.color||"rgba(255,255,255,0.03)"}10`,
-                              border:`1px solid ${result?.color||"rgba(255,255,255,0.07)"}25`,
-                              borderRadius:8}}>
-                              <div style={{fontSize:10,color:"#555",marginBottom:4}}>Your prediction</div>
-                              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                                <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#aaa"}}>
-                                  {pred.homeScore}–{pred.awayScore}
-                                </span>
-                                {result&&(
-                                  <span style={{fontSize:11,color:result.color,fontWeight:700}}>
-                                    {result.label} {result.points>0?`+${result.points}pts`:""}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })()}
-
-                        {/* 🤖 AI Analysis button */}
-                        {(()=>{
-                          const id = f.fixture?.id;
-                          const analysis = matchAnalysis[id];
-                          return(
-                            <div style={{marginTop:12}}>
-                              <button onClick={()=>analyseMatch(f)} disabled={analysis?.loading}
-                                style={{
-                                  width:"100%",padding:"10px 14px",
-                                  background:analysis?.loading?"rgba(139,92,246,0.05)":"rgba(139,92,246,0.1)",
-                                  border:"1px solid rgba(139,92,246,0.25)",borderRadius:8,
-                                  color:"#a78bfa",fontSize:12,fontWeight:700,
-                                  cursor:analysis?.loading?"wait":"pointer",
-                                  fontFamily:"inherit",textAlign:"left",
-                                  display:"flex",alignItems:"center",gap:8,
-                                }}>
-                                <span>{analysis?.loading?"⏳":"🤖"}</span>
-                                <span>{analysis?.loading?"Analysing match…":analysis?.text?"🔄 Refresh AI Analysis":"AI Match Analysis"}</span>
-                              </button>
-                              {analysis?.text&&!analysis?.loading&&(
-                                <div style={{
-                                  marginTop:8,padding:"12px 14px",
-                                  background:"rgba(139,92,246,0.06)",
-                                  border:"1px solid rgba(139,92,246,0.15)",
-                                  borderRadius:8,fontSize:12,color:"#c4b5fd",
-                                  lineHeight:1.7,fontStyle:"italic",
-                                }}>
-                                  {analysis.text}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
-
-                        {/* Top & Poor Performers */}
-                        {fixturePlayers.length>=2&&(()=>{
-                          // Flatten all players from both teams
-                          const allPlayers = fixturePlayers.flatMap(team =>
-                            (team.players||[]).map(p=>({
-                              ...p.player,
-                              ...p.statistics?.[0],
-                              teamName: team.team?.name,
-                              teamFlag: FLAGS[team.team?.name]||"🏳️",
-                            }))
-                          ).filter(p => p.games?.rating && p.games?.minutes > 0);
-
-                          if (!allPlayers.length) return null;
-
-                          const sorted = [...allPlayers].sort((a,b)=>
-                            parseFloat(b.games?.rating||0) - parseFloat(a.games?.rating||0)
-                          );
-                          const top = sorted.slice(0,3);
-                          const poor = sorted.slice(-2).reverse();
-
-                          const PlayerRow = ({p, rank, isTop}) => {
-                            const rating = parseFloat(p.games?.rating||0).toFixed(1);
-                            const color = isTop
-                              ? rating>=8?"#22c55e":rating>=7?"#fcb900":"#60a5fa"
-                              : "#ef4444";
-                            return(
-                              <div style={{display:"flex",alignItems:"center",gap:8,
-                                padding:"6px 8px",marginBottom:4,borderRadius:7,
-                                background:`${color}08`,border:`1px solid ${color}18`}}>
-                                <span style={{fontSize:9,color:"#555",width:14,flexShrink:0}}>
-                                  {isTop?`#${rank}`:"▼"}
-                                </span>
-                                <span style={{fontSize:11,flexShrink:0}}>{p.teamFlag}</span>
-                                <div style={{flex:1,minWidth:0}}>
-                                  <div style={{fontSize:11,fontWeight:700,
-                                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                                    {p.name}
-                                  </div>
-                                  <div style={{fontSize:9,color:"#555",display:"flex",gap:6,marginTop:1}}>
-                                    {p.goals?.total>0&&<span>⚽ {p.goals.total}</span>}
-                                    {p.goals?.assists>0&&<span>🅰️ {p.goals.assists}</span>}
-                                    {p.passes?.accuracy&&<span>🎯 {p.passes.accuracy}%</span>}
-                                    {p.tackles?.total>0&&<span>💪 {p.tackles.total} tkl</span>}
-                                    {p.dribbles?.success>0&&<span>🏃 {p.dribbles.success} drb</span>}
-                                    <span style={{color:"#555"}}>{p.games?.minutes}'</span>
-                                  </div>
-                                </div>
-                                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,
-                                  color,flexShrink:0}}>{rating}</div>
-                              </div>
-                            );
-                          };
-
-                          return(
-                            <div style={{marginTop:12}}>
-                              <div style={{display:"flex",gap:8}}>
-                                {/* Top performers */}
-                                <div style={{flex:1}}>
-                                  <div style={{fontSize:10,fontWeight:700,color:"#22c55e",marginBottom:6}}>
-                                    ⭐ Top Performers
-                                  </div>
-                                  {top.map((p,i)=><PlayerRow key={i} p={p} rank={i+1} isTop={true}/>)}
-                                </div>
-                                {/* Poor performers */}
-                                <div style={{flex:1}}>
-                                  <div style={{fontSize:10,fontWeight:700,color:"#ef4444",marginBottom:6}}>
-                                    📉 Struggling
-                                  </div>
-                                  {poor.map((p,i)=><PlayerRow key={i} p={p} rank={i+1} isTop={false}/>)}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })()}
+                        })}
                       </div>
                     )}
+                    {fixtureStats?.length>=2&&(()=>{
+                      const hs=fixtureStats[0]?.statistics||[], as_=fixtureStats[1]?.statistics||[];
+                      const keys=["Ball Possession","Total Shots","Shots on Goal","Corner Kicks","Fouls","Yellow Cards"];
+                      return(
+                        <div style={{marginBottom:14}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"#60a5fa",marginBottom:8}}>📊 Match Stats</div>
+                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,fontSize:10,color:"#555"}}>
+                            <span style={{fontWeight:700,color:"#ccc"}}>{home?.name}</span>
+                            <span style={{fontWeight:700,color:"#ccc"}}>{away?.name}</span>
+                          </div>
+                          {keys.map(k=>{
+                            const hv=hs.find(s=>s.type===k)?.value||0, av=as_.find(s=>s.type===k)?.value||0;
+                            const hn=parseInt(String(hv).replace("%",""))||0, an=parseInt(String(av).replace("%",""))||0;
+                            const tot=hn+an||1;
+                            return(
+                              <div key={k} style={{marginBottom:8}}>
+                                <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
+                                  <span style={{color:"#fcb900",fontWeight:700}}>{hv}</span>
+                                  <span style={{color:"#555",fontSize:9}}>{k}</span>
+                                  <span style={{color:"#60a5fa",fontWeight:700}}>{av}</span>
+                                </div>
+                                <div style={{display:"flex",height:4,borderRadius:2,overflow:"hidden",background:"rgba(255,255,255,0.05)"}}>
+                                  <div style={{width:`${(hn/tot)*100}%`,background:"#fcb900",borderRadius:"2px 0 0 2px"}}/>
+                                  <div style={{width:`${(an/tot)*100}%`,background:"#60a5fa",borderRadius:"0 2px 2px 0"}}/>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                    {fixturePlayers.length>=2&&(()=>{
+                      const all=fixturePlayers.flatMap(team=>(team.players||[]).map(p=>({
+                        ...p.player,...p.statistics?.[0],teamFlag:FLAGS[team.team?.name]||"🏳️"
+                      }))).filter(p=>p.games?.rating&&p.games?.minutes>0);
+                      if(!all.length) return null;
+                      const sorted=[...all].sort((a,b)=>parseFloat(b.games?.rating||0)-parseFloat(a.games?.rating||0));
+                      const top=sorted.slice(0,3), poor=sorted.slice(-2).reverse();
+                      const PR=({p,rank,isTop})=>{
+                        const r=parseFloat(p.games?.rating||0).toFixed(1);
+                        const c=isTop?(r>=8?"#22c55e":r>=7?"#fcb900":"#60a5fa"):"#ef4444";
+                        return(
+                          <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",marginBottom:4,
+                            borderRadius:7,background:`${c}08`,border:`1px solid ${c}18`}}>
+                            <span style={{fontSize:9,color:"#555",width:14,flexShrink:0}}>{isTop?`#${rank}`:"▼"}</span>
+                            <span style={{fontSize:11,flexShrink:0}}>{p.teamFlag}</span>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontSize:11,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
+                              <div style={{fontSize:9,color:"#555",display:"flex",gap:6,marginTop:1}}>
+                                {p.goals?.total>0&&<span>⚽{p.goals.total}</span>}
+                                {p.goals?.assists>0&&<span>🅰️{p.goals.assists}</span>}
+                                {p.passes?.accuracy&&<span>🎯{p.passes.accuracy}%</span>}
+                                {p.tackles?.total>0&&<span>💪{p.tackles.total}</span>}
+                                <span>{p.games?.minutes}'</span>
+                              </div>
+                            </div>
+                            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:c,flexShrink:0}}>{r}</div>
+                          </div>
+                        );
+                      };
+                      return(
+                        <div style={{marginBottom:14}}>
+                          <div style={{display:"flex",gap:8}}>
+                            <div style={{flex:1}}>
+                              <div style={{fontSize:10,fontWeight:700,color:"#22c55e",marginBottom:6}}>⭐ Top Performers</div>
+                              {top.map((p,i)=><PR key={i} p={p} rank={i+1} isTop={true}/>)}
+                            </div>
+                            <div style={{flex:1}}>
+                              <div style={{fontSize:10,fontWeight:700,color:"#ef4444",marginBottom:6}}>📉 Struggling</div>
+                              {poor.map((p,i)=><PR key={i} p={p} rank={i+1} isTop={false}/>)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    {(()=>{
+                      const nm=home?.name, am=away?.name;
+                      const pred=matches.find(m=>(m.home===nm&&m.away===am)||(m.home===am&&m.away===nm));
+                      if(!pred||pred.homeScore===null) return null;
+                      const result=score?.home!==null?calcMatchPoints(pred,{homeScore:score?.home,awayScore:score?.away}):null;
+                      return(
+                        <div style={{marginBottom:12,padding:"10px 12px",
+                          background:`${result?.color||"rgba(255,255,255,0.03)"}10`,
+                          border:`1px solid ${result?.color||"rgba(255,255,255,0.07)"}25`,borderRadius:8}}>
+                          <div style={{fontSize:10,color:"#555",marginBottom:4}}>Your prediction</div>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#aaa"}}>{pred.homeScore}–{pred.awayScore}</span>
+                            {result&&<span style={{fontSize:11,color:result.color,fontWeight:700}}>{result.label} {result.points>0?`+${result.points}pts`:""}</span>}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    <div>
+                      <button onClick={()=>analyseMatch(f)} disabled={analysis?.loading} style={{
+                        width:"100%",padding:"10px 14px",
+                        background:analysis?.loading?"rgba(139,92,246,0.05)":"rgba(139,92,246,0.1)",
+                        border:"1px solid rgba(139,92,246,0.25)",borderRadius:8,
+                        color:"#a78bfa",fontSize:12,fontWeight:700,
+                        cursor:analysis?.loading?"wait":"pointer",
+                        fontFamily:"inherit",textAlign:"left",display:"flex",alignItems:"center",gap:8,
+                      }}>
+                        <span>{analysis?.loading?"⏳":"🤖"}</span>
+                        <span>{analysis?.loading?"Analysing…":analysis?.text?"🔄 Refresh Analysis":"AI Match Analysis"}</span>
+                        <button onClick={(e)=>{e.stopPropagation();setSelectedFixture(null);}} style={{
+                          marginLeft:"auto",padding:"2px 8px",background:"rgba(255,255,255,0.05)",
+                          border:"1px solid rgba(255,255,255,0.1)",borderRadius:5,
+                          color:"#555",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+                      </button>
+                      {analysis?.text&&!analysis?.loading&&(
+                        <div style={{marginTop:8,padding:"12px 14px",
+                          background:"rgba(139,92,246,0.06)",border:"1px solid rgba(139,92,246,0.15)",
+                          borderRadius:8,fontSize:12,color:"#c4b5fd",lineHeight:1.7,fontStyle:"italic"}}>
+                          {analysis.text}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
-              })}            </div>
+              })()}
+            </div>
           )}
 
           {/* Today's matches */}
