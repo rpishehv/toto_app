@@ -1291,7 +1291,6 @@ export default function App(){
     const PW = 320, PH = 420;
 
     const positionPlayers = (players, isHome) => {
-      // Group by grid row position
       const byGrid = {};
       players.forEach(p => {
         const grid = p.grid || "1:1";
@@ -1304,15 +1303,15 @@ export default function App(){
       rows.forEach((row, ri) => {
         const rowPlayers = byGrid[row];
         const totalRows = rows.length;
-        // For home: row 1 = GK near top, last row = attackers near centre
-        // For away: mirror vertically
+        // Home: GK at 6%, attackers at 44% (well clear of centre at 50%)
+        // Away: GK at 94%, attackers at 56% (well clear of centre)
         const yPct = isHome
-          ? 8 + (ri / (totalRows-1)) * 42
-          : 92 - (ri / (totalRows-1)) * 42;
+          ? 6 + (ri / (totalRows-1)) * 38
+          : 94 - (ri / (totalRows-1)) * 38;
         rowPlayers.forEach((p, pi) => {
           const xPct = rowPlayers.length === 1
             ? 50
-            : 15 + (pi / (rowPlayers.length-1)) * 70;
+            : 12 + (pi / (rowPlayers.length-1)) * 76;
           positioned.push({ ...p, xPct, yPct });
         });
       });
