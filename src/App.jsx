@@ -4524,7 +4524,6 @@ export default function App(){
                 ["I forgot my PIN — what do I do?","Use your recovery code. When you created your account, a code like WC26-XXXX-XXXX was shown. On the login screen enter your name, tap 'Forgot PIN? Use recovery code', enter your code, and set a new PIN."],
                 ["I lost my recovery code too","Contact the admin — they can reset your PIN from the Admin panel under User Management. Your predictions will be preserved."],
                 ["Where is my recovery code?","It was shown once when you first created your account. If you saved it somewhere (notes app, screenshot) use it via the 'Forgot PIN?' link. Otherwise ask the admin to reset your PIN."],
-                ["Can I use this without a Claude account?","You need a free Claude.ai account to open the artifact. Sign up at claude.ai — it's free."],
               ]
             },
             {
@@ -4599,7 +4598,7 @@ export default function App(){
 
           <div style={{marginTop:8,padding:"14px 16px",background:"rgba(96,165,250,0.07)",
             border:"1px solid rgba(96,165,250,0.2)",borderRadius:10,fontSize:12,color:"#60a5fa",lineHeight:1.7}}>
-            Still stuck? The app was built by Claude AI. If something isn't working, try refreshing or switching to a newer version.
+            Still stuck?  If something isn't working, try refreshing or switching to a newer version. Contact admin if necessary.
           </div>
         </div>}
 
@@ -4607,4 +4606,3 @@ export default function App(){
     </div>
   );
 }
-
