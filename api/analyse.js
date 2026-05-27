@@ -18,7 +18,11 @@ export default async function handler(req) {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 });
   }
 
-  const { home, away, homeScore, awayScore, elapsed, events, stats, userPred } = body;
+  const { home, away, homeScore, awayScore, elapsed, events, stats, userPred, winProb } = body;
+
+  const winProbText = winProb
+    ? `Current win probability: ${home} ${winProb.home}%, Draw ${winProb.draw}%, ${away} ${winProb.away}%`
+    : '';
 
   // Build context from match data
   const eventsText = events?.length > 0
@@ -49,6 +53,7 @@ export default async function handler(req) {
 
 Match: ${home} ${homeScore} - ${awayScore} ${away}
 Minute: ${elapsed || '?'}'
+${winProbText}
 
 Recent Events:
 ${eventsText}
@@ -59,11 +64,11 @@ ${statsText}
 ${userPredText}
 
 Write a sharp, exciting live match analysis in exactly 3 sentences:
-1. What's happening tactically right now
-2. The key factor/moment that's defining this match  
-3. What to expect in the remaining minutes AND a comment on whether the user's prediction is on track
+1. What's happening tactically right now and who looks more likely to win
+2. The key factor/moment that's defining the match and affecting win probability
+3. What to expect in the remaining minutes, the most likely outcome, AND whether the user's prediction is on track
 
-Keep it punchy, specific to THIS match, and under 80 words total. No headers, just flowing analysis.`;
+Keep it punchy, specific to THIS match, reference win likelihood naturally (e.g. "Mexico look odds-on to hold on", "South Africa need a miracle"), and under 90 words total. No headers, just flowing analysis.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
