@@ -692,6 +692,7 @@ export default function App(){
   const [fixtureStats,setFixtureStats]=useState(null);
   const [fixtureEvents,setFixtureEvents]=useState([]);
   const [fixtureLineups,setFixtureLineups]=useState([]);
+  const [fixturePlayers,setFixturePlayers]=useState([]);
   const [liveLastUpdated,setLiveLastUpdated]=useState(null);
   const [todayMatches,setTodayMatches]=useState([]);
   const [refreshCooldown,setRefreshCooldown]=useState(0); // seconds remaining
@@ -1133,18 +1134,21 @@ export default function App(){
     setFixtureStats(null);
     setFixtureEvents([]);
     setFixtureLineups([]);
+    setFixturePlayers([]);
     try {
-      const [statsRes, eventsRes, lineupsRes] = await Promise.all([
+      const [statsRes, eventsRes, lineupsRes, playersRes] = await Promise.all([
         fetch(`/api/live?type=stats&fixtureId=${fixtureId}`),
         fetch(`/api/live?type=events&fixtureId=${fixtureId}`),
         fetch(`/api/live?type=lineups&fixtureId=${fixtureId}`),
+        fetch(`/api/live?type=players&fixtureId=${fixtureId}`),
       ]);
-      const [stats, events, lineups] = await Promise.all([
-        statsRes.json(), eventsRes.json(), lineupsRes.json()
+      const [stats, events, lineups, players] = await Promise.all([
+        statsRes.json(), eventsRes.json(), lineupsRes.json(), playersRes.json()
       ]);
       setFixtureStats(stats.response || []);
       setFixtureEvents(events.response || []);
       setFixtureLineups(lineups.response || []);
+      setFixturePlayers(players.response || []);
     } catch(e) {
       console.error('Fixture details error:', e);
     }
@@ -3720,12 +3724,86 @@ export default function App(){
                             </div>
                           );
                         })()}
+
+                        {/* Top & Poor Performers */}
+                        {fixturePlayers.length>=2&&(()=>{
+                          // Flatten all players from both teams
+                          const allPlayers = fixturePlayers.flatMap(team =>
+                            (team.players||[]).map(p=>({
+                              ...p.player,
+                              ...p.statistics?.[0],
+                              teamName: team.team?.name,
+                              teamFlag: FLAGS[team.team?.name]||"🏳️",
+                            }))
+                          ).filter(p => p.games?.rating && p.games?.minutes > 0);
+
+                          if (!allPlayers.length) return null;
+
+                          const sorted = [...allPlayers].sort((a,b)=>
+                            parseFloat(b.games?.rating||0) - parseFloat(a.games?.rating||0)
+                          );
+                          const top = sorted.slice(0,3);
+                          const poor = sorted.slice(-2).reverse();
+
+                          const PlayerRow = ({p, rank, isTop}) => {
+                            const rating = parseFloat(p.games?.rating||0).toFixed(1);
+                            const color = isTop
+                              ? rating>=8?"#22c55e":rating>=7?"#fcb900":"#60a5fa"
+                              : "#ef4444";
+                            return(
+                              <div style={{display:"flex",alignItems:"center",gap:8,
+                                padding:"6px 8px",marginBottom:4,borderRadius:7,
+                                background:`${color}08`,border:`1px solid ${color}18`}}>
+                                <span style={{fontSize:9,color:"#555",width:14,flexShrink:0}}>
+                                  {isTop?`#${rank}`:"▼"}
+                                </span>
+                                <span style={{fontSize:11,flexShrink:0}}>{p.teamFlag}</span>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontSize:11,fontWeight:700,
+                                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                    {p.name}
+                                  </div>
+                                  <div style={{fontSize:9,color:"#555",display:"flex",gap:6,marginTop:1}}>
+                                    {p.goals?.total>0&&<span>⚽ {p.goals.total}</span>}
+                                    {p.goals?.assists>0&&<span>🅰️ {p.goals.assists}</span>}
+                                    {p.passes?.accuracy&&<span>🎯 {p.passes.accuracy}%</span>}
+                                    {p.tackles?.total>0&&<span>💪 {p.tackles.total} tkl</span>}
+                                    {p.dribbles?.success>0&&<span>🏃 {p.dribbles.success} drb</span>}
+                                    <span style={{color:"#555"}}>{p.games?.minutes}'</span>
+                                  </div>
+                                </div>
+                                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,
+                                  color,flexShrink:0}}>{rating}</div>
+                              </div>
+                            );
+                          };
+
+                          return(
+                            <div style={{marginTop:12}}>
+                              <div style={{display:"flex",gap:8}}>
+                                {/* Top performers */}
+                                <div style={{flex:1}}>
+                                  <div style={{fontSize:10,fontWeight:700,color:"#22c55e",marginBottom:6}}>
+                                    ⭐ Top Performers
+                                  </div>
+                                  {top.map((p,i)=><PlayerRow key={i} p={p} rank={i+1} isTop={true}/>)}
+                                </div>
+                                {/* Poor performers */}
+                                <div style={{flex:1}}>
+                                  <div style={{fontSize:10,fontWeight:700,color:"#ef4444",marginBottom:6}}>
+                                    📉 Struggling
+                                  </div>
+                                  {poor.map((p,i)=><PlayerRow key={i} p={p} rank={i+1} isTop={false}/>)}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>
                 );
-              })}
-            </div>
+              })}            </div>
           )}
 
           {/* Today's matches */}
@@ -3977,6 +4055,66 @@ export default function App(){
                     )}
                   </div>
                 )}
+
+                {/* Player Ratings (sim) */}
+                {simMinute>=30&&(()=>{
+                  const score = getSimScore(simMinute);
+                  const hasGoal = e => simEvents.some(ev=>ev.type==="Goal"&&ev.player===e);
+                  const hasAssist = e => simEvents.some(ev=>ev.type==="Goal"&&ev.assist===e);
+                  const isRedded = e => simEvents.some(ev=>ev.type==="Card"&&ev.detail==="Red Card"&&ev.player===e);
+                  const isSubbed = e => simEvents.some(ev=>ev.type==="Sub"&&ev.off===e&&simMinute>=ev.min);
+
+                  const simRatings = [
+                    {name:"Lozano",  flag:"🇲🇽", base:7.2, bonus: hasGoal("Lozano")?1.5:0 + hasAssist("Lozano")?0.8:0},
+                    {name:"Jimenez", flag:"🇲🇽", base:6.8, bonus: hasGoal("Jimenez")?1.8:0 + hasAssist("Jimenez")?0.5:0},
+                    {name:"Herrera", flag:"🇲🇽", base:6.9, bonus:0.3},
+                    {name:"Manyama", flag:"🇿🇦", base:6.5, bonus: hasGoal("Manyama")?1.6:0},
+                    {name:"Tau",     flag:"🇿🇦", base:5.8, bonus: isRedded("Hlatshwayo")?-0.3:0},
+                    {name:"Hlatshwayo",flag:"🇿🇦",base:4.2, bonus: isRedded("Hlatshwayo")?-2.5:0},
+                  ].map(p=>({...p, rating:(p.base+p.bonus+(score.h>score.a?0.2:-0.2)).toFixed(1)}))
+                   .sort((a,b)=>parseFloat(b.rating)-parseFloat(a.rating));
+
+                  const top = simRatings.slice(0,3);
+                  const poor = simRatings.slice(-2).reverse();
+
+                  const SimPlayerRow = ({p, isTop}) => {
+                    const r = parseFloat(p.rating);
+                    const color = isTop ? (r>=8?"#22c55e":r>=7?"#fcb900":"#60a5fa") : "#ef4444";
+                    return(
+                      <div style={{display:"flex",alignItems:"center",gap:6,
+                        padding:"5px 8px",marginBottom:4,borderRadius:7,
+                        background:`${color}08`,border:`1px solid ${color}18`}}>
+                        <span style={{fontSize:10}}>{p.flag}</span>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:11,fontWeight:700}}>{p.name}</div>
+                          <div style={{fontSize:9,color:"#555",display:"flex",gap:5,marginTop:1}}>
+                            {hasGoal(p.name)&&<span>⚽</span>}
+                            {hasAssist(p.name)&&<span>🅰️</span>}
+                            {isRedded(p.name)&&<span>🟥</span>}
+                            {isSubbed(p.name)&&<span>🔄 subbed off</span>}
+                            <span>{simMinute}'</span>
+                          </div>
+                        </div>
+                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color}}>{p.rating}</div>
+                      </div>
+                    );
+                  };
+
+                  return(
+                    <div style={{marginBottom:12}}>
+                      <div style={{display:"flex",gap:8}}>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"#22c55e",marginBottom:6}}>⭐ Top Performers</div>
+                          {top.map((p,i)=><SimPlayerRow key={i} p={p} isTop={true}/>)}
+                        </div>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"#ef4444",marginBottom:6}}>📉 Struggling</div>
+                          {poor.map((p,i)=><SimPlayerRow key={i} p={p} isTop={false}/>)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* AI Analysis */}
                 {simMinute>=20&&(
