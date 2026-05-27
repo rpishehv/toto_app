@@ -3965,6 +3965,31 @@ export default function App(){
                   </div>
                 )}
 
+                {/* AI Analysis */}
+                {simMinute>=20&&(
+                  <div style={{marginBottom:12}}>
+                    <button onClick={generateSimAnalysis} disabled={simAnalysisLoading} style={{
+                      width:"100%",padding:"10px 14px",
+                      background:simAnalysisLoading?"rgba(139,92,246,0.05)":"rgba(139,92,246,0.1)",
+                      border:"1px solid rgba(139,92,246,0.25)",borderRadius:8,
+                      color:"#a78bfa",fontSize:12,fontWeight:700,
+                      cursor:simAnalysisLoading?"wait":"pointer",
+                      fontFamily:"inherit",textAlign:"left",display:"flex",alignItems:"center",gap:8,
+                    }}>
+                      <span>{simAnalysisLoading?"⏳":"🤖"}</span>
+                      <span>{simAnalysisLoading?"Analysing match…":simAnalysis?"🔄 Refresh AI Analysis":"AI Match Analysis"}</span>
+                      <span style={{marginLeft:"auto",fontSize:10,color:"#6d5a9c",fontWeight:400}}>uses Anthropic API</span>
+                    </button>
+                    {simAnalysis&&!simAnalysisLoading&&(
+                      <div style={{marginTop:8,padding:"12px 14px",
+                        background:"rgba(139,92,246,0.06)",border:"1px solid rgba(139,92,246,0.15)",
+                        borderRadius:8,fontSize:12,color:"#c4b5fd",lineHeight:1.7,fontStyle:"italic"}}>
+                        {simAnalysis}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Formation graphic — updates on subs and red cards */}
                 {simMinute>0&&(()=>{
                   // Mexico 4-3-3 starting XI with grid positions (row:col)
@@ -4013,31 +4038,6 @@ export default function App(){
                     homeFlag="🇲🇽" awayFlag="🇿🇦"
                   />;
                 })()}
-
-                {/* AI Analysis */}
-                {simMinute>=20&&(
-                  <div style={{marginBottom:12}}>
-                    <button onClick={generateSimAnalysis} disabled={simAnalysisLoading} style={{
-                      width:"100%",padding:"10px 14px",
-                      background:simAnalysisLoading?"rgba(139,92,246,0.05)":"rgba(139,92,246,0.1)",
-                      border:"1px solid rgba(139,92,246,0.25)",borderRadius:8,
-                      color:"#a78bfa",fontSize:12,fontWeight:700,
-                      cursor:simAnalysisLoading?"wait":"pointer",
-                      fontFamily:"inherit",textAlign:"left",display:"flex",alignItems:"center",gap:8,
-                    }}>
-                      <span>{simAnalysisLoading?"⏳":"🤖"}</span>
-                      <span>{simAnalysisLoading?"Analysing match…":simAnalysis?"🔄 Refresh AI Analysis":"AI Match Analysis"}</span>
-                      <span style={{marginLeft:"auto",fontSize:10,color:"#6d5a9c",fontWeight:400}}>uses Anthropic API</span>
-                    </button>
-                    {simAnalysis&&!simAnalysisLoading&&(
-                      <div style={{marginTop:8,padding:"12px 14px",
-                        background:"rgba(139,92,246,0.06)",border:"1px solid rgba(139,92,246,0.15)",
-                        borderRadius:8,fontSize:12,color:"#c4b5fd",lineHeight:1.7,fontStyle:"italic"}}>
-                        {simAnalysis}
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {simMinute===0&&(
                   <div style={{textAlign:"center",padding:"20px",color:"#444",fontSize:12}}>
