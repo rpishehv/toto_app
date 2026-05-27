@@ -1094,7 +1094,21 @@ export default function App(){
         fetch('/api/live?type=today'),
       ]);
       const [liveData, todayData] = await Promise.all([liveRes.json(), todayRes.json()]);
-      if (liveData.error) throw new Error(liveData.tip ? `${liveData.error} — ${liveData.tip}` : liveData.error);
+      if (liveData.error) {
+        // "internal error" from API = season not available yet — treat as no matches
+        const isSeasonError = liveData.error.toLowerCase().includes('internal') ||
+          liveData.error.toLowerCase().includes('season') ||
+          liveData.error.toLowerCase().includes('2026');
+        if (isSeasonError) {
+          setLiveMatches([]);
+          setTodayMatches([]);
+          setLiveLastUpdated(new Date());
+          setRefreshCooldown(60);
+          setLiveLoading(false);
+          return;
+        }
+        throw new Error(liveData.tip ? `${liveData.error} — ${liveData.tip}` : liveData.error);
+      }
       setLiveMatches(liveData.response || []);
       setTodayMatches(todayData.response || []);
       setLiveLastUpdated(new Date());
@@ -3454,7 +3468,7 @@ export default function App(){
             </button>
           </div>
 
-          {liveError&&(
+          {liveError&&!liveError.toLowerCase().includes('internal')&&(
             <div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",
               borderRadius:9,padding:"12px 14px",marginBottom:16,fontSize:12,color:"#fca5a5"}}>
               <div style={{fontWeight:700,marginBottom:4}}>❌ {liveError.split('—')[0]}</div>
@@ -3767,7 +3781,7 @@ export default function App(){
             </div>
           )}
 
-          {!liveLoading&&!liveError&&liveMatches.length===0&&todayMatches.length===0&&(()=>{
+          {!liveLoading&&liveMatches.length===0&&todayMatches.length===0&&(()=>{
             const score = getSimScore(simMinute);
             const simEnded = simMinute >= 90;
             const userPred = matches.find(m=>
