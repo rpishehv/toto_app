@@ -802,6 +802,97 @@ function ScoringBar(){
   );
 }
 
+function KOMatchButtons({liveHome, liveAway, aiP}) {
+  const [showAI, setShowAI] = useState(false);
+  const [showOdds, setShowOdds] = useState(false);
+  const [odds, setOdds] = useState(aiP?.polymarket||null);
+  const [oddsLoading, setOddsLoading] = useState(false);
+
+  const fetchOdds = async () => {
+    if (odds) { setShowOdds(p=>!p); return; }
+    setShowOdds(true); setOddsLoading(true);
+    try {
+      const res = await fetch(`/api/odds?home=${encodeURIComponent(liveHome)}&away=${encodeURIComponent(liveAway)}`);
+      setOdds(await res.json());
+    } catch { setOdds({found:false,message:"Could not load odds"}); }
+    setOddsLoading(false);
+  };
+
+  return(
+    <div>
+      <div style={{display:"flex",gap:6,marginTop:8,paddingTop:8,borderTop:"1px solid rgba(255,255,255,0.04)"}}>
+        {aiP&&<button onClick={()=>setShowAI(p=>!p)} style={{
+          padding:"3px 10px",background:"rgba(139,92,246,0.12)",
+          border:"1px solid rgba(139,92,246,0.3)",borderRadius:5,
+          color:"#a78bfa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+        }}>🤖 AI</button>}
+        <button onClick={fetchOdds} style={{
+          padding:"3px 10px",
+          background:showOdds?"rgba(96,165,250,0.18)":"rgba(96,165,250,0.08)",
+          border:"1px solid rgba(96,165,250,0.25)",borderRadius:5,
+          color:"#60a5fa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+        }}>📊 Odds</button>
+      </div>
+      {showAI&&aiP&&(
+        <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,
+          background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.2)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>🤖 AI:</span>
+            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>{aiP.h} – {aiP.a}</span>
+            {aiP.confidence&&<span style={{fontSize:9,color:"#6d5a9c",background:"rgba(139,92,246,0.15)",borderRadius:4,padding:"2px 6px"}}>{aiP.confidence}</span>}
+            <button onClick={()=>setShowAI(false)} style={{marginLeft:"auto",padding:"1px 6px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+          </div>
+          {aiP.insight&&<div style={{fontSize:11,color:"#8b7dbf",lineHeight:1.6,marginBottom:4}}>{aiP.insight}</div>}
+          {aiP.key&&<div style={{fontSize:10,color:"#6d5a9c",fontStyle:"italic"}}>🔑 {aiP.key}</div>}
+          {!aiP.insight&&aiP.r&&<div style={{fontSize:10,color:"#7c6db3",fontStyle:"italic"}}>{aiP.r}</div>}
+        </div>
+      )}
+      {showOdds&&(
+        <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,
+          background:"rgba(96,165,250,0.06)",border:"1px solid rgba(96,165,250,0.18)"}}>
+          {oddsLoading?(
+            <div style={{fontSize:11,color:"#444"}}>⏳ Loading Polymarket odds…</div>
+          ):odds?.found?(
+            <>
+              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                <span style={{fontSize:11,color:"#60a5fa",fontWeight:700}}>📊 Polymarket</span>
+                {odds.volume&&<span style={{fontSize:9,color:"#444",marginLeft:"auto"}}>{odds.volume}</span>}
+                <button onClick={()=>setShowOdds(false)} style={{padding:"1px 6px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+              </div>
+              {(odds.outcomes?.length>0?odds.outcomes:[
+                {label:liveHome,prob:odds.homeProb},
+                {label:"Draw",prob:odds.drawProb},
+                {label:liveAway,prob:odds.awayProb},
+              ].filter(o=>o.prob!=null)).map((o,i)=>(
+                <div key={i} style={{marginBottom:5}}>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:2}}>
+                    <span style={{color:"#ccc",fontWeight:600}}>{o.label}</span>
+                    <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,
+                      color:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#888"}}>{o.prob}¢</span>
+                  </div>
+                  <div style={{height:4,background:"rgba(255,255,255,0.06)",borderRadius:2,overflow:"hidden"}}>
+                    <div style={{width:`${o.prob}%`,height:"100%",
+                      background:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#60a5fa",borderRadius:2}}/>
+                  </div>
+                </div>
+              ))}
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
+                <span style={{fontSize:9,color:"#444"}}>¢ = % probability</span>
+                {odds.url&&<a href={odds.url} target="_blank" rel="noopener noreferrer" style={{fontSize:9,color:"#60a5fa",textDecoration:"none"}}>View ↗</a>}
+              </div>
+            </>
+          ):(
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <span style={{fontSize:11,color:"#444"}}>📊 {odds?.message||"Markets not open yet"}</span>
+              <button onClick={()=>setShowOdds(false)} style={{padding:"1px 6px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App(){
   const [tab,setTab]=useState("groups");
   const [userName,setUserName]=useState("");
@@ -860,6 +951,7 @@ export default function App(){
   const [syncStatus,setSyncStatus]=useState(null);
   const [generatingAI,setGeneratingAI]=useState(false);
   const [aiGenStatus,setAiGenStatus]=useState(null);
+  const [showStandings,setShowStandings]=useState(false);
   const [generatingOdds,setGeneratingOdds]=useState(false);
   const [oddsGenStatus,setOddsGenStatus]=useState(null);
   const [adminHasSaved,setAdminHasSaved]=useState(false); // true once admin saves any results
@@ -2567,50 +2659,42 @@ export default function App(){
             ))}
           </div>
           <div style={{position:"relative"}}>
-            {/* Standings overlay panel */}
-            {(()=>{
-              const [showStandings, setShowStandings] = React.useState(false);
-              return(
-                <>
-                  {/* Floating standings button */}
-                  <button onClick={()=>setShowStandings(p=>!p)} style={{
-                    position:"sticky",top:4,zIndex:50,float:"right",
-                    padding:"5px 12px",marginBottom:8,
-                    background:showStandings?"rgba(252,185,0,0.2)":"rgba(252,185,0,0.08)",
-                    border:`1px solid ${showStandings?"rgba(252,185,0,0.5)":"rgba(252,185,0,0.2)"}`,
-                    borderRadius:7,color:"#fcb900",fontSize:11,fontWeight:700,
-                    cursor:"pointer",fontFamily:"inherit",
-                  }}>
-                    {showStandings?"✕ Hide":"📊 Standings"}
-                  </button>
+            {/* Floating standings button */}
+            <button onClick={()=>setShowStandings(p=>!p)} style={{
+              position:"sticky",top:4,zIndex:50,float:"right",
+              padding:"5px 12px",marginBottom:8,
+              background:showStandings?"rgba(252,185,0,0.2)":"rgba(252,185,0,0.08)",
+              border:`1px solid ${showStandings?"rgba(252,185,0,0.5)":"rgba(252,185,0,0.2)"}`,
+              borderRadius:7,color:"#fcb900",fontSize:11,fontWeight:700,
+              cursor:"pointer",fontFamily:"inherit",
+            }}>
+              {showStandings?"✕ Hide":"📊 Standings"}
+            </button>
 
-                  <h3 style={{margin:"0 0 10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:1,color:"#fcb900"}}>
-                    Group {activeGroup} — My Predictions
-                  </h3>
+            <h3 style={{margin:"0 0 10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:1,color:"#fcb900"}}>
+              Group {activeGroup} — My Predictions
+            </h3>
 
-                  {/* Standings panel — appears inline above matches */}
-                  {showStandings&&(
-                    <div style={{
-                      background:"rgba(255,255,255,0.03)",border:"1px solid rgba(252,185,0,0.2)",
-                      borderRadius:11,padding:11,marginBottom:14,
-                    }}>
-                      <div style={{fontSize:10,color:ga.some(m=>m.homeScore!==null)?"#22c55e":"#555",marginBottom:6,fontWeight:600}}>
-                        {adminHasSaved
-                          ? ga.some(m=>m.homeScore!==null) ? "📊 Based on actual results" : "📊 Actual results (none yet)"
-                          : "📊 Based on your predictions"}
-                      </div>
-                      <StandingsTable key={standingsKey} teams={gt} matches={adminHasSaved?ga:gm}/>
-                      <div style={{marginTop:9,fontSize:10,color:"#333",display:"flex",alignItems:"center",gap:5}}>
-                        <span style={{width:8,height:8,background:"rgba(252,185,0,0.18)",borderRadius:2,display:"inline-block"}}/>Top 2 qualify
-                      </div>
-                    </div>
-                  )}
+            {/* Standings panel — appears inline above matches */}
+            {showStandings&&(
+              <div style={{
+                background:"rgba(255,255,255,0.03)",border:"1px solid rgba(252,185,0,0.2)",
+                borderRadius:11,padding:11,marginBottom:14,
+              }}>
+                <div style={{fontSize:10,color:ga.some(m=>m.homeScore!==null)?"#22c55e":"#555",marginBottom:6,fontWeight:600}}>
+                  {adminHasSaved
+                    ? ga.some(m=>m.homeScore!==null) ? "📊 Based on actual results" : "📊 Actual results (none yet)"
+                    : "📊 Based on your predictions"}
+                </div>
+                <StandingsTable key={standingsKey} teams={gt} matches={adminHasSaved?ga:gm}/>
+                <div style={{marginTop:9,fontSize:10,color:"#333",display:"flex",alignItems:"center",gap:5}}>
+                  <span style={{width:8,height:8,background:"rgba(252,185,0,0.18)",borderRadius:2,display:"inline-block"}}/>Top 2 qualify
+                </div>
+              </div>
+            )}
 
-                  {/* Matches */}
-                  {gm.map(m=><MatchCard key={m.id} match={m} actual={ga.find(a=>a.id===m.id)} onUpdate={upMatchAndSync} kickoffs={KICKOFFS} livePreds={livePredictions}/>)}
-                </>
-              );
-            })()}
+            {/* Matches */}
+            {gm.map(m=><MatchCard key={m.id} match={m} actual={ga.find(a=>a.id===m.id)} onUpdate={upMatchAndSync} kickoffs={KICKOFFS} livePreds={livePredictions}/>)}
           </div>
         </div>}
 
@@ -2709,120 +2793,10 @@ export default function App(){
                         </div>
                       )}
                       {/* AI + Polymarket buttons for KO matches */}
-                      {teamsKnown&&(()=>{
-                        const koKey = `${liveHome}||${liveAway}`;
-                        const aiP = livePredictions[koKey];
-                        const polyData = aiP?.polymarket;
-                        const [showKOAI, setShowKOAI] = React.useState(false);
-                        const [showKOOdds, setShowKOOdds] = React.useState(false);
-                        const [koOdds, setKOOdds] = React.useState(polyData||null);
-                        const [koOddsLoading, setKOOddsLoading] = React.useState(false);
-
-                        const fetchKOOdds = async () => {
-                          if (koOdds) { setShowKOOdds(p=>!p); return; }
-                          setShowKOOdds(true); setKOOddsLoading(true);
-                          try {
-                            const res = await fetch(`/api/odds?home=${encodeURIComponent(liveHome)}&away=${encodeURIComponent(liveAway)}`);
-                            const data = await res.json();
-                            setKOOdds(data);
-                          } catch { setKOOdds({found:false,message:"Could not load odds"}); }
-                          setKOOddsLoading(false);
-                        };
-
-                        return(
-                          <div>
-                            {/* Buttons row */}
-                            {(aiP||true)&&(
-                              <div style={{display:"flex",gap:6,marginTop:8,paddingTop:8,
-                                borderTop:"1px solid rgba(255,255,255,0.04)"}}>
-                                {aiP&&<button onClick={()=>setShowKOAI(p=>!p)} style={{
-                                  padding:"3px 10px",background:"rgba(139,92,246,0.12)",
-                                  border:"1px solid rgba(139,92,246,0.3)",borderRadius:5,
-                                  color:"#a78bfa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
-                                }}>🤖 AI</button>}
-                                <button onClick={fetchKOOdds} style={{
-                                  padding:"3px 10px",
-                                  background:showKOOdds?"rgba(96,165,250,0.18)":"rgba(96,165,250,0.08)",
-                                  border:"1px solid rgba(96,165,250,0.25)",borderRadius:5,
-                                  color:"#60a5fa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
-                                }}>📊 Odds</button>
-                              </div>
-                            )}
-                            {/* AI panel */}
-                            {showKOAI&&aiP&&(
-                              <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,
-                                background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.2)"}}>
-                                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                                  <span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>🤖 AI:</span>
-                                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>
-                                    {aiP.h} – {aiP.a}
-                                  </span>
-                                  {aiP.confidence&&<span style={{fontSize:9,color:"#6d5a9c",
-                                    background:"rgba(139,92,246,0.15)",borderRadius:4,padding:"2px 6px"}}>
-                                    {aiP.confidence}
-                                  </span>}
-                                  <button onClick={()=>setShowKOAI(false)} style={{marginLeft:"auto",
-                                    padding:"1px 6px",background:"rgba(255,255,255,0.05)",
-                                    border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,
-                                    color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
-                                </div>
-                                {aiP.insight&&<div style={{fontSize:11,color:"#8b7dbf",lineHeight:1.6,marginBottom:4}}>{aiP.insight}</div>}
-                                {aiP.key&&<div style={{fontSize:10,color:"#6d5a9c",fontStyle:"italic"}}>🔑 {aiP.key}</div>}
-                                {!aiP.insight&&aiP.r&&<div style={{fontSize:10,color:"#7c6db3",fontStyle:"italic"}}>{aiP.r}</div>}
-                              </div>
-                            )}
-                            {/* Polymarket panel */}
-                            {showKOOdds&&(
-                              <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,
-                                background:"rgba(96,165,250,0.06)",border:"1px solid rgba(96,165,250,0.18)"}}>
-                                {koOddsLoading?(
-                                  <div style={{fontSize:11,color:"#444"}}>⏳ Loading Polymarket odds…</div>
-                                ):koOdds?.found?(
-                                  <>
-                                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-                                      <span style={{fontSize:11,color:"#60a5fa",fontWeight:700}}>📊 Polymarket</span>
-                                      {koOdds.volume&&<span style={{fontSize:9,color:"#444",marginLeft:"auto"}}>{koOdds.volume}</span>}
-                                      <button onClick={()=>setShowKOOdds(false)} style={{padding:"1px 6px",
-                                        background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",
-                                        borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
-                                    </div>
-                                    {(koOdds.outcomes?.length>0?koOdds.outcomes:[
-                                      {label:liveHome,prob:koOdds.homeProb},
-                                      {label:"Draw",prob:koOdds.drawProb},
-                                      {label:liveAway,prob:koOdds.awayProb},
-                                    ].filter(o=>o.prob!=null)).map((o,i)=>(
-                                      <div key={i} style={{marginBottom:5}}>
-                                        <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:2}}>
-                                          <span style={{color:"#ccc",fontWeight:600}}>{o.label}</span>
-                                          <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,
-                                            color:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#888"}}>{o.prob}¢</span>
-                                        </div>
-                                        <div style={{height:4,background:"rgba(255,255,255,0.06)",borderRadius:2,overflow:"hidden"}}>
-                                          <div style={{width:`${o.prob}%`,height:"100%",
-                                            background:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#60a5fa",
-                                            borderRadius:2}}/>
-                                        </div>
-                                      </div>
-                                    ))}
-                                    <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
-                                      <span style={{fontSize:9,color:"#444"}}>¢ = % probability</span>
-                                      {koOdds.url&&<a href={koOdds.url} target="_blank" rel="noopener noreferrer"
-                                        style={{fontSize:9,color:"#60a5fa",textDecoration:"none"}}>View ↗</a>}
-                                    </div>
-                                  </>
-                                ):(
-                                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                                    <span style={{fontSize:11,color:"#444"}}>📊 {koOdds?.message||"Markets not open yet"}</span>
-                                    <button onClick={()=>setShowKOOdds(false)} style={{padding:"1px 6px",
-                                      background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",
-                                      borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
+                      {teamsKnown&&<KOMatchButtons
+                        liveHome={liveHome} liveAway={liveAway}
+                        aiP={livePredictions[`${liveHome}||${liveAway}`]}
+                      />}
                     </div>
                   );
                 })}
