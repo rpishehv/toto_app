@@ -2777,19 +2777,20 @@ export default function App(){
                           {res&&<PointsBadge result={res}/>}
                         </div>
                       )}
-                      {/* Manual override — muted, always available */}
+                      {/* Manual override — always available */}
                       {!locked&&(
                         <div style={{display:"flex",alignItems:"center",gap:6,marginTop:6}}>
-                          <input value={m.home==="TBD"?"":m.home} placeholder="✏️ Override team 1…"
+                          <input value={m.home==="TBD"?"":m.home} placeholder="✏️ Team 1…"
                             onChange={e=>upKO({...m,home:e.target.value||"TBD"})}
                             style={{flex:1,background:"transparent",border:"none",
-                              borderBottom:"1px solid rgba(255,255,255,0.05)",
-                              color:"#444",fontSize:10,padding:"2px 0",outline:"none",fontFamily:"inherit"}}/>
-                          <input value={m.away==="TBD"?"":m.away} placeholder="✏️ Override team 2…"
+                              borderBottom:"1px solid rgba(255,255,255,0.08)",
+                              color:"#aaa",fontSize:11,padding:"4px 0",outline:"none",fontFamily:"inherit"}}/>
+                          <span style={{color:"#333",fontSize:10}}>vs</span>
+                          <input value={m.away==="TBD"?"":m.away} placeholder="✏️ Team 2…"
                             onChange={e=>upKO({...m,away:e.target.value||"TBD"})}
                             style={{flex:1,textAlign:"right",background:"transparent",border:"none",
-                              borderBottom:"1px solid rgba(255,255,255,0.05)",
-                              color:"#444",fontSize:10,padding:"2px 0",outline:"none",fontFamily:"inherit"}}/>
+                              borderBottom:"1px solid rgba(255,255,255,0.08)",
+                              color:"#aaa",fontSize:11,padding:"4px 0",outline:"none",fontFamily:"inherit"}}/>
                         </div>
                       )}
                       {/* AI + Polymarket buttons for KO matches */}
