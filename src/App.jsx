@@ -715,35 +715,67 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
 
 function StandingsTable({teams,matches}){
   const rows=calcStandings(teams,matches);
+  const [compact,setCompact]=useState(false);
   return(
-    <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
-      <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginTop:6,minWidth:260}}>
-        <thead>
-          <tr style={{color:"#444"}}>
-            <th style={{padding:"3px 4px",textAlign:"center",fontWeight:500,width:18}}>#</th>
-            <th style={{padding:"3px 4px",textAlign:"left",fontWeight:500}}>Team</th>
-            <th style={{padding:"3px 4px",textAlign:"center",fontWeight:500,width:24}} title="Played">P</th>
-            <th style={{padding:"3px 4px",textAlign:"center",fontWeight:500,width:24}} title="Goal Difference">GD</th>
-            <th style={{padding:"3px 4px",textAlign:"center",fontWeight:500,width:28}} title="Points">Pts</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r,i)=>(
-            <tr key={r.team} style={{background:i<2?"rgba(252,185,0,0.07)":"transparent",
-              borderTop:"1px solid rgba(255,255,255,0.04)"}}>
-              <td style={{padding:"4px 4px",textAlign:"center",color:i<2?"#fcb900":"#444",fontWeight:700,fontSize:10}}>{i+1}</td>
-              <td style={{padding:"4px 4px",fontWeight:600,fontSize:10,whiteSpace:"nowrap"}}>
-                {FLAGS[r.team]} {r.team}
-              </td>
-              <td style={{padding:"4px 4px",textAlign:"center",color:"#555",fontSize:10}}>{r.p}</td>
-              <td style={{padding:"4px 4px",textAlign:"center",color:r.gd>0?"#22c55e":r.gd<0?"#ef4444":"#555",fontSize:10,fontWeight:600}}>
-                {r.gd>0?`+${r.gd}`:r.gd}
-              </td>
-              <td style={{padding:"4px 4px",textAlign:"center",color:"#fcb900",fontWeight:700,fontSize:12}}>{r.pts}</td>
+    <div style={{marginTop:6}}>
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:4}}>
+        <button onClick={()=>setCompact(p=>!p)} style={{
+          padding:"2px 8px",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+          background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",
+          borderRadius:4,color:"#555",
+        }}>{compact?"📋 Full table":"📱 Compact"}</button>
+      </div>
+      {compact?(
+        // Compact mobile view: # / Team / GD / Pts only
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+          <thead>
+            <tr style={{color:"#444"}}>
+              <th style={{padding:"3px 4px",textAlign:"center",fontWeight:500,width:18}}>#</th>
+              <th style={{padding:"3px 4px",textAlign:"left",fontWeight:500}}>Team</th>
+              <th style={{padding:"3px 4px",textAlign:"center",fontWeight:500,width:24}}>GD</th>
+              <th style={{padding:"3px 4px",textAlign:"center",fontWeight:500,width:28}}>Pts</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((r,i)=>(
+              <tr key={r.team} style={{background:i<2?"rgba(252,185,0,0.07)":"transparent",
+                borderTop:"1px solid rgba(255,255,255,0.04)"}}>
+                <td style={{padding:"4px 4px",textAlign:"center",color:i<2?"#fcb900":"#444",fontWeight:700,fontSize:10}}>{i+1}</td>
+                <td style={{padding:"4px 4px",fontWeight:600,fontSize:11}}>{FLAGS[r.team]} {r.team}</td>
+                <td style={{padding:"4px 4px",textAlign:"center",fontSize:10,fontWeight:600,
+                  color:r.gd>0?"#22c55e":r.gd<0?"#ef4444":"#555"}}>
+                  {r.gd>0?`+${r.gd}`:r.gd}
+                </td>
+                <td style={{padding:"4px 4px",textAlign:"center",color:"#fcb900",fontWeight:700,fontSize:12}}>{r.pts}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ):(
+        // Full table
+        <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:280}}>
+            <thead>
+              <tr style={{color:"#444"}}>
+                {["#","Team","P","W","D","L","GD","Pts"].map(h=>(
+                  <th key={h} style={{padding:"3px 5px",textAlign:h==="Team"?"left":"center",fontWeight:500}}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r,i)=>(
+                <tr key={r.team} style={{background:i<2?"rgba(252,185,0,0.07)":"transparent",borderTop:"1px solid rgba(255,255,255,0.04)"}}>
+                  <td style={{padding:"4px 5px",textAlign:"center",color:i<2?"#fcb900":"#444",fontWeight:700}}>{i+1}</td>
+                  <td style={{padding:"4px 5px",fontWeight:600}}>{FLAGS[r.team]} {r.team}</td>
+                  {[r.p,r.w,r.d,r.l,r.gd>0?`+${r.gd}`:r.gd,r.pts].map((v,j)=>(
+                    <td key={j} style={{padding:"4px 5px",textAlign:"center",color:j===5?"#fcb900":"#999",fontWeight:j===5?700:400}}>{v}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -2534,35 +2566,51 @@ export default function App(){
               }}>Group {g}</button>
             ))}
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
-            <div>
-              <h3 style={{margin:"0 0 10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:1,color:"#fcb900"}}>
-                Group {activeGroup} — My Predictions
-              </h3>
-              {gm.map(m=><MatchCard key={m.id} match={m} actual={ga.find(a=>a.id===m.id)} onUpdate={upMatchAndSync} kickoffs={KICKOFFS} livePreds={livePredictions}/>)}
-            </div>
-            <div>
-              <h3 style={{margin:"0 0 10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:1,color:"#fcb900"}}>Standings</h3>
-              <div style={{background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:11,padding:11}}>
-                {/* Show actual standings when results are available, otherwise show predicted */}
-                {adminHasSaved ? (
-                  <>
-                    <div style={{fontSize:10,color:ga.some(m=>m.homeScore!==null)?"#22c55e":"#555",marginBottom:6,fontWeight:600}}>
-                      {ga.some(m=>m.homeScore!==null) ? "📊 Based on actual results" : "📊 Actual results (none yet this group)"}
+          <div style={{position:"relative"}}>
+            {/* Standings overlay panel */}
+            {(()=>{
+              const [showStandings, setShowStandings] = React.useState(false);
+              return(
+                <>
+                  {/* Floating standings button */}
+                  <button onClick={()=>setShowStandings(p=>!p)} style={{
+                    position:"sticky",top:4,zIndex:50,float:"right",
+                    padding:"5px 12px",marginBottom:8,
+                    background:showStandings?"rgba(252,185,0,0.2)":"rgba(252,185,0,0.08)",
+                    border:`1px solid ${showStandings?"rgba(252,185,0,0.5)":"rgba(252,185,0,0.2)"}`,
+                    borderRadius:7,color:"#fcb900",fontSize:11,fontWeight:700,
+                    cursor:"pointer",fontFamily:"inherit",
+                  }}>
+                    {showStandings?"✕ Hide":"📊 Standings"}
+                  </button>
+
+                  <h3 style={{margin:"0 0 10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:1,color:"#fcb900"}}>
+                    Group {activeGroup} — My Predictions
+                  </h3>
+
+                  {/* Standings panel — appears inline above matches */}
+                  {showStandings&&(
+                    <div style={{
+                      background:"rgba(255,255,255,0.03)",border:"1px solid rgba(252,185,0,0.2)",
+                      borderRadius:11,padding:11,marginBottom:14,
+                    }}>
+                      <div style={{fontSize:10,color:ga.some(m=>m.homeScore!==null)?"#22c55e":"#555",marginBottom:6,fontWeight:600}}>
+                        {adminHasSaved
+                          ? ga.some(m=>m.homeScore!==null) ? "📊 Based on actual results" : "📊 Actual results (none yet)"
+                          : "📊 Based on your predictions"}
+                      </div>
+                      <StandingsTable key={standingsKey} teams={gt} matches={adminHasSaved?ga:gm}/>
+                      <div style={{marginTop:9,fontSize:10,color:"#333",display:"flex",alignItems:"center",gap:5}}>
+                        <span style={{width:8,height:8,background:"rgba(252,185,0,0.18)",borderRadius:2,display:"inline-block"}}/>Top 2 qualify
+                      </div>
                     </div>
-                    <StandingsTable key={standingsKey} teams={gt} matches={ga}/>
-                  </>
-                ) : (
-                  <>
-                    <div style={{fontSize:10,color:"#555",marginBottom:6}}>📊 Based on your predictions</div>
-                    <StandingsTable key={standingsKey} teams={gt} matches={gm}/>
-                  </>
-                )}
-                <div style={{marginTop:9,fontSize:10,color:"#333",display:"flex",alignItems:"center",gap:5}}>
-                  <span style={{width:8,height:8,background:"rgba(252,185,0,0.18)",borderRadius:2,display:"inline-block"}}/>Top 2 qualify
-                </div>
-              </div>
-            </div>
+                  )}
+
+                  {/* Matches */}
+                  {gm.map(m=><MatchCard key={m.id} match={m} actual={ga.find(a=>a.id===m.id)} onUpdate={upMatchAndSync} kickoffs={KICKOFFS} livePreds={livePredictions}/>)}
+                </>
+              );
+            })()}
           </div>
         </div>}
 
