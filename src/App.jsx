@@ -589,6 +589,7 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
       border:`1px solid ${locked?"rgba(239,68,68,0.2)":done?"rgba(252,185,0,0.2)":"rgba(255,255,255,0.07)"}`,
       borderRadius:11,padding:"10px 10px",marginBottom:8,
     }}>
+      {/* Main match row — no buttons, full width for teams */}
       <div style={{display:"flex",alignItems:"center",gap:5}}>
         <span style={{fontSize:16,flexShrink:0}}>{FLAGS[match.home]||"🏳️"}</span>
         <span style={{flex:1,fontWeight:600,fontSize:11,color:winner===match.home?"#fcb900":locked?"#888":"#ddd",
@@ -607,20 +608,26 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
         <span style={{fontSize:16,flexShrink:0}}>{FLAGS[match.away]||"🏳️"}</span>
         {locked&&!result&&<span style={{fontSize:11,flexShrink:0}}>🔒</span>}
         {result&&<PointsBadge result={result}/>}
-        {aiPred&&!locked&&(
-          <button onClick={()=>setShowAI(p=>!p)} style={{
-            flexShrink:0,padding:"2px 6px",background:"rgba(139,92,246,0.12)",
-            border:"1px solid rgba(139,92,246,0.3)",borderRadius:5,
-            color:"#a78bfa",fontSize:10,cursor:"pointer",fontFamily:"inherit",fontWeight:700,
-          }}>🤖</button>
-        )}
-        <button onClick={fetchOdds} style={{
-          flexShrink:0,padding:"2px 6px",
-          background:showOdds?"rgba(96,165,250,0.2)":"rgba(96,165,250,0.08)",
-          border:"1px solid rgba(96,165,250,0.25)",borderRadius:5,
-          color:"#60a5fa",fontSize:10,cursor:"pointer",fontFamily:"inherit",fontWeight:700,
-        }}>📊</button>
       </div>
+
+      {/* Tool buttons row — only shown when relevant */}
+      {(aiPred&&!locked)||true?(
+        <div style={{display:"flex",gap:6,marginTop:6,paddingTop:5,
+          borderTop:"1px solid rgba(255,255,255,0.04)"}}>
+          {aiPred&&!locked&&(
+            <button onClick={()=>setShowAI(p=>!p)} style={{
+              padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+              background:showAI?"rgba(139,92,246,0.2)":"rgba(139,92,246,0.08)",
+              border:"1px solid rgba(139,92,246,0.25)",borderRadius:5,color:"#a78bfa",
+            }}>🤖 AI prediction</button>
+          )}
+          <button onClick={fetchOdds} style={{
+            padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+            background:showOdds?"rgba(96,165,250,0.2)":"rgba(96,165,250,0.05)",
+            border:"1px solid rgba(96,165,250,0.2)",borderRadius:5,color:"#60a5fa",
+          }}>📊 Market odds</button>
+        </div>
+      ):null}
 
       {/* Odds panel */}
       {showOdds&&(
@@ -709,26 +716,35 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
 function StandingsTable({teams,matches}){
   const rows=calcStandings(teams,matches);
   return(
-    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginTop:6}}>
-      <thead>
-        <tr style={{color:"#444"}}>
-          {["#","Team","P","W","D","L","GD","Pts"].map(h=>(
-            <th key={h} style={{padding:"3px 5px",textAlign:h==="Team"?"left":"center",fontWeight:500}}>{h}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r,i)=>(
-          <tr key={r.team} style={{background:i<2?"rgba(252,185,0,0.07)":"transparent",borderTop:"1px solid rgba(255,255,255,0.04)"}}>
-            <td style={{padding:"4px 5px",textAlign:"center",color:i<2?"#fcb900":"#444",fontWeight:700}}>{i+1}</td>
-            <td style={{padding:"4px 5px",fontWeight:600}}>{FLAGS[r.team]} {r.team}</td>
-            {[r.p,r.w,r.d,r.l,r.gd>0?`+${r.gd}`:r.gd,r.pts].map((v,j)=>(
-              <td key={j} style={{padding:"4px 5px",textAlign:"center",color:j===5?"#fcb900":"#999",fontWeight:j===5?700:400}}>{v}</td>
-            ))}
+    <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+      <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginTop:6,minWidth:260}}>
+        <thead>
+          <tr style={{color:"#444"}}>
+            <th style={{padding:"3px 4px",textAlign:"center",fontWeight:500,width:18}}>#</th>
+            <th style={{padding:"3px 4px",textAlign:"left",fontWeight:500}}>Team</th>
+            <th style={{padding:"3px 4px",textAlign:"center",fontWeight:500,width:24}} title="Played">P</th>
+            <th style={{padding:"3px 4px",textAlign:"center",fontWeight:500,width:24}} title="Goal Difference">GD</th>
+            <th style={{padding:"3px 4px",textAlign:"center",fontWeight:500,width:28}} title="Points">Pts</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((r,i)=>(
+            <tr key={r.team} style={{background:i<2?"rgba(252,185,0,0.07)":"transparent",
+              borderTop:"1px solid rgba(255,255,255,0.04)"}}>
+              <td style={{padding:"4px 4px",textAlign:"center",color:i<2?"#fcb900":"#444",fontWeight:700,fontSize:10}}>{i+1}</td>
+              <td style={{padding:"4px 4px",fontWeight:600,fontSize:10,whiteSpace:"nowrap"}}>
+                {FLAGS[r.team]} {r.team}
+              </td>
+              <td style={{padding:"4px 4px",textAlign:"center",color:"#555",fontSize:10}}>{r.p}</td>
+              <td style={{padding:"4px 4px",textAlign:"center",color:r.gd>0?"#22c55e":r.gd<0?"#ef4444":"#555",fontSize:10,fontWeight:600}}>
+                {r.gd>0?`+${r.gd}`:r.gd}
+              </td>
+              <td style={{padding:"4px 4px",textAlign:"center",color:"#fcb900",fontWeight:700,fontSize:12}}>{r.pts}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
