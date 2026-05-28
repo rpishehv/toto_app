@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import React from "react";
 import { supabase } from './supabase.js';
 import {
   sbGetUser, sbCreateUser, sbResetPin, sbVerifyRecovery, sbClearUser,
@@ -810,7 +811,9 @@ export default function App(){
   const [syncing,setSyncing]=useState(false);
   const [syncStatus,setSyncStatus]=useState(null);
   const [generatingAI,setGeneratingAI]=useState(false);
-  const [aiGenStatus,setAiGenStatus]=useState(null); // {ok, msg, stats}
+  const [aiGenStatus,setAiGenStatus]=useState(null);
+  const [generatingOdds,setGeneratingOdds]=useState(false);
+  const [oddsGenStatus,setOddsGenStatus]=useState(null);
   const [adminHasSaved,setAdminHasSaved]=useState(false); // true once admin saves any results
   const [saveHistory,setSaveHistory]=useState([]); // last 5 admin saves
   const [showConfirm,setShowConfirm]=useState(false); // confirmation dialog
@@ -1081,6 +1084,46 @@ export default function App(){
   // Build human-readable diff of what changed
   // ── Live Feed Sync ─────────────────────────────────────────────────────────
   // ── AI KO Prediction Generator ─────────────────────────────────────────────
+  const generateKOPolymarketOdds = async () => {
+    setGeneratingOdds(true);
+    setOddsGenStatus(null);
+    const koMatches = actualKO.filter(m => m.home !== "TBD" && m.away !== "TBD");
+    if (koMatches.length === 0) {
+      setOddsGenStatus({ ok:false, msg:"No KO teams set yet — fill R32 first." });
+      setGeneratingOdds(false);
+      return;
+    }
+    let done=0, notFound=0, failed=0;
+    const newPreds = { ...livePredictions };
+    for (const m of koMatches) {
+      const key = `${m.home}||${m.away}`;
+      try {
+        const res = await fetch(`/api/odds?home=${encodeURIComponent(m.home)}&away=${encodeURIComponent(m.away)}`);
+        const data = await res.json();
+        if (data.found) {
+          // Store Polymarket odds alongside AI predictions
+          newPreds[key] = { ...newPreds[key], polymarket: data };
+          done++;
+        } else {
+          notFound++;
+        }
+        setOddsGenStatus({ ok:true, msg:`Fetching... ${done+notFound+failed}/${koMatches.length}` });
+      } catch(e) {
+        console.error(`Odds failed for ${key}:`, e);
+        failed++;
+      }
+    }
+    setLivePredictions(newPreds);
+    await sbSaveActualResults(actualMatches, actualKO, actualPodium, koKickoffs, newPreds);
+    setOddsGenStatus({
+      ok: done > 0,
+      msg: done > 0
+        ? `✅ Found ${done} Polymarket markets${notFound>0?`, ${notFound} not listed yet`:""}.`
+        : `⏳ No Polymarket markets found yet — try again closer to June 11.`
+    });
+    setGeneratingOdds(false);
+  };
+
   const generateKOPredictions = async () => {
     setGeneratingAI(true);
     setAiGenStatus(null);
@@ -2601,6 +2644,121 @@ export default function App(){
                               color:"#444",fontSize:10,padding:"2px 0",outline:"none",fontFamily:"inherit"}}/>
                         </div>
                       )}
+                      {/* AI + Polymarket buttons for KO matches */}
+                      {teamsKnown&&(()=>{
+                        const koKey = `${liveHome}||${liveAway}`;
+                        const aiP = livePredictions[koKey];
+                        const polyData = aiP?.polymarket;
+                        const [showKOAI, setShowKOAI] = React.useState(false);
+                        const [showKOOdds, setShowKOOdds] = React.useState(false);
+                        const [koOdds, setKOOdds] = React.useState(polyData||null);
+                        const [koOddsLoading, setKOOddsLoading] = React.useState(false);
+
+                        const fetchKOOdds = async () => {
+                          if (koOdds) { setShowKOOdds(p=>!p); return; }
+                          setShowKOOdds(true); setKOOddsLoading(true);
+                          try {
+                            const res = await fetch(`/api/odds?home=${encodeURIComponent(liveHome)}&away=${encodeURIComponent(liveAway)}`);
+                            const data = await res.json();
+                            setKOOdds(data);
+                          } catch { setKOOdds({found:false,message:"Could not load odds"}); }
+                          setKOOddsLoading(false);
+                        };
+
+                        return(
+                          <div>
+                            {/* Buttons row */}
+                            {(aiP||true)&&(
+                              <div style={{display:"flex",gap:6,marginTop:8,paddingTop:8,
+                                borderTop:"1px solid rgba(255,255,255,0.04)"}}>
+                                {aiP&&<button onClick={()=>setShowKOAI(p=>!p)} style={{
+                                  padding:"3px 10px",background:"rgba(139,92,246,0.12)",
+                                  border:"1px solid rgba(139,92,246,0.3)",borderRadius:5,
+                                  color:"#a78bfa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                                }}>🤖 AI</button>}
+                                <button onClick={fetchKOOdds} style={{
+                                  padding:"3px 10px",
+                                  background:showKOOdds?"rgba(96,165,250,0.18)":"rgba(96,165,250,0.08)",
+                                  border:"1px solid rgba(96,165,250,0.25)",borderRadius:5,
+                                  color:"#60a5fa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                                }}>📊 Odds</button>
+                              </div>
+                            )}
+                            {/* AI panel */}
+                            {showKOAI&&aiP&&(
+                              <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,
+                                background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.2)"}}>
+                                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                                  <span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>🤖 AI:</span>
+                                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>
+                                    {aiP.h} – {aiP.a}
+                                  </span>
+                                  {aiP.confidence&&<span style={{fontSize:9,color:"#6d5a9c",
+                                    background:"rgba(139,92,246,0.15)",borderRadius:4,padding:"2px 6px"}}>
+                                    {aiP.confidence}
+                                  </span>}
+                                  <button onClick={()=>setShowKOAI(false)} style={{marginLeft:"auto",
+                                    padding:"1px 6px",background:"rgba(255,255,255,0.05)",
+                                    border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,
+                                    color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+                                </div>
+                                {aiP.insight&&<div style={{fontSize:11,color:"#8b7dbf",lineHeight:1.6,marginBottom:4}}>{aiP.insight}</div>}
+                                {aiP.key&&<div style={{fontSize:10,color:"#6d5a9c",fontStyle:"italic"}}>🔑 {aiP.key}</div>}
+                                {!aiP.insight&&aiP.r&&<div style={{fontSize:10,color:"#7c6db3",fontStyle:"italic"}}>{aiP.r}</div>}
+                              </div>
+                            )}
+                            {/* Polymarket panel */}
+                            {showKOOdds&&(
+                              <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,
+                                background:"rgba(96,165,250,0.06)",border:"1px solid rgba(96,165,250,0.18)"}}>
+                                {koOddsLoading?(
+                                  <div style={{fontSize:11,color:"#444"}}>⏳ Loading Polymarket odds…</div>
+                                ):koOdds?.found?(
+                                  <>
+                                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                                      <span style={{fontSize:11,color:"#60a5fa",fontWeight:700}}>📊 Polymarket</span>
+                                      {koOdds.volume&&<span style={{fontSize:9,color:"#444",marginLeft:"auto"}}>{koOdds.volume}</span>}
+                                      <button onClick={()=>setShowKOOdds(false)} style={{padding:"1px 6px",
+                                        background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",
+                                        borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+                                    </div>
+                                    {(koOdds.outcomes?.length>0?koOdds.outcomes:[
+                                      {label:liveHome,prob:koOdds.homeProb},
+                                      {label:"Draw",prob:koOdds.drawProb},
+                                      {label:liveAway,prob:koOdds.awayProb},
+                                    ].filter(o=>o.prob!=null)).map((o,i)=>(
+                                      <div key={i} style={{marginBottom:5}}>
+                                        <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:2}}>
+                                          <span style={{color:"#ccc",fontWeight:600}}>{o.label}</span>
+                                          <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,
+                                            color:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#888"}}>{o.prob}¢</span>
+                                        </div>
+                                        <div style={{height:4,background:"rgba(255,255,255,0.06)",borderRadius:2,overflow:"hidden"}}>
+                                          <div style={{width:`${o.prob}%`,height:"100%",
+                                            background:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#60a5fa",
+                                            borderRadius:2}}/>
+                                        </div>
+                                      </div>
+                                    ))}
+                                    <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
+                                      <span style={{fontSize:9,color:"#444"}}>¢ = % probability</span>
+                                      {koOdds.url&&<a href={koOdds.url} target="_blank" rel="noopener noreferrer"
+                                        style={{fontSize:9,color:"#60a5fa",textDecoration:"none"}}>View ↗</a>}
+                                    </div>
+                                  </>
+                                ):(
+                                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                                    <span style={{fontSize:11,color:"#444"}}>📊 {koOdds?.message||"Markets not open yet"}</span>
+                                    <button onClick={()=>setShowKOOdds(false)} style={{padding:"1px 6px",
+                                      background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",
+                                      borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -4514,7 +4672,7 @@ export default function App(){
               </div>
 
               {/* AI Predictions row */}
-              <div style={{marginBottom:syncStatus||aiGenStatus?8:20}}>
+              <div style={{marginBottom:8}}>
                 <button onClick={generateKOPredictions} disabled={generatingAI} style={{
                   width:"100%",padding:"11px 18px",
                   background:generatingAI?"rgba(167,139,250,0.06)":"rgba(167,139,250,0.08)",
@@ -4529,6 +4687,33 @@ export default function App(){
                   </span>}
                 </button>
               </div>
+
+              {/* Polymarket KO Odds row */}
+              <div style={{marginBottom:syncStatus||aiGenStatus||oddsGenStatus?8:20}}>
+                <button onClick={generateKOPolymarketOdds} disabled={generatingOdds} style={{
+                  width:"100%",padding:"11px 18px",
+                  background:generatingOdds?"rgba(96,165,250,0.04)":"rgba(96,165,250,0.07)",
+                  border:"1px solid rgba(96,165,250,0.2)",borderRadius:8,
+                  color:"#60a5fa",fontSize:13,fontWeight:700,
+                  cursor:generatingOdds?"wait":"pointer",fontFamily:"inherit",
+                  opacity:generatingOdds?0.7:1,textAlign:"left",
+                }}>
+                  {generatingOdds?"⏳ Fetching Polymarket odds…":"📊 Fetch KO Polymarket Odds"}
+                  {!generatingOdds&&<span style={{fontSize:11,color:"#4a7a9b",marginLeft:8,fontWeight:400}}>
+                    — saves crowd odds for all KO matches · visible to all players
+                  </span>}
+                </button>
+              </div>
+
+              {/* Odds gen status */}
+              {oddsGenStatus&&(
+                <div style={{
+                  padding:"9px 14px",marginBottom:8,borderRadius:8,fontSize:12,
+                  background:oddsGenStatus.ok?"rgba(96,165,250,0.08)":"rgba(239,68,68,0.08)",
+                  border:`1px solid ${oddsGenStatus.ok?"rgba(96,165,250,0.25)":"rgba(239,68,68,0.25)"}`,
+                  color:oddsGenStatus.ok?"#60a5fa":"#fca5a5",
+                }}>{oddsGenStatus.msg}</div>
+              )}
               {/* Sync status */}
               {aiGenStatus&&(
                 <div style={{
