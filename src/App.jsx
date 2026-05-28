@@ -3624,7 +3624,7 @@ export default function App(){
                         <div style={{marginBottom:12,padding:"10px 14px",
                           background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.06)",
                           borderRadius:10,fontSize:11,color:"#444"}}>
-                          📊 No Polymarket market found yet — markets open closer to kickoff
+                          {odds.message||"📊 Polymarket markets open closer to June 11 — check back soon"}
                         </div>
                       );
                       return(
