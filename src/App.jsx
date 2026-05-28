@@ -866,8 +866,14 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
   const [showExperts, setShowExperts] = useState(false);
   const [odds, setOdds] = useState(aiP?.polymarket||null);
   const [oddsLoading, setOddsLoading] = useState(false);
-  const [expertData, setExpertData] = useState(null);
+  // Use stored expert data if admin generated it, otherwise fetch fresh
+  const [expertData, setExpertData] = useState(aiP?.experts||null);
   const [expertLoading, setExpertLoading] = useState(false);
+
+  // Update if admin pushes new data via Supabase real-time
+  React.useEffect(()=>{
+    if (aiP?.experts && !expertData) setExpertData(aiP.experts);
+  }, [aiP?.experts]);
 
   const fetchOdds = async () => {
     if (odds) { setShowOdds(p=>!p); return; }
@@ -1037,6 +1043,8 @@ export default function App(){
   const [showStandings,setShowStandings]=useState(false);
   const [generatingOdds,setGeneratingOdds]=useState(false);
   const [oddsGenStatus,setOddsGenStatus]=useState(null);
+  const [generatingExperts,setGeneratingExperts]=useState(false);
+  const [expertsGenStatus,setExpertsGenStatus]=useState(null);
   const [adminHasSaved,setAdminHasSaved]=useState(false); // true once admin saves any results
   const [saveHistory,setSaveHistory]=useState([]); // last 5 admin saves
   const [showConfirm,setShowConfirm]=useState(false); // confirmation dialog
@@ -1345,6 +1353,48 @@ export default function App(){
         : `⏳ No Polymarket markets found yet — try again closer to June 11.`
     });
     setGeneratingOdds(false);
+  };
+
+  const generateKOExpertPredictions = async () => {
+    setGeneratingExperts(true);
+    setExpertsGenStatus(null);
+    const koMatches = actualKO.filter(m => m.home !== "TBD" && m.away !== "TBD");
+    if (koMatches.length === 0) {
+      setExpertsGenStatus({ ok:false, msg:"No KO teams set yet — fill R32 first." });
+      setGeneratingExperts(false);
+      return;
+    }
+    let done=0, failed=0;
+    const newPreds = { ...livePredictions };
+    for (const m of koMatches) {
+      const key = `${m.home}||${m.away}`;
+      setExpertsGenStatus({ ok:true, msg:`🔍 Fetching experts for ${m.home} vs ${m.away}… (${done+failed+1}/${koMatches.length})` });
+      try {
+        const res = await fetch('/api/experts', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ home:m.home, away:m.away, round:m.round }),
+        });
+        const data = await res.json();
+        if (data.consensus) {
+          newPreds[key] = { ...newPreds[key], experts: data };
+          done++;
+        } else { failed++; }
+      } catch(e) {
+        console.error(`Expert fetch failed for ${key}:`, e);
+        failed++;
+      }
+      // Small delay to avoid rate limiting
+      await new Promise(r => setTimeout(r, 800));
+    }
+    setLivePredictions(newPreds);
+    await sbSaveActualResults(actualMatches, actualKO, actualPodium, koKickoffs, newPreds);
+    setExpertsGenStatus({
+      ok: done > 0,
+      msg: done > 0
+        ? `✅ Expert predictions fetched for ${done} KO matches.${failed>0?` ${failed} failed.`:""}`
+        : `❌ Failed to fetch expert predictions — check API key or try again.`
+    });
+    setGeneratingExperts(false);
   };
 
   const generateKOPredictions = async () => {
@@ -4811,7 +4861,7 @@ export default function App(){
               </div>
 
               {/* Polymarket KO Odds row */}
-              <div style={{marginBottom:syncStatus||aiGenStatus||oddsGenStatus?8:20}}>
+              <div style={{marginBottom:8}}>
                 <button onClick={generateKOPolymarketOdds} disabled={generatingOdds} style={{
                   width:"100%",padding:"11px 18px",
                   background:generatingOdds?"rgba(96,165,250,0.04)":"rgba(96,165,250,0.07)",
@@ -4826,6 +4876,33 @@ export default function App(){
                   </span>}
                 </button>
               </div>
+
+              {/* Expert Predictions KO row */}
+              <div style={{marginBottom:syncStatus||aiGenStatus||oddsGenStatus||expertsGenStatus?8:20}}>
+                <button onClick={generateKOExpertPredictions} disabled={generatingExperts} style={{
+                  width:"100%",padding:"11px 18px",
+                  background:generatingExperts?"rgba(34,197,94,0.04)":"rgba(34,197,94,0.07)",
+                  border:"1px solid rgba(34,197,94,0.2)",borderRadius:8,
+                  color:"#22c55e",fontSize:13,fontWeight:700,
+                  cursor:generatingExperts?"wait":"pointer",fontFamily:"inherit",
+                  opacity:generatingExperts?0.7:1,textAlign:"left",
+                }}>
+                  {generatingExperts?"⏳ Fetching expert predictions…":"🔍 Generate KO Expert Predictions"}
+                  {!generatingExperts&&<span style={{fontSize:11,color:"#166534",marginLeft:8,fontWeight:400}}>
+                    — searches web for tipster picks · saves to Supabase · visible to all players
+                  </span>}
+                </button>
+              </div>
+
+              {/* Experts gen status */}
+              {expertsGenStatus&&(
+                <div style={{
+                  padding:"9px 14px",marginBottom:8,borderRadius:8,fontSize:12,
+                  background:expertsGenStatus.ok?"rgba(34,197,94,0.08)":"rgba(239,68,68,0.08)",
+                  border:`1px solid ${expertsGenStatus.ok?"rgba(34,197,94,0.25)":"rgba(239,68,68,0.25)"}`,
+                  color:expertsGenStatus.ok?"#22c55e":"#fca5a5",
+                }}>{expertsGenStatus.msg}</div>
+              )}
 
               {/* Odds gen status */}
               {oddsGenStatus&&(
