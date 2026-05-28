@@ -14,6 +14,7 @@ import {
 } from './storage.js';
 import { fetchLiveFeed, parseFeed, applyFeedToState } from './liveFeed.js';
 import GROUP_INSIGHTS from './insights.js';
+import EXPERT_PREDICTIONS from './experts.js';
 
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
@@ -565,8 +566,10 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
   const result=actual?calcMatchPoints(match,actual):null;
   const actDone=actual&&actual.homeScore!==null;
   const aiPred=getAIPrediction(match.home,match.away,livePreds);
+  const expertData=EXPERT_PREDICTIONS[`${match.home}||${match.away}`]||EXPERT_PREDICTIONS[`${match.away}||${match.home}`];
   const [showAI,setShowAI]=useState(false);
   const [showOdds,setShowOdds]=useState(false);
+  const [showExperts,setShowExperts]=useState(false);
   const [matchOdds,setMatchOdds]=useState(null);
   const [oddsLoading,setOddsLoading]=useState(false);
 
@@ -610,8 +613,8 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
         {result&&<PointsBadge result={result}/>}
       </div>
 
-      {/* Tool buttons row — only shown when relevant */}
-      {(aiPred&&!locked)||true?(
+      {/* Tool buttons row */}
+      {(aiPred&&!locked)||expertData||true?(
         <div style={{display:"flex",gap:6,marginTop:6,paddingTop:5,
           borderTop:"1px solid rgba(255,255,255,0.04)"}}>
           {aiPred&&!locked&&(
@@ -620,6 +623,13 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
               background:showAI?"rgba(139,92,246,0.2)":"rgba(139,92,246,0.08)",
               border:"1px solid rgba(139,92,246,0.25)",borderRadius:5,color:"#a78bfa",
             }}>🤖 AI prediction</button>
+          )}
+          {expertData&&(
+            <button onClick={()=>setShowExperts(p=>!p)} style={{
+              padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+              background:showExperts?"rgba(34,197,94,0.2)":"rgba(34,197,94,0.06)",
+              border:"1px solid rgba(34,197,94,0.2)",borderRadius:5,color:"#22c55e",
+            }}>🔍 Experts</button>
           )}
           <button onClick={fetchOdds} style={{
             padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
@@ -709,6 +719,7 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
           )}
         </div>
       )}
+      {showExperts&&<ExpertPanel home={match.home} away={match.away} data={expertData}/>}
     </div>
   );
 }
@@ -802,11 +813,61 @@ function ScoringBar(){
   );
 }
 
+function ExpertPanel({ home, away, data, loading }) {
+  if (loading) return (
+    <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,
+      background:"rgba(34,197,94,0.05)",border:"1px solid rgba(34,197,94,0.15)",
+      fontSize:11,color:"#444"}}>⏳ Fetching expert predictions…</div>
+  );
+  if (!data) return null;
+  return (
+    <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,
+      background:"rgba(34,197,94,0.05)",border:"1px solid rgba(34,197,94,0.18)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+        <span style={{fontSize:11,color:"#22c55e",fontWeight:700}}>🔍 Expert Consensus</span>
+        {data.consensus&&(
+          <span style={{fontSize:10,color:"#16a34a",background:"rgba(34,197,94,0.12)",
+            borderRadius:4,padding:"1px 7px",fontWeight:600}}>{data.consensus}</span>
+        )}
+        {data.likelyScore&&(
+          <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#4ade80",marginLeft:"auto"}}>
+            {data.likelyScore}
+          </span>
+        )}
+      </div>
+      {data.sources?.map((s,i)=>(
+        <div key={i} style={{display:"flex",alignItems:"center",gap:8,
+          padding:"4px 0",borderTop:i>0?"1px solid rgba(255,255,255,0.04)":"none",fontSize:10}}>
+          <span style={{color:"#555",width:80,flexShrink:0,fontWeight:600}}>{s.name}</span>
+          <span style={{flex:1,color:"#ccc"}}>{s.pick}</span>
+          {s.pct!=null&&(
+            <span style={{color:"#22c55e",fontWeight:700,flexShrink:0}}>{s.pct}%</span>
+          )}
+          {s.confidence&&(
+            <span style={{fontSize:9,color:
+              s.confidence==="High"?"#22c55e":s.confidence==="Medium"?"#fcb900":"#555",
+              flexShrink:0}}>{s.confidence}</span>
+          )}
+        </div>
+      ))}
+      {data.summary&&(
+        <div style={{marginTop:8,fontSize:11,color:"#555",lineHeight:1.6,
+          borderTop:"1px solid rgba(255,255,255,0.05)",paddingTop:7,fontStyle:"italic"}}>
+          {data.summary}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function KOMatchButtons({liveHome, liveAway, aiP}) {
   const [showAI, setShowAI] = useState(false);
   const [showOdds, setShowOdds] = useState(false);
+  const [showExperts, setShowExperts] = useState(false);
   const [odds, setOdds] = useState(aiP?.polymarket||null);
   const [oddsLoading, setOddsLoading] = useState(false);
+  const [expertData, setExpertData] = useState(null);
+  const [expertLoading, setExpertLoading] = useState(false);
 
   const fetchOdds = async () => {
     if (odds) { setShowOdds(p=>!p); return; }
@@ -818,6 +879,19 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
     setOddsLoading(false);
   };
 
+  const fetchExperts = async () => {
+    if (expertData) { setShowExperts(p=>!p); return; }
+    setShowExperts(true); setExpertLoading(true);
+    try {
+      const res = await fetch('/api/experts', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ home:liveHome, away:liveAway, round:'knockout' }),
+      });
+      setExpertData(await res.json());
+    } catch { setExpertData({ sources:[], consensus:'Unknown', summary:'Could not fetch expert predictions.' }); }
+    setExpertLoading(false);
+  };
+
   return(
     <div>
       <div style={{display:"flex",gap:6,marginTop:8,paddingTop:8,borderTop:"1px solid rgba(255,255,255,0.04)"}}>
@@ -826,6 +900,12 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
           border:"1px solid rgba(139,92,246,0.3)",borderRadius:5,
           color:"#a78bfa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
         }}>🤖 AI</button>}
+        <button onClick={fetchExperts} style={{
+          padding:"3px 10px",
+          background:showExperts?"rgba(34,197,94,0.2)":"rgba(34,197,94,0.06)",
+          border:"1px solid rgba(34,197,94,0.2)",borderRadius:5,
+          color:"#22c55e",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+        }}>🔍 Experts</button>
         <button onClick={fetchOdds} style={{
           padding:"3px 10px",
           background:showOdds?"rgba(96,165,250,0.18)":"rgba(96,165,250,0.08)",
@@ -846,6 +926,9 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
           {aiP.key&&<div style={{fontSize:10,color:"#6d5a9c",fontStyle:"italic"}}>🔑 {aiP.key}</div>}
           {!aiP.insight&&aiP.r&&<div style={{fontSize:10,color:"#7c6db3",fontStyle:"italic"}}>{aiP.r}</div>}
         </div>
+      )}
+      {(showExperts||expertLoading)&&(
+        <ExpertPanel home={liveHome} away={liveAway} data={expertData} loading={expertLoading}/>
       )}
       {showOdds&&(
         <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,
