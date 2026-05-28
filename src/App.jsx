@@ -565,6 +565,23 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
   const actDone=actual&&actual.homeScore!==null;
   const aiPred=getAIPrediction(match.home,match.away,livePreds);
   const [showAI,setShowAI]=useState(false);
+  const [showOdds,setShowOdds]=useState(false);
+  const [matchOdds,setMatchOdds]=useState(null);
+  const [oddsLoading,setOddsLoading]=useState(false);
+
+  const fetchOdds = async () => {
+    if (matchOdds) { setShowOdds(p=>!p); return; }
+    setShowOdds(true);
+    setOddsLoading(true);
+    try {
+      const res = await fetch(`/api/odds?home=${encodeURIComponent(match.home)}&away=${encodeURIComponent(match.away)}`);
+      const data = await res.json();
+      setMatchOdds(data);
+    } catch(e) {
+      setMatchOdds({ found:false, message: 'Could not load odds' });
+    }
+    setOddsLoading(false);
+  };
   return(
     <div style={{
       background:locked?"rgba(239,68,68,0.04)":done?"rgba(252,185,0,0.05)":"rgba(255,255,255,0.025)",
@@ -596,7 +613,65 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
             color:"#a78bfa",fontSize:10,cursor:"pointer",fontFamily:"inherit",fontWeight:700,
           }}>🤖</button>
         )}
+        <button onClick={fetchOdds} style={{
+          flexShrink:0,padding:"2px 6px",
+          background:showOdds?"rgba(96,165,250,0.2)":"rgba(96,165,250,0.08)",
+          border:"1px solid rgba(96,165,250,0.25)",borderRadius:5,
+          color:"#60a5fa",fontSize:10,cursor:"pointer",fontFamily:"inherit",fontWeight:700,
+        }}>📊</button>
       </div>
+
+      {/* Odds panel */}
+      {showOdds&&(
+        <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,
+          background:"rgba(96,165,250,0.06)",border:"1px solid rgba(96,165,250,0.18)"}}>
+          {oddsLoading?(
+            <div style={{fontSize:11,color:"#444",textAlign:"center"}}>⏳ Loading Polymarket odds…</div>
+          ):matchOdds?.found?(
+            <>
+              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                <span style={{fontSize:11,color:"#60a5fa",fontWeight:700}}>📊 Polymarket Crowd Odds</span>
+                {matchOdds.volume&&<span style={{fontSize:9,color:"#444",marginLeft:"auto"}}>{matchOdds.volume} vol</span>}
+                <button onClick={()=>setShowOdds(false)} style={{padding:"1px 6px",background:"rgba(255,255,255,0.05)",
+                  border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,color:"#555",
+                  fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+              </div>
+              {(matchOdds.outcomes?.length>0?matchOdds.outcomes:[
+                {label:match.home,prob:matchOdds.homeProb},
+                {label:"Draw",prob:matchOdds.drawProb},
+                {label:match.away,prob:matchOdds.awayProb},
+              ].filter(o=>o.prob!=null)).map((o,i)=>(
+                <div key={i} style={{marginBottom:5}}>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:2}}>
+                    <span style={{color:"#ccc",fontWeight:600}}>{o.label}</span>
+                    <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,
+                      color:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#888"}}>{o.prob}¢</span>
+                  </div>
+                  <div style={{height:4,background:"rgba(255,255,255,0.06)",borderRadius:2,overflow:"hidden"}}>
+                    <div style={{width:`${o.prob}%`,height:"100%",
+                      background:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#60a5fa",
+                      borderRadius:2,transition:"width 0.5s"}}/>
+                  </div>
+                </div>
+              ))}
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
+                <span style={{fontSize:9,color:"#444"}}>Price in ¢ = % probability</span>
+                {matchOdds.url&&<a href={matchOdds.url} target="_blank" rel="noopener noreferrer"
+                  style={{fontSize:9,color:"#60a5fa",textDecoration:"none"}}>View ↗</a>}
+              </div>
+            </>
+          ):(
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <span style={{fontSize:11,color:"#444"}}>
+                📊 {matchOdds?.message||"Markets open closer to June 11"}
+              </span>
+              <button onClick={()=>setShowOdds(false)} style={{padding:"1px 6px",background:"rgba(255,255,255,0.05)",
+                border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,color:"#555",
+                fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+            </div>
+          )}
+        </div>
+      )}
       {showAI&&aiPred&&(
         <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.2)"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
@@ -3604,85 +3679,6 @@ export default function App(){
                         homeFlag={FLAGS[home?.name]||"🏳️"} awayFlag={FLAGS[away?.name]||"🏳️"}/>;
                     })()}
 
-                    {/* Polymarket odds */}
-                    {(()=>{
-                      const key = `${home?.name}||${away?.name}`;
-                      const odds = marketOdds[key];
-                      if (!odds && !marketOdds[key]) {
-                        // Auto-fetch when match expanded
-                        fetchMarketOdds(home?.name, away?.name);
-                      }
-                      if (!odds || odds.loading) return(
-                        <div style={{marginBottom:12,padding:"10px 14px",
-                          background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",
-                          borderRadius:10,fontSize:11,color:"#444",display:"flex",alignItems:"center",gap:8}}>
-                          <span>📊</span>
-                          <span>{odds?.loading?"Loading Polymarket odds…":"Fetching market odds…"}</span>
-                        </div>
-                      );
-                      if (!odds.found) return(
-                        <div style={{marginBottom:12,padding:"10px 14px",
-                          background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.06)",
-                          borderRadius:10,fontSize:11,color:"#444"}}>
-                          {odds.message||"📊 Polymarket markets open closer to June 11 — check back soon"}
-                        </div>
-                      );
-                      return(
-                        <div style={{marginBottom:12,padding:"12px 14px",
-                          background:"rgba(96,165,250,0.06)",border:"1px solid rgba(96,165,250,0.18)",
-                          borderRadius:11}}>
-                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-                            <span style={{fontSize:11,fontWeight:700,color:"#60a5fa"}}>📊 Polymarket Crowd Odds</span>
-                            {odds.volume&&<span style={{fontSize:9,color:"#444",marginLeft:"auto"}}>{odds.volume} volume</span>}
-                          </div>
-                          {/* Outcome bars */}
-                          {odds.outcomes?.length>0 ? (
-                            <div>
-                              {odds.outcomes.map((o,i)=>(
-                                <div key={i} style={{marginBottom:6}}>
-                                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
-                                    <span style={{color:"#ccc",fontWeight:600}}>{o.label}</span>
-                                    <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,
-                                      color:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#888"}}>{o.prob}¢</span>
-                                  </div>
-                                  <div style={{height:5,background:"rgba(255,255,255,0.06)",borderRadius:3,overflow:"hidden"}}>
-                                    <div style={{width:`${o.prob}%`,height:"100%",
-                                      background:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#60a5fa",
-                                      borderRadius:3,transition:"width 0.5s"}}/>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : odds.homeProb!==null&&(
-                            <div style={{display:"flex",gap:8}}>
-                              {[
-                                {label:home?.name?.split(" ")[0], prob:odds.homeProb, color:"#fcb900"},
-                                {label:"Draw", prob:odds.drawProb, color:"#888"},
-                                {label:away?.name?.split(" ")[0], prob:odds.awayProb, color:"#60a5fa"},
-                              ].filter(o=>o.prob!==null).map((o,i)=>(
-                                <div key={i} style={{flex:1,textAlign:"center",
-                                  background:`${o.color}10`,border:`1px solid ${o.color}25`,
-                                  borderRadius:8,padding:"8px 4px"}}>
-                                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:o.color}}>{o.prob}¢</div>
-                                  <div style={{fontSize:9,color:"#555",marginTop:2}}>{o.label}</div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:8}}>
-                            <div style={{fontSize:9,color:"#444"}}>
-                              Price in cents = % probability · crowd-sourced
-                            </div>
-                            {odds.url&&(
-                              <a href={odds.url} target="_blank" rel="noopener noreferrer"
-                                style={{fontSize:9,color:"#60a5fa",textDecoration:"none"}}>
-                                View on Polymarket ↗
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
                       <div style={{marginBottom:14}}>
                         <div style={{fontSize:11,fontWeight:700,color:"#fcb900",marginBottom:8}}>📋 Match Events</div>
                         {fixtureEvents.map((ev,i)=>{
@@ -4011,53 +4007,6 @@ export default function App(){
                   />;
                 })()}
 
-                {/* Polymarket odds for sim match */}
-                {simMinute>0&&(()=>{
-                  const key = "Mexico||South Africa";
-                  const odds = marketOdds[key];
-                  if (!odds) { fetchMarketOdds("Mexico","South Africa"); return null; }
-                  if (odds.loading) return(
-                    <div style={{marginBottom:12,padding:"9px 14px",
-                      background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.06)",
-                      borderRadius:10,fontSize:11,color:"#444"}}>
-                      📊 Loading Polymarket odds…
-                    </div>
-                  );
-                  if (!odds.found) return(
-                    <div style={{marginBottom:12,padding:"9px 14px",
-                      background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.06)",
-                      borderRadius:10,fontSize:11,color:"#444"}}>
-                      📊 No Polymarket market yet — opens closer to June 11
-                    </div>
-                  );
-                  return(
-                    <div style={{marginBottom:12,padding:"12px 14px",
-                      background:"rgba(96,165,250,0.06)",border:"1px solid rgba(96,165,250,0.18)",
-                      borderRadius:11}}>
-                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-                        <span style={{fontSize:11,fontWeight:700,color:"#60a5fa"}}>📊 Polymarket Crowd Odds</span>
-                        {odds.volume&&<span style={{fontSize:9,color:"#444",marginLeft:"auto"}}>{odds.volume} volume</span>}
-                      </div>
-                      {odds.outcomes?.length>0&&odds.outcomes.map((o,i)=>(
-                        <div key={i} style={{marginBottom:6}}>
-                          <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
-                            <span style={{color:"#ccc",fontWeight:600}}>{o.label}</span>
-                            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,
-                              color:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#888"}}>{o.prob}¢</span>
-                          </div>
-                          <div style={{height:5,background:"rgba(255,255,255,0.06)",borderRadius:3,overflow:"hidden"}}>
-                            <div style={{width:`${o.prob}%`,height:"100%",
-                              background:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#60a5fa",
-                              borderRadius:3}}/>
-                          </div>
-                        </div>
-                      ))}
-                      <div style={{fontSize:9,color:"#444",marginTop:6}}>
-                        Price in cents = % probability · crowd-sourced real money market
-                      </div>
-                    </div>
-                  );
-                })()}
                 {simMinute>0&&(
                   <div style={{display:"flex",gap:10,marginBottom:12}}>
 
