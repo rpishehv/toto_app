@@ -693,6 +693,7 @@ export default function App(){
   const [fixtureEvents,setFixtureEvents]=useState([]);
   const [fixtureLineups,setFixtureLineups]=useState([]);
   const [fixturePlayers,setFixturePlayers]=useState([]);
+  const [marketOdds,setMarketOdds]=useState({}); // "Home||Away" → odds data
   const [liveLastUpdated,setLiveLastUpdated]=useState(null);
   const [todayMatches,setTodayMatches]=useState([]);
   const [refreshCooldown,setRefreshCooldown]=useState(0); // seconds remaining
@@ -1582,6 +1583,19 @@ export default function App(){
       setSimAnalysis(data.analysis || data.error);
     } catch(e) { setSimAnalysis(`Error: ${e.message}`); }
     setSimAnalysisLoading(false);
+  };
+
+  const fetchMarketOdds = async (homeName, awayName) => {
+    const key = `${homeName}||${awayName}`;
+    if (marketOdds[key]) return; // already loaded
+    setMarketOdds(prev => ({...prev, [key]: {loading:true}}));
+    try {
+      const res = await fetch(`/api/odds?home=${encodeURIComponent(homeName)}&away=${encodeURIComponent(awayName)}`);
+      const data = await res.json();
+      setMarketOdds(prev => ({...prev, [key]: {...data, loading:false}}));
+    } catch(e) {
+      setMarketOdds(prev => ({...prev, [key]: {loading:false, error:e.message}}));
+    }
   };
 
   // Load live data when tab is opened — manual refresh only (saves API quota)
@@ -3589,7 +3603,86 @@ export default function App(){
                         homeName={home?.name} awayName={away?.name}
                         homeFlag={FLAGS[home?.name]||"🏳️"} awayFlag={FLAGS[away?.name]||"🏳️"}/>;
                     })()}
-                    {fixtureEvents.length>0&&(
+
+                    {/* Polymarket odds */}
+                    {(()=>{
+                      const key = `${home?.name}||${away?.name}`;
+                      const odds = marketOdds[key];
+                      if (!odds && !marketOdds[key]) {
+                        // Auto-fetch when match expanded
+                        fetchMarketOdds(home?.name, away?.name);
+                      }
+                      if (!odds || odds.loading) return(
+                        <div style={{marginBottom:12,padding:"10px 14px",
+                          background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",
+                          borderRadius:10,fontSize:11,color:"#444",display:"flex",alignItems:"center",gap:8}}>
+                          <span>📊</span>
+                          <span>{odds?.loading?"Loading Polymarket odds…":"Fetching market odds…"}</span>
+                        </div>
+                      );
+                      if (!odds.found) return(
+                        <div style={{marginBottom:12,padding:"10px 14px",
+                          background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.06)",
+                          borderRadius:10,fontSize:11,color:"#444"}}>
+                          📊 No Polymarket market found yet — markets open closer to kickoff
+                        </div>
+                      );
+                      return(
+                        <div style={{marginBottom:12,padding:"12px 14px",
+                          background:"rgba(96,165,250,0.06)",border:"1px solid rgba(96,165,250,0.18)",
+                          borderRadius:11}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                            <span style={{fontSize:11,fontWeight:700,color:"#60a5fa"}}>📊 Polymarket Crowd Odds</span>
+                            {odds.volume&&<span style={{fontSize:9,color:"#444",marginLeft:"auto"}}>{odds.volume} volume</span>}
+                          </div>
+                          {/* Outcome bars */}
+                          {odds.outcomes?.length>0 ? (
+                            <div>
+                              {odds.outcomes.map((o,i)=>(
+                                <div key={i} style={{marginBottom:6}}>
+                                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
+                                    <span style={{color:"#ccc",fontWeight:600}}>{o.label}</span>
+                                    <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,
+                                      color:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#888"}}>{o.prob}¢</span>
+                                  </div>
+                                  <div style={{height:5,background:"rgba(255,255,255,0.06)",borderRadius:3,overflow:"hidden"}}>
+                                    <div style={{width:`${o.prob}%`,height:"100%",
+                                      background:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#60a5fa",
+                                      borderRadius:3,transition:"width 0.5s"}}/>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : odds.homeProb!==null&&(
+                            <div style={{display:"flex",gap:8}}>
+                              {[
+                                {label:home?.name?.split(" ")[0], prob:odds.homeProb, color:"#fcb900"},
+                                {label:"Draw", prob:odds.drawProb, color:"#888"},
+                                {label:away?.name?.split(" ")[0], prob:odds.awayProb, color:"#60a5fa"},
+                              ].filter(o=>o.prob!==null).map((o,i)=>(
+                                <div key={i} style={{flex:1,textAlign:"center",
+                                  background:`${o.color}10`,border:`1px solid ${o.color}25`,
+                                  borderRadius:8,padding:"8px 4px"}}>
+                                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:o.color}}>{o.prob}¢</div>
+                                  <div style={{fontSize:9,color:"#555",marginTop:2}}>{o.label}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:8}}>
+                            <div style={{fontSize:9,color:"#444"}}>
+                              Price in cents = % probability · crowd-sourced
+                            </div>
+                            {odds.url&&(
+                              <a href={odds.url} target="_blank" rel="noopener noreferrer"
+                                style={{fontSize:9,color:"#60a5fa",textDecoration:"none"}}>
+                                View on Polymarket ↗
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
                       <div style={{marginBottom:14}}>
                         <div style={{fontSize:11,fontWeight:700,color:"#fcb900",marginBottom:8}}>📋 Match Events</div>
                         {fixtureEvents.map((ev,i)=>{
@@ -3918,7 +4011,53 @@ export default function App(){
                   />;
                 })()}
 
-                {/* Events + Stats side by side */}
+                {/* Polymarket odds for sim match */}
+                {simMinute>0&&(()=>{
+                  const key = "Mexico||South Africa";
+                  const odds = marketOdds[key];
+                  if (!odds) { fetchMarketOdds("Mexico","South Africa"); return null; }
+                  if (odds.loading) return(
+                    <div style={{marginBottom:12,padding:"9px 14px",
+                      background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.06)",
+                      borderRadius:10,fontSize:11,color:"#444"}}>
+                      📊 Loading Polymarket odds…
+                    </div>
+                  );
+                  if (!odds.found) return(
+                    <div style={{marginBottom:12,padding:"9px 14px",
+                      background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.06)",
+                      borderRadius:10,fontSize:11,color:"#444"}}>
+                      📊 No Polymarket market yet — opens closer to June 11
+                    </div>
+                  );
+                  return(
+                    <div style={{marginBottom:12,padding:"12px 14px",
+                      background:"rgba(96,165,250,0.06)",border:"1px solid rgba(96,165,250,0.18)",
+                      borderRadius:11}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                        <span style={{fontSize:11,fontWeight:700,color:"#60a5fa"}}>📊 Polymarket Crowd Odds</span>
+                        {odds.volume&&<span style={{fontSize:9,color:"#444",marginLeft:"auto"}}>{odds.volume} volume</span>}
+                      </div>
+                      {odds.outcomes?.length>0&&odds.outcomes.map((o,i)=>(
+                        <div key={i} style={{marginBottom:6}}>
+                          <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
+                            <span style={{color:"#ccc",fontWeight:600}}>{o.label}</span>
+                            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,
+                              color:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#888"}}>{o.prob}¢</span>
+                          </div>
+                          <div style={{height:5,background:"rgba(255,255,255,0.06)",borderRadius:3,overflow:"hidden"}}>
+                            <div style={{width:`${o.prob}%`,height:"100%",
+                              background:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#60a5fa",
+                              borderRadius:3}}/>
+                          </div>
+                        </div>
+                      ))}
+                      <div style={{fontSize:9,color:"#444",marginTop:6}}>
+                        Price in cents = % probability · crowd-sourced real money market
+                      </div>
+                    </div>
+                  );
+                })()}
                 {simMinute>0&&(
                   <div style={{display:"flex",gap:10,marginBottom:12}}>
 
