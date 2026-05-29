@@ -457,7 +457,7 @@ function PointsBadge({result}){
       {hover&&(
         <div style={{
           position:"absolute",right:0,top:"115%",background:"#161b27",
-          border:"1px solid rgba(255,255,255,0.12)",borderRadius:9,padding:"9px 13px",
+          border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,padding:"9px 13px",
           zIndex:999,boxShadow:"0 12px 40px rgba(0,0,0,0.65)",
           fontSize:12,color:"#bbb",whiteSpace:"nowrap",
         }}>{label} <span style={{color,fontWeight:700,marginLeft:8}}>+{points} pts</span></div>
@@ -593,7 +593,7 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
     <div style={{
       background:locked?"rgba(239,68,68,0.04)":done?"rgba(252,185,0,0.05)":"rgba(255,255,255,0.03)",
       border:`1px solid ${locked?"rgba(239,68,68,0.2)":done?"rgba(252,185,0,0.2)":"rgba(255,255,255,0.06)"}`,
-      borderRadius:11,padding:"10px 10px",marginBottom:8,
+      borderRadius:10,padding:"10px 10px",marginBottom:8,
     }}>
       {/* Main match row — no buttons, full width for teams */}
       <div style={{display:"flex",alignItems:"center",gap:5}}>
@@ -624,20 +624,20 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
               <button onClick={()=>setShowAI(p=>!p)} style={{
                 padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
                 background:showAI?"rgba(139,92,246,0.2)":"rgba(139,92,246,0.08)",
-                border:"1px solid rgba(139,92,246,0.25)",borderRadius:5,color:"#a78bfa",
+                border:"1px solid rgba(139,92,246,0.25)",borderRadius:4,color:"#a78bfa",
               }}>🤖 AI prediction</button>
             )}
             {expertData&&(
               <button onClick={()=>setShowExperts(p=>!p)} style={{
                 padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
                 background:showExperts?"rgba(34,197,94,0.2)":"rgba(34,197,94,0.06)",
-                border:"1px solid rgba(34,197,94,0.2)",borderRadius:5,color:"#22c55e",
+                border:"1px solid rgba(34,197,94,0.2)",borderRadius:4,color:"#22c55e",
               }}>🔍 Experts</button>
             )}
             <button onClick={fetchOdds} style={{
               padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
               background:showOdds?"rgba(96,165,250,0.2)":"rgba(96,165,250,0.05)",
-              border:"1px solid rgba(96,165,250,0.2)",borderRadius:5,color:"#60a5fa",
+              border:"1px solid rgba(96,165,250,0.2)",borderRadius:4,color:"#60a5fa",
             }}>📊 Market odds</button>
           </div>
         </div>
@@ -706,8 +706,8 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
               </span>
             )}
             <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
-              {!locked&&<button onClick={()=>{onUpdate({...match,homeScore:aiPred.h,awayScore:aiPred.a});setShowAI(false);}} style={{padding:"3px 10px",background:"rgba(139,92,246,0.2)",border:"1px solid rgba(139,92,246,0.4)",borderRadius:5,color:"#c4b5fd",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Use</button>}
-              <button onClick={()=>setShowAI(false)} style={{padding:"3px 8px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.10)",borderRadius:5,color:"#555",fontSize:11,cursor:"pointer",fontFamily:"inherit",lineHeight:1}}>✕</button>
+              {!locked&&<button onClick={()=>{onUpdate({...match,homeScore:aiPred.h,awayScore:aiPred.a});setShowAI(false);}} style={{padding:"3px 10px",background:"rgba(139,92,246,0.2)",border:"1px solid rgba(139,92,246,0.4)",borderRadius:4,color:"#c4b5fd",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Use</button>}
+              <button onClick={()=>setShowAI(false)} style={{padding:"3px 8px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,color:"#555",fontSize:11,cursor:"pointer",fontFamily:"inherit",lineHeight:1}}>✕</button>
             </div>
           </div>
           {aiPred.insight&&(
@@ -838,7 +838,7 @@ function ReactionsBar({matchId, userName, home, away}) {
           <button onClick={undo} style={{
             marginLeft:"auto",padding:"2px 8px",
             background:"rgba(252,185,0,0.15)",border:"1px solid rgba(252,185,0,0.3)",
-            borderRadius:5,color:"#fcb900",fontSize:10,fontWeight:700,
+            borderRadius:4,color:"#fcb900",fontSize:10,fontWeight:700,
             cursor:"pointer",fontFamily:"inherit",
           }}>Undo</button>
         </div>
@@ -920,7 +920,7 @@ function StandingsTable({teams,matches}){
 
 function ScoringBar(){
   return(
-    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:11,padding:"11px 15px",marginBottom:20,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"11px 15px",marginBottom:20,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
       <span style={{fontSize:11,fontWeight:700,color:"#fcb900",marginRight:2}}>📋 Scoring:</span>
       {[
         {pts:100,text:"1st place",color:"#f59e0b",icon:"🥇"},
@@ -930,7 +930,7 @@ function ScoringBar(){
         {pts:3,text:"Correct GD",color:"#fcb900",icon:"📐"},
         {pts:2,text:"Correct outcome",color:"#60a5fa",icon:"✓"},
       ].map((r,i)=>(
-        <div key={i} style={{display:"flex",alignItems:"center",gap:5,background:`${r.color}12`,border:`1px solid ${r.color}30`,borderRadius:7,padding:"5px 11px"}}>
+        <div key={i} style={{display:"flex",alignItems:"center",gap:5,background:`${r.color}12`,border:`1px solid ${r.color}30`,borderRadius:6,padding:"5px 11px"}}>
           <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:17,color:r.color,lineHeight:1}}>{r.pts}</span>
           <span style={{fontSize:11,color:"#777"}}>{r.icon} {r.text}</span>
         </div>
@@ -1030,19 +1030,19 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
       <div style={{display:"flex",gap:6,marginTop:8,paddingTop:8,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
         {aiP&&<button onClick={()=>setShowAI(p=>!p)} style={{
           padding:"3px 10px",background:"rgba(139,92,246,0.12)",
-          border:"1px solid rgba(139,92,246,0.3)",borderRadius:5,
+          border:"1px solid rgba(139,92,246,0.3)",borderRadius:4,
           color:"#a78bfa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
         }}>🤖 AI</button>}
         <button onClick={fetchExperts} style={{
           padding:"3px 10px",
           background:showExperts?"rgba(34,197,94,0.2)":"rgba(34,197,94,0.06)",
-          border:"1px solid rgba(34,197,94,0.2)",borderRadius:5,
+          border:"1px solid rgba(34,197,94,0.2)",borderRadius:4,
           color:"#22c55e",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
         }}>🔍 Experts</button>
         <button onClick={fetchOdds} style={{
           padding:"3px 10px",
           background:showOdds?"rgba(96,165,250,0.18)":"rgba(96,165,250,0.08)",
-          border:"1px solid rgba(96,165,250,0.25)",borderRadius:5,
+          border:"1px solid rgba(96,165,250,0.25)",borderRadius:4,
           color:"#60a5fa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
         }}>📊 Odds</button>
       </div>
@@ -2016,7 +2016,7 @@ export default function App(){
     const leader = home>away?"home":away>home?"away":null;
     return(
       <div style={{marginBottom:12,padding:"12px 14px",
-        background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:11}}>
+        background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10}}>
         <div style={{fontSize:10,color:"#555",fontWeight:700,marginBottom:8,letterSpacing:1}}>WIN PROBABILITY</div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
           <div style={{textAlign:"center",width:50}}>
@@ -2432,7 +2432,7 @@ export default function App(){
     await sbSavePrediction(userName, blankMatches, blankKO, blankPodium);
     const lb = await sbUpsertLeaderboard(userName, blankPodium, 0);
     setLeaderboard(lb);
-    setSaved(true); setTimeout(()=>setSaved(false),2500);
+    setSaved(true);
   };
 
   const savePreds=async()=>{
@@ -2441,17 +2441,21 @@ export default function App(){
     const lb = await sbUpsertLeaderboard(userName, podium, myPts);
     setLeaderboard(lb);
     await saveBackup(matches, knockout, podium);
-    setSaved(true); setTimeout(()=>setSaved(false),2500);
+    setSaved(true);
   };
 
   // Auto-save every 30s when predictions are dirty
+  const [autoSaveToast,setAutoSaveToast]=useState(false);
   useEffect(()=>{
     if(!userName || saved) return;
     const timer = setTimeout(async()=>{
       await sbSavePrediction(userName, matches, knockout, podium);
       const lb = await sbUpsertLeaderboard(userName, podium, myPts);
       setLeaderboard(lb);
-      setSaved(true); setTimeout(()=>setSaved(false),2000);
+      setSaved(true);
+      // Brief toast
+      setAutoSaveToast(true);
+      setTimeout(()=>setAutoSaveToast(false), 2000);
     }, 30000);
     return ()=>clearTimeout(timer);
   },[matches, knockout, podium, userName]);
@@ -2565,7 +2569,7 @@ export default function App(){
             <div style={{textAlign:"left"}}>
               <div style={{
                 background:"rgba(252,185,0,0.08)",border:"1px solid rgba(252,185,0,0.2)",
-                borderRadius:9,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#999",
+                borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#999",
               }}>
                 👋 Welcome, <strong style={{color:"#fcb900"}}>{nameInput}</strong>! Set a PIN to protect your predictions.
               </div>
@@ -2589,7 +2593,7 @@ export default function App(){
               <button onClick={submitNewPin} style={btnStyle}>CREATE ACCOUNT</button>
               <button onClick={()=>{setPinStep("name");setPinInput("");setPinConfirm("");setPinError("");}}
                 style={{width:"100%",marginTop:8,padding:"9px",background:"transparent",
-                  border:"1px solid rgba(255,255,255,0.10)",borderRadius:9,color:"#555",
+                  border:"1px solid rgba(255,255,255,0.10)",borderRadius:10,color:"#555",
                   fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>← Back</button>
             </div>
           )}
@@ -2599,7 +2603,7 @@ export default function App(){
             <div style={{textAlign:"left"}}>
               <div style={{
                 background:"rgba(34,197,94,0.07)",border:"1px solid rgba(34,197,94,0.2)",
-                borderRadius:9,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#999",
+                borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#999",
               }}>
                 🔒 Welcome back, <strong style={{color:"#22c55e"}}>{nameInput}</strong>! Enter your PIN to access your predictions.
               </div>
@@ -2623,7 +2627,7 @@ export default function App(){
                   textDecoration:"underline"}}>Forgot PIN? Use recovery code</button>
               <button onClick={()=>{setPinStep("name");setPinInput("");setPinError("");}}
                 style={{width:"100%",marginTop:4,padding:"9px",background:"transparent",
-                  border:"1px solid rgba(255,255,255,0.10)",borderRadius:9,color:"#555",
+                  border:"1px solid rgba(255,255,255,0.10)",borderRadius:10,color:"#555",
                   fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>← Different name</button>
             </div>
           )}
@@ -2633,7 +2637,7 @@ export default function App(){
             <div style={{textAlign:"left"}}>
               <div style={{
                 background:"rgba(252,185,0,0.08)",border:"1px solid rgba(252,185,0,0.3)",
-                borderRadius:9,padding:"14px",marginBottom:16,
+                borderRadius:10,padding:"14px",marginBottom:16,
               }}>
                 <div style={{fontWeight:700,color:"#fcb900",fontSize:13,marginBottom:6}}>
                   🔑 Your Recovery Code
@@ -2657,7 +2661,7 @@ export default function App(){
             <div style={{textAlign:"left"}}>
               <div style={{
                 background:"rgba(96,165,250,0.07)",border:"1px solid rgba(96,165,250,0.2)",
-                borderRadius:9,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#999",
+                borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#999",
               }}>
                 🔑 Enter the recovery code you saved when you created your account for <strong style={{color:"#60a5fa"}}>{nameInput}</strong>.
               </div>
@@ -2670,7 +2674,7 @@ export default function App(){
               <button onClick={submitRecoveryCode} style={btnStyle}>Verify Code →</button>
               <button onClick={()=>{setPinStep("pin-existing");setRecoveryInput("");setPinError("");}}
                 style={{width:"100%",marginTop:8,padding:"9px",background:"transparent",
-                  border:"1px solid rgba(255,255,255,0.10)",borderRadius:9,color:"#555",
+                  border:"1px solid rgba(255,255,255,0.10)",borderRadius:10,color:"#555",
                   fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>← Back to PIN</button>
             </div>
           )}
@@ -2680,7 +2684,7 @@ export default function App(){
             <div style={{textAlign:"left"}}>
               <div style={{
                 background:"rgba(34,197,94,0.07)",border:"1px solid rgba(34,197,94,0.2)",
-                borderRadius:9,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#999",
+                borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#999",
               }}>
                 ✅ Recovery code verified for <strong style={{color:"#22c55e"}}>{nameInput}</strong>! Set a new PIN.
               </div>
@@ -2797,7 +2801,7 @@ export default function App(){
             </div>
             <div style={{
               background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",
-              borderRadius:9,padding:"10px 14px",marginBottom:18,fontSize:12,color:"#fca5a5",
+              borderRadius:10,padding:"10px 14px",marginBottom:18,fontSize:12,color:"#fca5a5",
               textAlign:"center",lineHeight:1.6,
             }}>
               🔒 Predictions lock <strong>15 minutes before kickoff</strong>.<br/>
@@ -2805,10 +2809,10 @@ export default function App(){
             </div>
             {/* Progress bar */}
             <div style={{marginBottom:18}}>
-              <div style={{height:6,background:"rgba(255,255,255,0.06)",borderRadius:3,overflow:"hidden",marginBottom:4}}>
+              <div style={{height:6,background:"rgba(255,255,255,0.06)",borderRadius:4,overflow:"hidden",marginBottom:4}}>
                 <div style={{
                   width:`${Math.round(matches.filter(m=>m.homeScore!==null).length/ALL_MATCHES.length*100)}%`,
-                  height:"100%",background:"#fcb900",borderRadius:3,transition:"width 0.5s",
+                  height:"100%",background:"#fcb900",borderRadius:4,transition:"width 0.5s",
                 }}/>
               </div>
               <div style={{fontSize:10,color:"#555",textAlign:"right"}}>
@@ -2817,12 +2821,12 @@ export default function App(){
             </div>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>{setShowPredReminder(false);setTab("groups");}} style={{
-                flex:2,padding:"12px",background:"#fcb900",border:"none",borderRadius:9,
+                flex:2,padding:"12px",background:"#fcb900",border:"none",borderRadius:10,
                 color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",
               }}>⚽ Go to Predictions</button>
               <button onClick={()=>setShowPredReminder(false)} style={{
                 flex:1,padding:"12px",background:"rgba(255,255,255,0.06)",
-                border:"1px solid rgba(255,255,255,0.10)",borderRadius:9,
+                border:"1px solid rgba(255,255,255,0.10)",borderRadius:10,
                 color:"#666",fontSize:13,cursor:"pointer",fontFamily:"inherit",
               }}>Later</button>
             </div>
@@ -2841,10 +2845,10 @@ export default function App(){
             <div style={{fontSize:9,color:"#444"}}>Prediction Challenge</div>
           </div>
           {myPts>0&&<div style={{background:"rgba(252,185,0,0.12)",border:"1px solid rgba(252,185,0,0.28)",
-            borderRadius:7,padding:"3px 9px",fontSize:11,fontWeight:700,color:"#fcb900",flexShrink:0}}>🏅 {myPts}pts</div>}
+            borderRadius:6,padding:"3px 9px",fontSize:11,fontWeight:700,color:"#fcb900",flexShrink:0}}>🏅 {myPts}pts</div>}
           <span style={{fontSize:10,color:"#444",flexShrink:0,maxWidth:70,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>👤 {userName}</span>
           <button onClick={savePreds} style={{padding:"6px 14px",background:saved?"#22c55e":"#fcb900",
-            border:"none",borderRadius:7,color:"#000",fontWeight:700,fontSize:12,cursor:"pointer",
+            border:"none",borderRadius:6,color:"#000",fontWeight:700,fontSize:12,cursor:"pointer",
             transition:"all 0.3s",fontFamily:"inherit",flexShrink:0}}>
             {saved?"✓ Saved":"Save"}
           </button>
@@ -2855,7 +2859,7 @@ export default function App(){
           <button onClick={exportPredictions} style={{
             padding:"4px 9px",background:"transparent",border:"1px solid rgba(96,165,250,0.3)",
             borderRadius:6,color:"#60a5fa",fontSize:10,cursor:"pointer",fontFamily:"inherit",
-          }}>📤 Export</button>
+          }}>📦 Backup</button>
           <button onClick={()=>setShowImport(p=>!p)} style={{
             padding:"4px 9px",background:"transparent",border:"1px solid rgba(252,185,0,0.3)",
             borderRadius:6,color:"#fcb900",fontSize:10,cursor:"pointer",fontFamily:"inherit",
@@ -2896,7 +2900,7 @@ export default function App(){
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",
           display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}}>
           <div style={{background:"#1a1f2e",border:"1px solid rgba(239,68,68,0.35)",
-            borderRadius:14,padding:"22px 24px",maxWidth:360,width:"100%"}}>
+            borderRadius:16,padding:"22px 24px",maxWidth:360,width:"100%"}}>
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:"#ef4444",marginBottom:10}}>
               Reset My Predictions?
             </div>
@@ -2955,7 +2959,7 @@ export default function App(){
           padding:"12px 16px",
         }}>
           <div style={{fontSize:12,color:"#fcb900",fontWeight:700,marginBottom:4}}>
-            📤 Export: Copy the text below and save it somewhere safe.<br/>
+            📦 Backup: Copy the text below and save it somewhere safe.<br/>
             📥 Import: Paste previously exported text here, then tap Import.
             {lastBackupAt&&<span style={{color:"#22c55e",fontWeight:400,fontSize:11}}> · Last backup: {new Date(lastBackupAt).toLocaleDateString()} {new Date(lastBackupAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>}
           </div>
@@ -2963,11 +2967,11 @@ export default function App(){
             <textarea value={importText} onChange={e=>setImportText(e.target.value)}
               placeholder='Tap Export above to see your predictions, or paste exported JSON here to import…'
               style={{flex:1,height:80,padding:"8px",background:"rgba(0,0,0,0.3)",
-                border:"1px solid rgba(255,255,255,0.15)",borderRadius:7,
+                border:"1px solid rgba(255,255,255,0.15)",borderRadius:6,
                 color:"#fff",fontSize:11,fontFamily:"monospace",resize:"none",outline:"none"}}/>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               <button onClick={importPredictions} style={{
-                padding:"8px 14px",background:"#fcb900",border:"none",borderRadius:7,
+                padding:"8px 14px",background:"#fcb900",border:"none",borderRadius:6,
                 color:"#000",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",
               }}>Import</button>
               <button onClick={async()=>{
@@ -2976,11 +2980,11 @@ export default function App(){
                 else{setImportText("No backup found in storage yet.");}
               }} style={{
                 padding:"8px 14px",background:"rgba(34,197,94,0.1)",border:"1px solid rgba(34,197,94,0.3)",
-                borderRadius:7,color:"#22c55e",fontSize:11,cursor:"pointer",fontFamily:"inherit",
+                borderRadius:6,color:"#22c55e",fontSize:11,cursor:"pointer",fontFamily:"inherit",
               }}>♻️ Restore</button>
               <button onClick={()=>{setShowImport(false);setImportText("");}} style={{
                 padding:"8px 14px",background:"transparent",border:"1px solid rgba(255,255,255,0.10)",
-                borderRadius:7,color:"#555",fontSize:12,cursor:"pointer",fontFamily:"inherit",
+                borderRadius:6,color:"#555",fontSize:12,cursor:"pointer",fontFamily:"inherit",
               }}>Close</button>
             </div>
           </div>
@@ -3103,6 +3107,18 @@ export default function App(){
         );
       })()}
 
+      {/* AUTO-SAVE TOAST */}
+      {autoSaveToast&&(
+        <div style={{
+          position:"fixed",bottom:80,left:"50%",transform:"translateX(-50%)",
+          background:"rgba(34,197,94,0.9)",backdropFilter:"blur(8px)",
+          color:"#000",padding:"6px 16px",borderRadius:20,
+          fontSize:12,fontWeight:700,zIndex:9999,
+          animation:"fadeUp 0.3s ease",pointerEvents:"none",
+          whiteSpace:"nowrap",
+        }}>✓ Auto-saved</div>
+      )}
+
       {/* TABS */}
       <div style={{borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.22)"}}>
         {[TABS_ROW1, TABS_ROW2].map((row, ri)=>(
@@ -3165,7 +3181,7 @@ export default function App(){
           <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:18}}>
             {Object.keys(GROUPS).map(g=>(
               <button key={g} onClick={()=>setActiveGroup(g)} style={{
-                padding:"6px 12px",borderRadius:7,border:"1px solid",
+                padding:"6px 12px",borderRadius:6,border:"1px solid",
                 borderColor:activeGroup===g?"#fcb900":"rgba(255,255,255,0.10)",
                 background:activeGroup===g?"#fcb900":"transparent",
                 color:activeGroup===g?"#000":"#666",
@@ -3175,19 +3191,19 @@ export default function App(){
           </div>
           <div style={{position:"relative"}}>
             {/* Two-line tips */}
-            {!showStandings&&(
-              <div style={{fontSize:10,color:"#444",marginBottom:8,lineHeight:1.8}}>
+            <div style={{fontSize:10,color:"#444",marginBottom:8,lineHeight:1.8}}>
+              {!showStandings&&(
                 <div>💡 Tap <span style={{color:"#fcb900",fontWeight:700}}>📊 Standings</span> to see the Group {activeGroup} table</div>
-                <div>💡 Each match has <span style={{color:"#a78bfa",fontWeight:700}}>🤖 AI</span> · <span style={{color:"#22c55e",fontWeight:700}}>🔍 Experts</span> · <span style={{color:"#60a5fa",fontWeight:700}}>📊 Market odds</span> — tap the buttons below each match</div>
-              </div>
-            )}
+              )}
+              <div>💡 Each match has <span style={{color:"#a78bfa",fontWeight:700}}>🤖 AI</span> · <span style={{color:"#22c55e",fontWeight:700}}>🔍 Experts</span> · <span style={{color:"#60a5fa",fontWeight:700}}>📊 Market odds</span> — tap the buttons below each match</div>
+            </div>
             {/* Floating standings button */}
             <button onClick={()=>setShowStandings(p=>!p)} style={{
               position:"sticky",top:4,zIndex:50,float:"right",
               padding:"5px 12px",marginBottom:8,
               background:showStandings?"rgba(252,185,0,0.2)":"rgba(252,185,0,0.08)",
               border:`1px solid ${showStandings?"rgba(252,185,0,0.5)":"rgba(252,185,0,0.2)"}`,
-              borderRadius:7,color:"#fcb900",fontSize:11,fontWeight:700,
+              borderRadius:6,color:"#fcb900",fontSize:11,fontWeight:700,
               cursor:"pointer",fontFamily:"inherit",
             }}>
               {showStandings?"✕ Hide":"📊 Standings"}
@@ -3201,7 +3217,7 @@ export default function App(){
             {showStandings&&(
               <div style={{
                 background:"rgba(255,255,255,0.03)",border:"1px solid rgba(252,185,0,0.2)",
-                borderRadius:11,padding:11,marginBottom:14,
+                borderRadius:10,padding:11,marginBottom:14,
               }}>
                 <div style={{fontSize:10,color:ga.some(m=>m.homeScore!==null)?"#22c55e":"#555",marginBottom:6,fontWeight:600}}>
                   {adminHasSaved
@@ -3271,7 +3287,7 @@ export default function App(){
                   const countdown=!locked?timeUntilLock({...m,home:liveHome,away:liveAway},allKickoffs):null;
                   return(
                     <div key={m.id} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${locked?"rgba(239,68,68,0.2)":"rgba(255,255,255,0.06)"}`,
-                      borderRadius:11,padding:"11px 13px",marginBottom:8}}>
+                      borderRadius:10,padding:"11px 13px",marginBottom:8}}>
                       {/* Live team names from feed */}
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:teamsKnown?8:0}}>
                         <span style={{fontSize:16}}>{FLAGS[liveHome]||"🏳️"}</span>
@@ -3404,14 +3420,14 @@ export default function App(){
                 {!champLocked && champCountdown && (
                   <div style={{display:"inline-flex",alignItems:"center",gap:8,
                     background:"rgba(96,165,250,0.1)",border:"1px solid rgba(96,165,250,0.3)",
-                    borderRadius:9,padding:"8px 16px",fontSize:12,color:"#60a5fa"}}>
+                    borderRadius:10,padding:"8px 16px",fontSize:12,color:"#60a5fa"}}>
                     ⏱ Locks in <strong>{champCountdown}</strong> — June 11 at tournament kickoff
                   </div>
                 )}
                 {champLocked && (
                   <div style={{display:"inline-flex",alignItems:"center",gap:8,
                     background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.25)",
-                    borderRadius:9,padding:"8px 16px",fontSize:12,color:"#ef4444"}}>
+                    borderRadius:10,padding:"8px 16px",fontSize:12,color:"#ef4444"}}>
                     🔒 Podium picks locked — tournament has started
                   </div>
                 )}
@@ -3422,7 +3438,7 @@ export default function App(){
                 {places.map(p=>(
                   <div key={p.key} style={{
                     background:`${p.color}15`,border:`1px solid ${p.color}40`,
-                    borderRadius:9,padding:"8px 16px",textAlign:"center",
+                    borderRadius:10,padding:"8px 16px",textAlign:"center",
                   }}>
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:p.color}}>{p.pts}</div>
                     <div style={{fontSize:10,color:"#666"}}>pts</div>
@@ -3471,7 +3487,7 @@ export default function App(){
                       {!champLocked && (
                         <button onClick={()=>{setPodium(p=>({...p,[place.key]:null}));setSaved(false);}}
                           style={{padding:"3px 8px",background:"rgba(239,68,68,0.1)",
-                            border:"1px solid rgba(239,68,68,0.25)",borderRadius:5,
+                            border:"1px solid rgba(239,68,68,0.25)",borderRadius:4,
                             color:"#ef4444",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
                       )}
                     </div>
@@ -3516,7 +3532,7 @@ export default function App(){
                                   }
                                 }}
                                 style={{
-                                  padding:"6px 11px",borderRadius:7,
+                                  padding:"6px 11px",borderRadius:6,
                                   border:`1px solid ${selected?place.color:"rgba(255,255,255,0.06)"}`,
                                   background:selected?`${place.color}18`:"rgba(255,255,255,0.03)",
                                   color:selected?place.color:usedElsewhere?"#333":"#888",
@@ -3555,7 +3571,7 @@ export default function App(){
             ].map((r,i)=>(
               <div key={i} style={{
                 background:`${r.color}0e`,border:`1px solid ${r.color}30`,
-                borderRadius:11,padding:"12px 14px",
+                borderRadius:10,padding:"12px 14px",
                 display:"flex",alignItems:"center",gap:12,
               }}>
                 <div style={{textAlign:"center",flexShrink:0,width:52}}>
@@ -3572,7 +3588,7 @@ export default function App(){
             {/* Max per match */}
             <div style={{
               background:"rgba(252,185,0,0.06)",border:"1px solid rgba(252,185,0,0.15)",
-              borderRadius:11,padding:"12px 14px",display:"flex",alignItems:"center",gap:12,
+              borderRadius:10,padding:"12px 14px",display:"flex",alignItems:"center",gap:12,
             }}>
               <div style={{textAlign:"center",flexShrink:0,width:52}}>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,color:"#fcb900",lineHeight:1}}>6</div>
@@ -3596,7 +3612,7 @@ export default function App(){
             ].map(r=>(
               <div key={r.pts} style={{
                 background:`${r.color}0e`,border:`1px solid ${r.color}30`,
-                borderRadius:11,padding:"14px",textAlign:"center",
+                borderRadius:10,padding:"14px",textAlign:"center",
               }}>
                 <div style={{fontSize:26,marginBottom:4}}>{r.icon}</div>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,color:r.color,lineHeight:1}}>{r.pts}</div>
@@ -3616,7 +3632,7 @@ export default function App(){
 
           {/* My score */}
           <div style={{background:"rgba(252,185,0,0.08)",border:"1px solid rgba(252,185,0,0.22)",
-            borderRadius:13,padding:"16px 20px",marginBottom:16,
+            borderRadius:12,padding:"16px 20px",marginBottom:16,
             display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <div>
               <div style={{fontSize:11,color:"#666"}}>Your total points</div>
@@ -3630,7 +3646,7 @@ export default function App(){
           {/* Podium status */}
           <div style={{
             background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.10)",
-            borderRadius:11,padding:"12px 16px",marginBottom:20,
+            borderRadius:10,padding:"12px 16px",marginBottom:20,
           }}>
             <div style={{fontSize:11,color:"#555",marginBottom:10}}>🏆 Podium Picks</div>
             {[
@@ -3673,7 +3689,7 @@ export default function App(){
                 if(!res)return null;
                 return(
                   <div key={pred.id} style={{display:"flex",alignItems:"center",gap:9,
-                    padding:"8px 12px",borderRadius:9,marginBottom:6,
+                    padding:"8px 12px",borderRadius:10,marginBottom:6,
                     background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",fontSize:11}}>
                     <span style={{fontWeight:600}}>{FLAGS[pred.home]||"🏳️"} {pred.home}</span>
                     <span style={{color:"#333",flex:1,textAlign:"center",fontFamily:"monospace",fontSize:10}}>
@@ -3746,7 +3762,7 @@ export default function App(){
             </div>
           )}
           <div style={{marginTop:24,padding:"14px 17px",background:"rgba(255,255,255,0.03)",
-            borderRadius:11,border:"1px solid rgba(255,255,255,0.06)"}}>
+            borderRadius:10,border:"1px solid rgba(255,255,255,0.06)"}}>
             <div style={{fontWeight:700,marginBottom:7,fontSize:12}}>📋 How to compete</div>
             <ol style={{color:"#444",fontSize:11,margin:0,paddingLeft:16,lineHeight:2.1}}>
               <li>Everyone opens this same app URL</li>
@@ -3773,7 +3789,7 @@ export default function App(){
                       setH2hData({[newUsers[0]]:p1,[newUsers[1]]:p2});
                     }
                   }} style={{flex:1,padding:"8px 10px",background:"rgba(255,255,255,0.06)",
-                    border:"1px solid rgba(255,255,255,0.10)",borderRadius:7,
+                    border:"1px solid rgba(255,255,255,0.10)",borderRadius:6,
                     color:"#fff",fontSize:12,fontFamily:"inherit",outline:"none"}}>
                     <option value="">Select player {i+1}…</option>
                     {leaderboard.map(e=><option key={e.username} value={e.username}>{e.username}</option>)}
@@ -3821,7 +3837,7 @@ export default function App(){
                     {/* Per-match comparison */}
                     {rows.slice(0,8).map(({actual,r1,r2},i)=>(
                       <div key={i} style={{display:"flex",alignItems:"center",gap:6,
-                        padding:"6px 8px",marginBottom:4,borderRadius:7,
+                        padding:"6px 8px",marginBottom:4,borderRadius:6,
                         background:!r1||!r2?"rgba(255,255,255,0.03)":"rgba(255,255,255,0.03)",
                         opacity:!r1||!r2?0.4:1}}>
                         <div style={{
@@ -3914,7 +3930,7 @@ export default function App(){
                         return(
                           <div key={actual.id} style={{
                             display:"flex",alignItems:"center",gap:8,
-                            padding:"8px 10px",marginBottom:5,borderRadius:9,
+                            padding:"8px 10px",marginBottom:5,borderRadius:10,
                             background:`${result?.color||"#333"}10`,
                             border:`1px solid ${result?.color||"#333"}25`,
                           }}>
@@ -3957,7 +3973,7 @@ export default function App(){
                             return(
                               <div key={actual.id} style={{
                                 display:"flex",alignItems:"center",gap:8,
-                                padding:"8px 10px",marginBottom:5,borderRadius:9,
+                                padding:"8px 10px",marginBottom:5,borderRadius:10,
                                 background:`${result?.color||"#333"}10`,
                                 border:`1px solid ${result?.color||"#333"}25`,
                               }}>
@@ -4048,7 +4064,7 @@ export default function App(){
           const myRank = leaderboard.findIndex(e=>e.username===userName)+1;
 
           const StatBox = ({value,label,color="#fcb900",sub=""})=>(
-            <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:11,padding:"12px 10px",textAlign:"center"}}>
+            <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"12px 10px",textAlign:"center"}}>
               <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color,lineHeight:1}}>{value}</div>
               <div style={{fontSize:10,color:"#555",marginTop:3}}>{label}</div>
               {sub&&<div style={{fontSize:10,color:"#444",marginTop:2}}>{sub}</div>}
@@ -4164,7 +4180,7 @@ export default function App(){
                   {rankHistory.length>1&&(
                     <div style={{marginBottom:20,padding:"14px",
                       background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",
-                      borderRadius:11}}>
+                      borderRadius:10}}>
                       <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"#fcb900",
                         letterSpacing:1,marginBottom:12}}>📈 Rank History</div>
                       {(()=>{
@@ -4231,7 +4247,7 @@ export default function App(){
                   </div>
 
                   {/* Points distribution */}
-                  <div style={{marginBottom:16,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:11,padding:"14px"}}>
+                  <div style={{marginBottom:16,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"14px"}}>
                     <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>Points Distribution</div>
                     <div style={{display:"flex",gap:8,marginBottom:10}}>
                       <StatBox value={leaderboard.length} label="Players" color="#60a5fa"/>
@@ -4247,9 +4263,9 @@ export default function App(){
                     ].map((b,i)=>(
                       <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                         <div style={{fontSize:11,width:120,color:"#888"}}>{b.label}</div>
-                        <div style={{flex:1,height:6,background:"rgba(255,255,255,0.06)",borderRadius:3,overflow:"hidden"}}>
+                        <div style={{flex:1,height:6,background:"rgba(255,255,255,0.06)",borderRadius:4,overflow:"hidden"}}>
                           <div style={{width:leaderboard.length>0?`${(b.count/leaderboard.length)*100}%`:"0%",
-                            height:"100%",background:b.color,borderRadius:3,transition:"width 0.5s"}}/>
+                            height:"100%",background:b.color,borderRadius:4,transition:"width 0.5s"}}/>
                         </div>
                         <div style={{fontSize:11,color:"#555",width:20,textAlign:"right"}}>{b.count}</div>
                       </div>
@@ -4275,7 +4291,7 @@ export default function App(){
                     ];
 
                     return(
-                      <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:11,padding:"14px"}}>
+                      <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"14px"}}>
                         <div style={{fontSize:12,fontWeight:700,marginBottom:14}}>👑 Podium Picks</div>
                         {places.map(place=>{
                           const counts = placeCounts[place.key];
@@ -4293,9 +4309,9 @@ export default function App(){
                                 <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
                                   <span style={{fontSize:13}}>{FLAGS[team]||"🏳️"}</span>
                                   <span style={{fontSize:11,flex:1,fontWeight:600}}>{team}</span>
-                                  <div style={{flex:2,height:5,background:"rgba(255,255,255,0.06)",borderRadius:3,overflow:"hidden"}}>
+                                  <div style={{flex:2,height:5,background:"rgba(255,255,255,0.06)",borderRadius:4,overflow:"hidden"}}>
                                     <div style={{width:`${(count/leaderboard.length)*100}%`,
-                                      height:"100%",background:place.color,borderRadius:3}}/>
+                                      height:"100%",background:place.color,borderRadius:4}}/>
                                   </div>
                                   <span style={{fontSize:10,color:"#555",width:40,textAlign:"right"}}>
                                     {count} ({Math.round(count/leaderboard.length*100)}%)
@@ -4338,7 +4354,7 @@ export default function App(){
               marginLeft:"auto",padding:"6px 14px",
               background:refreshCooldown>0?"rgba(255,255,255,0.03)":"rgba(239,68,68,0.1)",
               border:`1px solid ${refreshCooldown>0?"rgba(255,255,255,0.06)":"rgba(239,68,68,0.25)"}`,
-              borderRadius:7,color:refreshCooldown>0?"#444":"#ef4444",fontSize:12,fontWeight:700,
+              borderRadius:6,color:refreshCooldown>0?"#444":"#ef4444",fontSize:12,fontWeight:700,
               cursor:liveLoading||refreshCooldown>0?"not-allowed":"pointer",fontFamily:"inherit",
               minWidth:90,textAlign:"center",
             }}>
@@ -4348,7 +4364,7 @@ export default function App(){
 
           {liveError&&!liveError.toLowerCase().includes('internal')&&(
             <div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",
-              borderRadius:9,padding:"12px 14px",marginBottom:16,fontSize:12,color:"#fca5a5"}}>
+              borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:12,color:"#fca5a5"}}>
               <div style={{fontWeight:700,marginBottom:4}}>❌ {liveError.split('—')[0]}</div>
               {liveError.includes('—')&&(
                 <div style={{fontSize:11,color:"#888",marginTop:4}}>
@@ -4529,7 +4545,7 @@ export default function App(){
                         const c=isTop?(r>=8?"#22c55e":r>=7?"#fcb900":"#60a5fa"):"#ef4444";
                         return(
                           <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",marginBottom:4,
-                            borderRadius:7,background:`${c}08`,border:`1px solid ${c}18`}}>
+                            borderRadius:6,background:`${c}08`,border:`1px solid ${c}18`}}>
                             <span style={{fontSize:9,color:"#555",width:14,flexShrink:0}}>{isTop?`#${rank}`:"▼"}</span>
                             <span style={{fontSize:11,flexShrink:0}}>{p.teamFlag}</span>
                             <div style={{flex:1,minWidth:0}}>
@@ -4591,7 +4607,7 @@ export default function App(){
                         <span>{analysis?.loading?"Analysing…":analysis?.text?"🔄 Refresh Analysis":"AI Match Analysis"}</span>
                         <button onClick={(e)=>{e.stopPropagation();setSelectedFixture(null);}} style={{
                           marginLeft:"auto",padding:"2px 8px",background:"rgba(255,255,255,0.06)",
-                          border:"1px solid rgba(255,255,255,0.10)",borderRadius:5,
+                          border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,
                           color:"#555",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
                       </button>
                       {analysis?.text&&!analysis?.loading&&(
@@ -4683,7 +4699,7 @@ export default function App(){
                 <div style={{
                   background:"linear-gradient(135deg,rgba(252,185,0,0.12),rgba(252,185,0,0.06))",
                   border:"1px solid rgba(252,185,0,0.35)",
-                  borderRadius:11,padding:"12px 16px",marginBottom:16,
+                  borderRadius:10,padding:"12px 16px",marginBottom:16,
                 }}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
                     <span style={{fontSize:16}}>🎮</span>
@@ -4700,7 +4716,7 @@ export default function App(){
 
                 {/* Match card */}
                 <div style={{
-                  padding:"18px 16px",borderRadius:14,marginBottom:12,
+                  padding:"18px 16px",borderRadius:16,marginBottom:12,
                   background: simMinute>0 ? "rgba(239,68,68,0.06)" : "rgba(255,255,255,0.03)",
                   border:`1px solid ${simMinute>0 ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.06)"}`,
                 }}>
@@ -4888,7 +4904,7 @@ export default function App(){
                     const color = isTop ? (r>=8?"#22c55e":r>=7?"#fcb900":"#60a5fa") : "#ef4444";
                     return(
                       <div style={{display:"flex",alignItems:"center",gap:6,
-                        padding:"5px 8px",marginBottom:4,borderRadius:7,
+                        padding:"5px 8px",marginBottom:4,borderRadius:6,
                         background:`${color}08`,border:`1px solid ${color}18`}}>
                         <span style={{fontSize:10}}>{p.flag}</span>
                         <div style={{flex:1}}>
@@ -5045,7 +5061,7 @@ export default function App(){
           let lastDate = null;
 
           return(
-            <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 220px)",minHeight:400}}>
+            <div style={{display:"flex",flexDirection:"column",height:"calc(100dvh - 220px)",minHeight:360}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                 <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:2,
                   color:"#fcb900",margin:0}}>💬 Group Chat</h2>
@@ -5153,7 +5169,8 @@ export default function App(){
               </div>
 
               {/* Input */}
-              <div style={{paddingTop:10,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
+              <div style={{paddingTop:10,borderTop:"1px solid rgba(255,255,255,0.06)",
+                position:"sticky",bottom:0,background:"#0a0d12",paddingBottom:"env(safe-area-inset-bottom,8px)"}}>
                 <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
                   <textarea
                     value={chatInput}
@@ -5207,7 +5224,7 @@ export default function App(){
             <button onClick={generateBracket} disabled={bracketLoading} style={{
               width:"100%",padding:"12px",
               background:bracketLoading?"rgba(139,92,246,0.05)":"rgba(139,92,246,0.12)",
-              border:"1px solid rgba(139,92,246,0.3)",borderRadius:9,
+              border:"1px solid rgba(139,92,246,0.3)",borderRadius:10,
               color:"#a78bfa",fontSize:13,fontWeight:700,
               cursor:bracketLoading?"wait":"pointer",fontFamily:"inherit",
             }}>{bracketLoading?"⏳ Predicting tournament…":bracketPred?"🔄 Regenerate AI Bracket":"🔮 Generate AI Tournament Prediction"}</button>
@@ -5218,7 +5235,7 @@ export default function App(){
             )}
 
             {bracketPred&&(
-              <div style={{marginTop:14,background:"rgba(139,92,246,0.06)",border:"1px solid rgba(139,92,246,0.2)",borderRadius:11,padding:"14px"}}>
+              <div style={{marginTop:14,background:"rgba(139,92,246,0.06)",border:"1px solid rgba(139,92,246,0.2)",borderRadius:10,padding:"14px"}}>
                 {/* Champion */}
                 <div style={{textAlign:"center",marginBottom:16,padding:"14px",
                   background:"rgba(252,185,0,0.08)",border:"1px solid rgba(252,185,0,0.25)",borderRadius:10}}>
@@ -5314,7 +5331,7 @@ export default function App(){
             <button onClick={generateCommentary} disabled={commentaryLoading||leaderboard.length===0} style={{
               width:"100%",padding:"12px",
               background:commentaryLoading?"rgba(139,92,246,0.05)":"rgba(139,92,246,0.12)",
-              border:"1px solid rgba(139,92,246,0.3)",borderRadius:9,
+              border:"1px solid rgba(139,92,246,0.3)",borderRadius:10,
               color:"#a78bfa",fontSize:13,fontWeight:700,
               cursor:commentaryLoading||leaderboard.length===0?"wait":"pointer",fontFamily:"inherit",
               opacity:leaderboard.length===0?0.4:1,
@@ -5376,14 +5393,14 @@ export default function App(){
             <button onClick={calculateWhatIf} disabled={!whatIfTeam||whatIfLoading} style={{
               width:"100%",padding:"12px",
               background:!whatIfTeam||whatIfLoading?"rgba(139,92,246,0.05)":"rgba(139,92,246,0.12)",
-              border:"1px solid rgba(139,92,246,0.3)",borderRadius:9,
+              border:"1px solid rgba(139,92,246,0.3)",borderRadius:10,
               color:"#a78bfa",fontSize:13,fontWeight:700,
               cursor:!whatIfTeam||whatIfLoading?"not-allowed":"pointer",fontFamily:"inherit",
               opacity:!whatIfTeam?0.4:1,
             }}>{whatIfLoading?"⏳ Calculating…":"🔮 Calculate What-If"}</button>
 
             {whatIfResult&&(
-              <div style={{marginTop:12,background:"rgba(139,92,246,0.06)",border:"1px solid rgba(139,92,246,0.2)",borderRadius:11,padding:"14px"}}>
+              <div style={{marginTop:12,background:"rgba(139,92,246,0.06)",border:"1px solid rgba(139,92,246,0.2)",borderRadius:10,padding:"14px"}}>
                 <div style={{fontSize:12,fontWeight:700,color:"#a78bfa",marginBottom:8}}>
                   {whatIfResult.scenario}
                 </div>
@@ -5394,7 +5411,7 @@ export default function App(){
                     <div style={{fontSize:10,color:"#555",marginBottom:6}}>Who benefits:</div>
                     {(whatIfResult.pointsGained||[]).filter(e=>e.gained>0).sort((a,b)=>b.gained-a.gained).map((e,i)=>(
                       <div key={i} style={{display:"flex",alignItems:"center",gap:8,
-                        padding:"6px 10px",marginBottom:4,borderRadius:7,
+                        padding:"6px 10px",marginBottom:4,borderRadius:6,
                         background:"rgba(34,197,94,0.06)",border:"1px solid rgba(34,197,94,0.15)"}}>
                         <span style={{fontSize:11,flex:1,fontWeight:600}}>{e.username}</span>
                         <span style={{color:"#22c55e",fontFamily:"'Bebas Neue',sans-serif",fontSize:15}}>+{e.gained}pts</span>
@@ -5582,7 +5599,7 @@ export default function App(){
                 <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",
                   display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}}>
                   <div style={{background:"#1a1f2e",border:"1px solid rgba(239,68,68,0.35)",
-                    borderRadius:14,padding:"22px 24px",maxWidth:360,width:"100%"}}>
+                    borderRadius:16,padding:"22px 24px",maxWidth:360,width:"100%"}}>
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:"#ef4444",marginBottom:10}}>
                       Reset All Results?
                     </div>
@@ -5614,7 +5631,7 @@ export default function App(){
                 <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",
                   display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}}>
                   <div style={{background:"#1a1f2e",border:"1px solid rgba(239,68,68,0.3)",
-                    borderRadius:14,padding:"20px 24px",maxWidth:380,width:"100%"}}>
+                    borderRadius:16,padding:"20px 24px",maxWidth:380,width:"100%"}}>
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#ef4444",marginBottom:10}}>
                       Confirm Rollback
                     </div>
@@ -5651,7 +5668,7 @@ export default function App(){
                 <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",
                   display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}}>
                   <div style={{background:"#1a1f2e",border:"1px solid rgba(252,185,0,0.3)",
-                    borderRadius:14,padding:"20px 24px",maxWidth:420,width:"100%",
+                    borderRadius:16,padding:"20px 24px",maxWidth:420,width:"100%",
                     maxHeight:"80vh",overflowY:"auto"}}>
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#fcb900",marginBottom:12}}>
                       Confirm Save
@@ -5720,17 +5737,17 @@ export default function App(){
                   Participation Report
                 </div>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
-                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:9,padding:"10px",textAlign:"center"}}>
+                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"10px",textAlign:"center"}}>
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#fcb900"}}>{leaderboard.length}</div>
                     <div style={{fontSize:10,color:"#555"}}>Total players</div>
                   </div>
-                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:9,padding:"10px",textAlign:"center"}}>
+                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"10px",textAlign:"center"}}>
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#22c55e"}}>
                       {leaderboard.filter(e=>e.points>0).length}
                     </div>
                     <div style={{fontSize:10,color:"#555"}}>With predictions</div>
                   </div>
-                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:9,padding:"10px",textAlign:"center"}}>
+                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"10px",textAlign:"center"}}>
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#ef4444"}}>
                       {leaderboard.filter(e=>e.points===0).length}
                     </div>
@@ -5743,7 +5760,7 @@ export default function App(){
                     <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                       {leaderboard.filter(e=>e.points===0).map(e=>(
                         <span key={e.username} style={{fontSize:11,color:"#888",background:"rgba(255,255,255,0.06)",
-                          border:"1px solid rgba(255,255,255,0.10)",borderRadius:5,padding:"3px 8px"}}>
+                          border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,padding:"3px 8px"}}>
                           {e.username}
                         </span>
                       ))}
@@ -5765,7 +5782,7 @@ export default function App(){
                     placeholder="Username to reset…"
                     id="adminPinResetUser"
                     style={{flex:1,padding:"8px 12px",background:"rgba(255,255,255,0.06)",
-                      border:"1px solid rgba(255,255,255,0.10)",borderRadius:7,
+                      border:"1px solid rgba(255,255,255,0.10)",borderRadius:6,
                       color:"#fff",fontSize:12,fontFamily:"inherit",outline:"none"}}/>
                   <button onClick={async()=>{
                     const el = document.getElementById("adminPinResetUser");
@@ -5784,7 +5801,7 @@ export default function App(){
                     setTimeout(()=>setAdminPinError(""),4000);
                   }} style={{
                     padding:"8px 16px",background:"rgba(239,68,68,0.12)",
-                    border:"1px solid rgba(239,68,68,0.3)",borderRadius:7,
+                    border:"1px solid rgba(239,68,68,0.3)",borderRadius:6,
                     color:"#ef4444",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0,
                   }}>Reset PIN</button>
                 </div>
@@ -5799,7 +5816,7 @@ export default function App(){
                   </h3>
                   <button onClick={adminFillR32} style={{
                     padding:"7px 14px",background:"rgba(96,165,250,0.12)",
-                    border:"1px solid rgba(96,165,250,0.3)",borderRadius:7,
+                    border:"1px solid rgba(96,165,250,0.3)",borderRadius:6,
                     color:"#60a5fa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
                   }}>⚡ Fill R32 from standings</button>
                 </div>
@@ -5821,7 +5838,7 @@ export default function App(){
                 {actualMatches.filter(m=>m.group===adminActiveGroup).map(m=>(
                   <div key={m.id} style={{
                     display:"flex",alignItems:"center",gap:9,
-                    padding:"9px 12px",borderRadius:9,marginBottom:7,
+                    padding:"9px 12px",borderRadius:10,marginBottom:7,
                     background:"rgba(34,197,94,0.04)",border:"1px solid rgba(34,197,94,0.12)",
                   }}>
                     <span style={{fontSize:15}}>{FLAGS[m.home]||"🏳️"}</span>
@@ -5975,7 +5992,7 @@ export default function App(){
                     {/* Show existing live predictions */}
                     {Object.entries(livePredictions).map(([key,pred])=>(
                       <div key={key} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,
-                        background:"rgba(139,92,246,0.05)",borderRadius:7,padding:"7px 10px",
+                        background:"rgba(139,92,246,0.05)",borderRadius:6,padding:"7px 10px",
                         border:"1px solid rgba(139,92,246,0.15)"}}>
                         <span style={{fontSize:10,color:"#7c6db3",flex:1,fontFamily:"monospace"}}>{key}</span>
                         <span style={{fontSize:12,color:"#c4b5fd",fontWeight:700,flexShrink:0}}>{pred.h}–{pred.a}</span>
