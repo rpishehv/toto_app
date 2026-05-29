@@ -2748,48 +2748,6 @@ export default function App(){
             transition:"all 0.3s",fontFamily:"inherit",flexShrink:0}}>{saved?"✓":"Save"}</button>
         </div>
 
-        {/* Mini leaderboard — top 3 */}
-        {leaderboard.length>0&&(
-          <div style={{padding:"0 14px 8px",display:"flex",gap:4,overflowX:"auto"}}>
-            {leaderboard.slice(0,3).map((e,i)=>{
-              const medals=["🥇","🥈","🥉"];
-              const isMe=e.username===userName;
-              return(
-                <div key={e.username} style={{
-                  display:"flex",alignItems:"center",gap:5,
-                  padding:"3px 8px",borderRadius:6,flexShrink:0,
-                  background:isMe?"rgba(252,185,0,0.12)":"rgba(255,255,255,0.04)",
-                  border:`1px solid ${isMe?"rgba(252,185,0,0.3)":"rgba(255,255,255,0.07)"}`,
-                }}>
-                  <span style={{fontSize:12}}>{medals[i]}</span>
-                  <span style={{fontSize:10,fontWeight:isMe?700:400,
-                    color:isMe?"#fcb900":"#888",maxWidth:60,overflow:"hidden",
-                    textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.username}</span>
-                  <span style={{fontSize:10,color:"#555",fontWeight:700}}>{e.points}pts</span>
-                </div>
-              );
-            })}
-            {/* My rank if not in top 3 */}
-            {(()=>{
-              const myRank=leaderboard.findIndex(e=>e.username===userName);
-              if(myRank>=3) return(
-                <div style={{display:"flex",alignItems:"center",gap:5,
-                  padding:"3px 8px",borderRadius:6,flexShrink:0,
-                  background:"rgba(252,185,0,0.12)",border:"1px solid rgba(252,185,0,0.3)"}}>
-                  <span style={{fontSize:10,color:"#fcb900",fontWeight:700}}>#{myRank+1}</span>
-                  <span style={{fontSize:10,color:"#fcb900",fontWeight:700}}>{userName}</span>
-                  <span style={{fontSize:10,color:"#555"}}>{myPts}pts</span>
-                </div>
-              );
-            })()}
-            <button onClick={()=>setShowShareCard(true)} style={{
-              marginLeft:"auto",padding:"3px 9px",flexShrink:0,
-              background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",
-              borderRadius:6,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit",
-            }}>📤 Share</button>
-          </div>
-        )}
-
         {/* Action row */}
         <div style={{padding:"0 14px 8px",display:"flex",gap:6}}>
           <button onClick={exportPredictions} style={{
@@ -2804,6 +2762,10 @@ export default function App(){
             padding:"4px 9px",background:"transparent",border:"1px solid rgba(239,68,68,0.3)",
             borderRadius:6,color:"#ef4444",fontSize:10,cursor:"pointer",fontFamily:"inherit",
           }}>🗑 Reset</button>
+          <button onClick={()=>setShowShareCard(true)} style={{
+            padding:"4px 9px",background:"transparent",border:"1px solid rgba(34,197,94,0.3)",
+            borderRadius:6,color:"#22c55e",fontSize:10,cursor:"pointer",fontFamily:"inherit",
+          }}>📤 Share</button>
           <button onClick={()=>{clearSession();setUserName("");setNameInput("");setPinInput("");setPinConfirm("");setPinStep("name");setPinError("");}} style={{
             padding:"4px 9px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",
             borderRadius:6,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit",marginLeft:"auto",
