@@ -1043,6 +1043,24 @@ export default function App(){
       setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
     }
   };
+
+  // Poll chat messages every 10s while on chat tab
+  useEffect(()=>{
+    if(tab!=="chat") return;
+    const poll = setInterval(()=>{
+      sbGetMessages(50).then(msgs=>{
+        setChatMessages(prev=>{
+          // Merge — keep optimistic ones, add any new real ones
+          const realIds = new Set(msgs.map(m=>m.id));
+          const optimistic = prev.filter(m=>m.id?.startsWith('optimistic_'));
+          return [...msgs, ...optimistic.filter(o=>
+            !msgs.some(m=>m.username===o.username&&m.message===o.message)
+          )];
+        });
+      });
+    }, 10000);
+    return ()=>clearInterval(poll);
+  },[tab]);
   const [userName,setUserName]=useState("");
   const [appError,setAppError]=useState(null);
   const [recentPoints,setRecentPoints]=useState(null); // points earned notification
@@ -1217,24 +1235,21 @@ export default function App(){
     // Load chat + subscribe to new messages
     sbGetMessages(50).then(msgs => setChatMessages(msgs));
     const chatSub = supabase
-      .channel('chat_messages_changes')
+      .channel('chat_realtime')
       .on('postgres_changes', { event:'INSERT', schema:'public', table:'chat_messages' }, payload=>{
         setChatMessages(prev => {
-          // Deduplicate — remove optimistic version if real one arrives
           const filtered = prev.filter(m =>
             !(m.id?.startsWith('optimistic_') &&
               m.username === payload.new.username &&
               m.message === payload.new.message)
           );
-          // Don't add if already present (e.g. own message already added optimistically and then confirmed)
-          const alreadyReal = filtered.some(m => m.id === payload.new.id);
-          if (alreadyReal) return filtered;
+          if (filtered.some(m => m.id === payload.new.id)) return filtered;
           return [...filtered, payload.new];
         });
         setChatUnread(u => u + 1);
         setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
       })
-      .subscribe();
+      .subscribe(status => console.log('Chat sub:', status));
 
     // Subscribe to leaderboard changes
     const lbSub = supabase
@@ -4924,9 +4939,16 @@ export default function App(){
                 <div style={{fontSize:10,color:"#444"}}>
                   {leaderboard.length} players
                 </div>
-                <div style={{display:"flex",alignItems:"center",gap:4,marginLeft:"auto"}}>
-                  <div style={{width:6,height:6,borderRadius:"50%",background:"#22c55e"}}/>
-                  <span style={{fontSize:10,color:"#22c55e"}}>Live</span>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
+                  <button onClick={()=>sbGetMessages(50).then(msgs=>setChatMessages(msgs))} style={{
+                    padding:"3px 8px",background:"rgba(255,255,255,0.04)",
+                    border:"1px solid rgba(255,255,255,0.08)",borderRadius:6,
+                    color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit",
+                  }}>🔄</button>
+                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    <div style={{width:6,height:6,borderRadius:"50%",background:"#22c55e"}}/>
+                    <span style={{fontSize:10,color:"#22c55e"}}>Live</span>
+                  </div>
                 </div>
               </div>
 
