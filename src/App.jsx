@@ -1139,6 +1139,7 @@ export default function App(){
   const [userName,setUserName]=useState("");
   const [appError,setAppError]=useState(null);
   const [appLoading,setAppLoading]=useState(true);
+  const [isOnline,setIsOnline]=useState(navigator.onLine);
   const [recentPoints,setRecentPoints]=useState(null); // points earned notification
   const [predictionCount,setPredictionCount]=useState({done:0,total:0}); // completion indicator
   const [showPredReminder,setShowPredReminder]=useState(false);
@@ -1281,7 +1282,15 @@ export default function App(){
       }
     })();
     const nowInterval=setInterval(()=>setNow(Date.now()),60*1000);
-    return ()=>clearInterval(nowInterval);
+    const goOnline  = ()=>setIsOnline(true);
+    const goOffline = ()=>setIsOnline(false);
+    window.addEventListener('online',  goOnline);
+    window.addEventListener('offline', goOffline);
+    return ()=>{
+      clearInterval(nowInterval);
+      window.removeEventListener('online',  goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
   },[]);
 
   // ── Real-time subscriptions ─────────────────────────────────────────────────
@@ -2739,7 +2748,7 @@ export default function App(){
           --fs-xs: 9px; --fs-sm: 11px; --fs-md: 13px; --fs-lg: 15px;
           --border-subtle: rgba(255,255,255,0.06);
           --border-mid:    rgba(255,255,255,0.10);
-          --border-strong: rgba(255,255,255,0.16);
+          --border-strong: rgba(255,255,255,0.15);
           --bg-card:   rgba(255,255,255,0.03);
           --bg-hover:  rgba(255,255,255,0.06);
           --col-gold:  #fcb900; --col-green: #22c55e;
@@ -2927,8 +2936,8 @@ export default function App(){
         </div>
       )}
 
-      {/* Option 2: backup reminder banner */}
-      {userName && (() => {
+      {/* Backup reminder — only after user has saved predictions */}
+      {userName && saved && (() => {
         const daysSince = lastBackupAt ? (Date.now()-lastBackupAt)/(1000*60*60*24) : null;
         const noBackup = lastBackupAt===null;
         const stale = daysSince!==null && daysSince >= BACKUP_WARN_DAYS;
@@ -2940,14 +2949,14 @@ export default function App(){
           }}>
             <span style={{fontSize:11,color:"#fca5a5"}}>
               ⚠️ {noBackup
-                ? "No backup yet — tap Export after saving your predictions"
-                : `Last backup ${Math.floor(daysSince)} day${Math.floor(daysSince)!==1?"s":""} ago — consider exporting`}
+                ? "No backup yet — tap 📦 Backup to save a copy"
+                : `Last backup ${Math.floor(daysSince)} day${Math.floor(daysSince)!==1?"s":""} ago — consider backing up`}
             </span>
             <button onClick={exportPredictions} style={{
               padding:"4px 12px",background:"rgba(239,68,68,0.15)",
               border:"1px solid rgba(239,68,68,0.3)",borderRadius:6,
               color:"#fca5a5",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0,
-            }}>📤 Backup now</button>
+            }}>📦 Backup now</button>
           </div>
         );
       })()}
@@ -2988,6 +2997,19 @@ export default function App(){
               }}>Close</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* OFFLINE BANNER */}
+      {!isOnline&&(
+        <div style={{
+          background:"rgba(239,68,68,0.12)",borderBottom:"1px solid rgba(239,68,68,0.3)",
+          padding:"8px 16px",display:"flex",alignItems:"center",gap:8,
+        }}>
+          <span style={{fontSize:14}}>📡</span>
+          <span style={{fontSize:11,color:"#fca5a5",fontWeight:600}}>
+            No connection — changes will save automatically when reconnected
+          </span>
         </div>
       )}
 
@@ -3190,24 +3212,24 @@ export default function App(){
             ))}
           </div>
           <div style={{position:"relative"}}>
-            {/* Two-line tips */}
-            <div style={{fontSize:10,color:"#444",marginBottom:8,lineHeight:1.8}}>
-              {!showStandings&&(
-                <div>💡 Tap <span style={{color:"#fcb900",fontWeight:700}}>📊 Standings</span> to see the Group {activeGroup} table</div>
-              )}
-              <div>💡 Each match has <span style={{color:"#a78bfa",fontWeight:700}}>🤖 AI</span> · <span style={{color:"#22c55e",fontWeight:700}}>🔍 Experts</span> · <span style={{color:"#60a5fa",fontWeight:700}}>📊 Market odds</span> — tap the buttons below each match</div>
+            {/* Tips row — standings button inline with tip */}
+            <div style={{marginBottom:10}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                <div style={{flex:1,fontSize:10,color:"#444"}}>
+                  💡 Tap <span style={{color:"#fcb900",fontWeight:700}}>📊 Standings</span> to see the Group {activeGroup} table
+                </div>
+                <button onClick={()=>setShowStandings(p=>!p)} style={{
+                  flexShrink:0,padding:"4px 12px",
+                  background:showStandings?"rgba(252,185,0,0.2)":"rgba(252,185,0,0.08)",
+                  border:`1px solid ${showStandings?"rgba(252,185,0,0.5)":"rgba(252,185,0,0.2)"}`,
+                  borderRadius:6,color:"#fcb900",fontSize:11,fontWeight:700,
+                  cursor:"pointer",fontFamily:"inherit",
+                }}>{showStandings?"✕ Hide":"📊 Standings"}</button>
+              </div>
+              <div style={{fontSize:10,color:"#444"}}>
+                💡 Each match has <span style={{color:"#a78bfa",fontWeight:700}}>🤖 AI</span> · <span style={{color:"#22c55e",fontWeight:700}}>🔍 Experts</span> · <span style={{color:"#60a5fa",fontWeight:700}}>📊 Market odds</span> — tap the buttons below each match
+              </div>
             </div>
-            {/* Floating standings button */}
-            <button onClick={()=>setShowStandings(p=>!p)} style={{
-              position:"sticky",top:4,zIndex:50,float:"right",
-              padding:"5px 12px",marginBottom:8,
-              background:showStandings?"rgba(252,185,0,0.2)":"rgba(252,185,0,0.08)",
-              border:`1px solid ${showStandings?"rgba(252,185,0,0.5)":"rgba(252,185,0,0.2)"}`,
-              borderRadius:6,color:"#fcb900",fontSize:11,fontWeight:700,
-              cursor:"pointer",fontFamily:"inherit",
-            }}>
-              {showStandings?"✕ Hide":"📊 Standings"}
-            </button>
 
             <h3 style={{margin:"0 0 10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:1,color:"#fcb900"}}>
               Group {activeGroup} — My Predictions
