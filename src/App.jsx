@@ -8,6 +8,8 @@ import {
   sbGetLeaderboard, sbUpsertLeaderboard,
   sbGetSaveHistory, sbAddSaveHistory,
   sbGetAIContent, sbSaveAIContent,
+  sbUpdateRankHistory, sbGetRankHistory,
+  sbGetReactions, sbToggleReaction,
   saveSession, getSession, clearSession,
   generateRecoveryCode,
   lsGet, lsSet, lsDel, stGet, stSet, detectStorage,
@@ -720,6 +722,51 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
         </div>
       )}
       {showExperts&&<ExpertPanel home={match.home} away={match.away} data={expertData}/>}
+      <ReactionsBar matchId={match.id} userName={userName}/>
+    </div>
+  );
+}
+
+function ReactionsBar({matchId, userName}) {
+  const EMOJIS = ["🔥","😱","😂","👏","💔","🎯"];
+  const [counts, setCounts] = useState({});
+  const [mine, setMine] = useState(new Set());
+
+  const loadReactions = async () => {
+    const rows = await sbGetReactions(matchId);
+    const c={}, m=new Set();
+    rows.forEach(r=>{ c[r.emoji]=(c[r.emoji]||0)+1; if(r.username===userName) m.add(r.emoji); });
+    setCounts(c); setMine(m);
+  };
+
+  useEffect(()=>{
+    if(!matchId) return;
+    loadReactions();
+    const sub = supabase.channel(`reactions_${matchId}`)
+      .on('postgres_changes',{event:'*',schema:'public',table:'reactions',
+        filter:`match_id=eq.${matchId}`}, loadReactions)
+      .subscribe();
+    return ()=>supabase.removeChannel(sub);
+  },[matchId]);
+
+  const toggle = async(emoji) => {
+    await sbToggleReaction(matchId, userName, emoji);
+  };
+
+  return(
+    <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>
+      {EMOJIS.map(e=>(
+        <button key={e} onClick={()=>toggle(e)} style={{
+          padding:"2px 7px",borderRadius:12,fontSize:12,cursor:"pointer",fontFamily:"inherit",
+          background:mine.has(e)?"rgba(252,185,0,0.15)":"rgba(255,255,255,0.04)",
+          border:`1px solid ${mine.has(e)?"rgba(252,185,0,0.4)":"rgba(255,255,255,0.08)"}`,
+          color:mine.has(e)?"#fcb900":"#666",
+          display:"flex",alignItems:"center",gap:3,
+        }}>
+          <span>{e}</span>
+          {counts[e]>0&&<span style={{fontSize:9,fontWeight:700}}>{counts[e]}</span>}
+        </button>
+      ))}
     </div>
   );
 }
@@ -1041,6 +1088,12 @@ export default function App(){
   const [generatingAI,setGeneratingAI]=useState(false);
   const [aiGenStatus,setAiGenStatus]=useState(null);
   const [showStandings,setShowStandings]=useState(false);
+  // Share card
+  const [showShareCard,setShowShareCard]=useState(false);
+  // Rank history
+  const [rankHistory,setRankHistory]=useState([]);
+  // Reactions — matchId → { emoji → count, myEmojis: Set }
+  const [reactions,setReactions]=useState({});
   const [generatingOdds,setGeneratingOdds]=useState(false);
   const [oddsGenStatus,setOddsGenStatus]=useState(null);
   const [generatingExperts,setGeneratingExperts]=useState(false);
@@ -1103,6 +1156,9 @@ export default function App(){
         const aiContent = await sbGetAIContent();
         if(aiContent?.bracket)   { setBracketPred(aiContent.bracket); setBracketGeneratedBy(aiContent.bracket_generated_by); }
         if(aiContent?.commentary){ setCommentary(aiContent.commentary); setCommentaryGeneratedBy(aiContent.commentary_generated_by); }
+        // Load rank history
+        const rh = await sbGetRankHistory(sesh.username);
+        if(rh?.length) setRankHistory(rh);
       } catch(e) {
         console.error('Initial load error:', e);
         setAppError(`Load failed: ${e.message}`);
@@ -2263,8 +2319,14 @@ export default function App(){
       }
     }
     lb.sort((a,b)=>b.points-a.points);
-    // leaderboard updated via sbUpsertLeaderboard
     setLeaderboard(lb);
+    // Update rank history for each user
+    for(const [i,e] of lb.entries()){
+      await sbUpdateRankHistory(e.username, i+1, e.points);
+    }
+    // Refresh own rank history
+    const rh = await sbGetRankHistory(userName);
+    if(rh?.length) setRankHistory(rh);
   };
 
   const gm=matches.filter(m=>m.group===activeGroup);
@@ -2605,6 +2667,49 @@ export default function App(){
             border:"none",borderRadius:7,color:"#000",fontWeight:700,fontSize:12,cursor:"pointer",
             transition:"all 0.3s",fontFamily:"inherit",flexShrink:0}}>{saved?"✓":"Save"}</button>
         </div>
+
+        {/* Mini leaderboard — top 3 */}
+        {leaderboard.length>0&&(
+          <div style={{padding:"0 14px 8px",display:"flex",gap:4,overflowX:"auto"}}>
+            {leaderboard.slice(0,3).map((e,i)=>{
+              const medals=["🥇","🥈","🥉"];
+              const isMe=e.username===userName;
+              return(
+                <div key={e.username} style={{
+                  display:"flex",alignItems:"center",gap:5,
+                  padding:"3px 8px",borderRadius:6,flexShrink:0,
+                  background:isMe?"rgba(252,185,0,0.12)":"rgba(255,255,255,0.04)",
+                  border:`1px solid ${isMe?"rgba(252,185,0,0.3)":"rgba(255,255,255,0.07)"}`,
+                }}>
+                  <span style={{fontSize:12}}>{medals[i]}</span>
+                  <span style={{fontSize:10,fontWeight:isMe?700:400,
+                    color:isMe?"#fcb900":"#888",maxWidth:60,overflow:"hidden",
+                    textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.username}</span>
+                  <span style={{fontSize:10,color:"#555",fontWeight:700}}>{e.points}pts</span>
+                </div>
+              );
+            })}
+            {/* My rank if not in top 3 */}
+            {(()=>{
+              const myRank=leaderboard.findIndex(e=>e.username===userName);
+              if(myRank>=3) return(
+                <div style={{display:"flex",alignItems:"center",gap:5,
+                  padding:"3px 8px",borderRadius:6,flexShrink:0,
+                  background:"rgba(252,185,0,0.12)",border:"1px solid rgba(252,185,0,0.3)"}}>
+                  <span style={{fontSize:10,color:"#fcb900",fontWeight:700}}>#{myRank+1}</span>
+                  <span style={{fontSize:10,color:"#fcb900",fontWeight:700}}>{userName}</span>
+                  <span style={{fontSize:10,color:"#555"}}>{myPts}pts</span>
+                </div>
+              );
+            })()}
+            <button onClick={()=>setShowShareCard(true)} style={{
+              marginLeft:"auto",padding:"3px 9px",flexShrink:0,
+              background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",
+              borderRadius:6,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit",
+            }}>📤 Share</button>
+          </div>
+        )}
+
         {/* Action row */}
         <div style={{padding:"0 14px 8px",display:"flex",gap:6}}>
           <button onClick={exportPredictions} style={{
@@ -2737,6 +2842,114 @@ export default function App(){
           </div>
         </div>
       )}
+
+      {/* SHARE CARD MODAL */}
+      {showShareCard&&(()=>{
+        const myRank=leaderboard.findIndex(e=>e.username===userName)+1;
+        const total=leaderboard.length;
+        const pct=Math.round(predictionCount.done/predictionCount.total*100);
+        const shareText=`🏆 FIFA World Cup 2026 Predictions\n👤 ${userName} · #${myRank} of ${total}\n🏅 ${myPts} points · ${pct}% predicted\n⚽ Picked ${podium?.first||"?"} to win it all\n\nPlay at: toto-app-oqdi.vercel.app`;
+        const handleShare=async()=>{
+          if(navigator.share){
+            await navigator.share({title:"FIFA 2026 Predictions",text:shareText});
+          } else {
+            navigator.clipboard?.writeText(shareText);
+            alert("Copied to clipboard!");
+          }
+        };
+        return(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",
+            zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",
+            padding:20}} onClick={()=>setShowShareCard(false)}>
+            <div onClick={e=>e.stopPropagation()} style={{
+              width:"100%",maxWidth:340,borderRadius:20,overflow:"hidden",
+              background:"linear-gradient(135deg,#1a1f2e 0%,#0d1117 100%)",
+              border:"1px solid rgba(252,185,0,0.3)",boxShadow:"0 24px 80px rgba(0,0,0,0.6)",
+            }}>
+              {/* Card header */}
+              <div style={{background:"linear-gradient(135deg,rgba(252,185,0,0.15),rgba(252,185,0,0.05))",
+                padding:"24px 24px 20px",textAlign:"center",
+                borderBottom:"1px solid rgba(252,185,0,0.15)"}}>
+                <div style={{fontSize:32,marginBottom:8}}>⚽</div>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,color:"#fcb900",letterSpacing:3}}>FIFA 2026</div>
+                <div style={{fontSize:11,color:"#555",marginTop:2}}>Prediction Challenge</div>
+              </div>
+              {/* Stats */}
+              <div style={{padding:"20px 24px"}}>
+                <div style={{fontSize:20,fontWeight:700,color:"#fff",marginBottom:16}}>👤 {userName}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+                  {[
+                    {label:"Rank",value:`#${myRank} of ${total}`,color:"#fcb900"},
+                    {label:"Points",value:`${myPts}pts`,color:"#22c55e"},
+                    {label:"Predicted",value:`${pct}%`,color:"#60a5fa"},
+                    {label:"My Champion",value:podium?.first||"?",color:"#a78bfa"},
+                  ].map((s,i)=>(
+                    <div key={i} style={{background:"rgba(255,255,255,0.04)",
+                      border:"1px solid rgba(255,255,255,0.07)",borderRadius:10,padding:"10px 12px"}}>
+                      <div style={{fontSize:9,color:"#444",marginBottom:4}}>{s.label}</div>
+                      <div style={{fontSize:15,fontWeight:700,color:s.color}}>{s.value}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Rank chart sparkline */}
+                {rankHistory.length>1&&(
+                  <div style={{marginBottom:16,padding:"10px 12px",
+                    background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",
+                    borderRadius:10}}>
+                    <div style={{fontSize:9,color:"#444",marginBottom:6}}>📈 Rank History</div>
+                    <svg width="100%" height="40" viewBox={`0 0 ${rankHistory.length*20} 40`}>
+                      {rankHistory.map((r,i)=>{
+                        const maxRank=Math.max(...rankHistory.map(x=>x.rank));
+                        const y=4+(r.rank-1)/(maxRank-1||1)*32;
+                        const x=i*20+10;
+                        return(
+                          <g key={i}>
+                            {i>0&&(()=>{
+                              const prev=rankHistory[i-1];
+                              const py=4+(prev.rank-1)/(maxRank-1||1)*32;
+                              return<line x1={(i-1)*20+10} y1={py} x2={x} y2={y}
+                                stroke="#fcb900" strokeWidth="1.5" opacity="0.6"/>;
+                            })()}
+                            <circle cx={x} cy={y} r="3" fill="#fcb900"/>
+                            <text x={x} y={y-6} textAnchor="middle"
+                              fill="#555" fontSize="7">#{r.rank}</text>
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  </div>
+                )}
+                {/* Podium picks */}
+                {(podium?.first||podium?.second||podium?.third)&&(
+                  <div style={{display:"flex",gap:6,marginBottom:16}}>
+                    {[{e:"🥇",t:podium.first},{e:"🥈",t:podium.second},{e:"🥉",t:podium.third}]
+                      .filter(p=>p.t).map((p,i)=>(
+                      <div key={i} style={{flex:1,textAlign:"center",padding:"6px 4px",
+                        background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",
+                        borderRadius:8,fontSize:10}}>
+                        <div style={{fontSize:14}}>{p.e}</div>
+                        <div style={{color:"#888",marginTop:2,fontSize:9}}>{p.t}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button onClick={handleShare} style={{
+                  width:"100%",padding:"13px",
+                  background:"linear-gradient(135deg,#fcb900,#f59e0b)",
+                  border:"none",borderRadius:10,color:"#000",
+                  fontFamily:"'Bebas Neue',sans-serif",fontSize:18,letterSpacing:1,
+                  cursor:"pointer",
+                }}>📤 Share to WhatsApp</button>
+                <button onClick={()=>setShowShareCard(false)} style={{
+                  width:"100%",padding:"8px",marginTop:8,
+                  background:"transparent",border:"1px solid rgba(255,255,255,0.1)",
+                  borderRadius:8,color:"#555",fontSize:11,cursor:"pointer",fontFamily:"inherit",
+                }}>Close</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* TABS */}
       <div style={{display:"flex",borderBottom:"1px solid rgba(255,255,255,0.07)",
@@ -3770,6 +3983,73 @@ export default function App(){
 
                   {/* ── Group Stats ── */}
                   <div style={{height:1,background:"rgba(255,255,255,0.06)",marginBottom:16}}/>
+
+                  {/* ── Rank History chart ── */}
+                  {rankHistory.length>1&&(
+                    <div style={{marginBottom:20,padding:"14px",
+                      background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",
+                      borderRadius:11}}>
+                      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"#fcb900",
+                        letterSpacing:1,marginBottom:12}}>📈 Rank History</div>
+                      {(()=>{
+                        const W=280, H=80;
+                        const n=rankHistory.length;
+                        const maxRank=Math.max(...rankHistory.map(r=>r.rank));
+                        const toX=i=>n===1?W/2:(i/(n-1))*W;
+                        const toY=r=>8+((r-1)/(maxRank-1||1))*(H-16);
+                        const pts=rankHistory.map((r,i)=>({x:toX(i),y:toY(r.rank),...r}));
+                        const pathD=pts.map((p,i)=>`${i===0?"M":"L"}${p.x},${p.y}`).join(" ");
+                        return(
+                          <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{overflow:"visible"}}>
+                            {/* Grid lines */}
+                            {[1,Math.ceil(maxRank/2),maxRank].map(r=>(
+                              <line key={r} x1="0" y1={toY(r)} x2={W} y2={toY(r)}
+                                stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+                            ))}
+                            {/* Line */}
+                            <path d={pathD} fill="none" stroke="#fcb900" strokeWidth="2"
+                              strokeLinecap="round" strokeLinejoin="round"/>
+                            {/* Area fill */}
+                            <path d={`${pathD} L${W},${H} L0,${H} Z`}
+                              fill="url(#rankGrad)" opacity="0.15"/>
+                            <defs>
+                              <linearGradient id="rankGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#fcb900" stopOpacity="0.8"/>
+                                <stop offset="100%" stopColor="#fcb900" stopOpacity="0"/>
+                              </linearGradient>
+                            </defs>
+                            {/* Points */}
+                            {pts.map((p,i)=>(
+                              <g key={i}>
+                                <circle cx={p.x} cy={p.y} r="4"
+                                  fill={i===pts.length-1?"#fcb900":"#1a1f2e"}
+                                  stroke="#fcb900" strokeWidth="2"/>
+                                <text x={p.x} y={p.y-9} textAnchor="middle"
+                                  fill="#fcb900" fontSize="9" fontWeight="700">#{p.rank}</text>
+                                <text x={p.x} y={H+12} textAnchor="middle"
+                                  fill="#333" fontSize="7">
+                                  {new Date(p.savedAt).toLocaleDateString('en',{month:'short',day:'numeric'})}
+                                </text>
+                              </g>
+                            ))}
+                          </svg>
+                        );
+                      })()}
+                      <div style={{display:"flex",justifyContent:"space-between",marginTop:8,fontSize:10}}>
+                        <span style={{color:"#444"}}>
+                          Started: #{rankHistory[0]?.rank}
+                        </span>
+                        <span style={{color:rankHistory[rankHistory.length-1]?.rank<rankHistory[0]?.rank?"#22c55e":"#ef4444",fontWeight:700}}>
+                          Current: #{rankHistory[rankHistory.length-1]?.rank}
+                          {rankHistory.length>1&&(()=>{
+                            const diff=rankHistory[0].rank-rankHistory[rankHistory.length-1].rank;
+                            return diff!==0?<span> ({diff>0?`▲${diff}`:`▼${Math.abs(diff)}`})</span>:null;
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"#555",letterSpacing:1,marginBottom:12}}>
                     Group Analytics
                   </div>

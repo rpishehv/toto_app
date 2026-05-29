@@ -173,6 +173,43 @@ export async function detectStorage() { return 'supabase'; }
 // Stores shared AI-generated content (bracket prediction, commentary)
 // Single row table — id=1 always
 
+// ─── RANK HISTORY ─────────────────────────────────────────────────────────────
+export async function sbUpdateRankHistory(username, rank, points) {
+  const { data } = await supabase
+    .from('leaderboard').select('rank_history').eq('username', username).maybeSingle();
+  const history = data?.rank_history || [];
+  const entry = { rank, points, savedAt: new Date().toISOString() };
+  const updated = [...history.slice(-19), entry]; // keep last 20
+  await supabase.from('leaderboard')
+    .update({ rank_history: updated }).eq('username', username);
+}
+
+export async function sbGetRankHistory(username) {
+  const { data } = await supabase
+    .from('leaderboard').select('rank_history').eq('username', username).maybeSingle();
+  return data?.rank_history || [];
+}
+
+// ─── REACTIONS ────────────────────────────────────────────────────────────────
+export async function sbGetReactions(matchId) {
+  const { data } = await supabase
+    .from('reactions').select('*').eq('match_id', matchId);
+  return data || [];
+}
+
+export async function sbToggleReaction(matchId, username, emoji) {
+  const id = `${matchId}_${username}_${emoji}`;
+  const { data } = await supabase
+    .from('reactions').select('id').eq('id', id).maybeSingle();
+  if (data) {
+    await supabase.from('reactions').delete().eq('id', id);
+    return false; // removed
+  } else {
+    await supabase.from('reactions').insert({ id, match_id: matchId, username, emoji });
+    return true; // added
+  }
+}
+
 export async function sbGetAIContent() {
   const { data, error } = await supabase
     .from('ai_content').select('*').eq('id', 1).maybeSingle()

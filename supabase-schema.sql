@@ -78,3 +78,19 @@ create table if not exists ai_content (
 
 -- Seed the single row
 insert into ai_content (id) values (1) on conflict (id) do nothing;
+
+-- Rank history (per user, array of {rank, points, savedAt})
+alter table leaderboard add column if not exists rank_history jsonb default '[]';
+
+-- Reactions (shared, real-time)
+create table if not exists reactions (
+  id text primary key,  -- e.g. "matchId_userId_emoji"
+  match_id text not null,
+  username text not null,
+  emoji text not null,
+  created_at timestamptz default now()
+);
+alter table reactions enable row level security;
+create policy "Anyone can read reactions" on reactions for select using (true);
+create policy "Anyone can insert reactions" on reactions for insert with check (true);
+create policy "Anyone can delete own reactions" on reactions for delete using (true);
