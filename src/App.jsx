@@ -1219,9 +1219,19 @@ export default function App(){
     const chatSub = supabase
       .channel('chat_messages_changes')
       .on('postgres_changes', { event:'INSERT', schema:'public', table:'chat_messages' }, payload=>{
-        setChatMessages(prev => [...prev, payload.new]);
+        setChatMessages(prev => {
+          // Deduplicate — remove optimistic version if real one arrives
+          const filtered = prev.filter(m =>
+            !(m.id?.startsWith('optimistic_') &&
+              m.username === payload.new.username &&
+              m.message === payload.new.message)
+          );
+          // Don't add if already present (e.g. own message already added optimistically and then confirmed)
+          const alreadyReal = filtered.some(m => m.id === payload.new.id);
+          if (alreadyReal) return filtered;
+          return [...filtered, payload.new];
+        });
         setChatUnread(u => u + 1);
-        // Auto-scroll if already at bottom
         setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
       })
       .subscribe();
@@ -4879,9 +4889,17 @@ export default function App(){
             if (!msg || chatSending) return;
             setChatSending(true);
             setChatInput("");
+            // Optimistically add to UI immediately
+            const optimistic = {
+              id: `optimistic_${Date.now()}`,
+              username: userName,
+              message: msg,
+              created_at: new Date().toISOString(),
+            };
+            setChatMessages(prev => [...prev, optimistic]);
+            setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 50);
             await sbSendMessage(userName, msg);
             setChatSending(false);
-            setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
           };
           const handleKey = e => { if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendMsg(); } };
           const formatTime = ts => {
