@@ -606,8 +606,8 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
             <span style={{color:"#444",fontWeight:700,fontSize:11}}>–</span>
             <ScoreInput value={match.awayScore} onChange={v=>onUpdate({...match,awayScore:v})} readOnly={locked}/>
           </div>
-          {actDone&&<div style={{fontSize:9,color:"#555",fontFamily:"monospace"}}>{actual.homeScore}–{actual.awayScore}</div>}
-          {!locked&&countdown&&<div style={{fontSize:9,color:"#60a5fa"}}>⏱ {countdown}</div>}
+          {actDone&&<div style={{fontSize:10,color:"#555",fontFamily:"monospace"}}>{actual.homeScore}–{actual.awayScore}</div>}
+          {!locked&&countdown&&<div style={{fontSize:10,color:"#60a5fa"}}>⏱ {countdown}</div>}
         </div>
         <span style={{flex:1,textAlign:"right",fontWeight:600,fontSize:11,color:winner===match.away?"#fcb900":locked?"#888":"#ddd",
           overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>{match.away}</span>
@@ -653,7 +653,7 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
             <>
               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
                 <span style={{fontSize:11,color:"#60a5fa",fontWeight:700}}>📊 Polymarket Crowd Odds</span>
-                {matchOdds.volume&&<span style={{fontSize:9,color:"#444",marginLeft:"auto"}}>{matchOdds.volume} vol</span>}
+                {matchOdds.volume&&<span style={{fontSize:10,color:"#444",marginLeft:"auto"}}>{matchOdds.volume} vol</span>}
                 <button onClick={()=>setShowOdds(false)} style={{padding:"1px 6px",background:"rgba(255,255,255,0.06)",
                   border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,color:"#555",
                   fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
@@ -677,9 +677,9 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
                 </div>
               ))}
               <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
-                <span style={{fontSize:9,color:"#444"}}>Price in ¢ = % probability</span>
+                <span style={{fontSize:10,color:"#444"}}>Price in ¢ = % probability</span>
                 {matchOdds.url&&<a href={matchOdds.url} target="_blank" rel="noopener noreferrer"
-                  style={{fontSize:9,color:"#60a5fa",textDecoration:"none"}}>View ↗</a>}
+                  style={{fontSize:10,color:"#60a5fa",textDecoration:"none"}}>View ↗</a>}
               </div>
             </>
           ):(
@@ -700,7 +700,7 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
             <span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>🤖 AI Prediction:</span>
             <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>{aiPred.h} – {aiPred.a}</span>
             {aiPred.confidence&&(
-              <span style={{fontSize:9,color:"#6d5a9c",
+              <span style={{fontSize:10,color:"#6d5a9c",
                 background:"rgba(139,92,246,0.15)",borderRadius:4,padding:"2px 6px"}}>
                 {aiPred.confidence} confidence
               </span>
@@ -857,7 +857,7 @@ function StandingsTable({teams,matches}){
           {compact?"# / Team / GD / Pts":"Full table"}
         </span>
         <button onClick={()=>setCompact(p=>!p)} style={{
-          padding:"3px 10px",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+          padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
           background:compact?"rgba(252,185,0,0.10)":"rgba(255,255,255,0.06)",
           border:`1px solid ${compact?"rgba(252,185,0,0.3)":"rgba(255,255,255,0.10)"}`,
           borderRadius:6,color:compact?"#fcb900":"#555",
@@ -971,7 +971,7 @@ function ExpertPanel({ home, away, data, loading }) {
             <span style={{color:"#22c55e",fontWeight:700,flexShrink:0}}>{s.pct}%</span>
           )}
           {s.confidence&&(
-            <span style={{fontSize:9,color:
+            <span style={{fontSize:10,color:
               s.confidence==="High"?"#22c55e":s.confidence==="Medium"?"#fcb900":"#555",
               flexShrink:0}}>{s.confidence}</span>
           )}
@@ -1052,7 +1052,7 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>🤖 AI:</span>
             <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>{aiP.h} – {aiP.a}</span>
-            {aiP.confidence&&<span style={{fontSize:9,color:"#6d5a9c",background:"rgba(139,92,246,0.15)",borderRadius:4,padding:"2px 6px"}}>{aiP.confidence}</span>}
+            {aiP.confidence&&<span style={{fontSize:10,color:"#6d5a9c",background:"rgba(139,92,246,0.15)",borderRadius:4,padding:"2px 6px"}}>{aiP.confidence}</span>}
             <button onClick={()=>setShowAI(false)} style={{marginLeft:"auto",padding:"1px 6px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
           </div>
           {aiP.insight&&<div style={{fontSize:11,color:"#8b7dbf",lineHeight:1.6,marginBottom:4}}>{aiP.insight}</div>}
@@ -1072,7 +1072,7 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
             <>
               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
                 <span style={{fontSize:11,color:"#60a5fa",fontWeight:700}}>📊 Polymarket</span>
-                {odds.volume&&<span style={{fontSize:9,color:"#444",marginLeft:"auto"}}>{odds.volume}</span>}
+                {odds.volume&&<span style={{fontSize:10,color:"#444",marginLeft:"auto"}}>{odds.volume}</span>}
                 <button onClick={()=>setShowOdds(false)} style={{padding:"1px 6px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
               </div>
               {(odds.outcomes?.length>0?odds.outcomes:[
@@ -1093,8 +1093,8 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
                 </div>
               ))}
               <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
-                <span style={{fontSize:9,color:"#444"}}>¢ = % probability</span>
-                {odds.url&&<a href={odds.url} target="_blank" rel="noopener noreferrer" style={{fontSize:9,color:"#60a5fa",textDecoration:"none"}}>View ↗</a>}
+                <span style={{fontSize:10,color:"#444"}}>¢ = % probability</span>
+                {odds.url&&<a href={odds.url} target="_blank" rel="noopener noreferrer" style={{fontSize:10,color:"#60a5fa",textDecoration:"none"}}>View ↗</a>}
               </div>
             </>
           ):(
@@ -1947,8 +1947,8 @@ export default function App(){
         <div style={{fontSize:10,fontWeight:700,color:"#555",marginBottom:6,letterSpacing:1}}>⚽ FORMATIONS</div>
         <div dangerouslySetInnerHTML={{__html:svg}}/>
         <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:4}}>
-          <span style={{fontSize:9,color:"#444"}}>🟥 = red card</span>
-          <span style={{fontSize:9,color:"#444"}}>🟢 = subbed on</span>
+          <span style={{fontSize:10,color:"#444"}}>🟥 = red card</span>
+          <span style={{fontSize:10,color:"#444"}}>🟢 = subbed on</span>
         </div>
       </div>
     );
@@ -2021,7 +2021,7 @@ export default function App(){
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
           <div style={{textAlign:"center",width:50}}>
             <div style={{fontSize:18}}>{homeFlag}</div>
-            <div style={{fontSize:9,color:"#888",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",
+            <div style={{fontSize:10,color:"#888",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",
               textOverflow:"ellipsis",maxWidth:50}}>{homeName?.split(" ")[0]}</div>
           </div>
           <div style={{flex:1}}>
@@ -2042,11 +2042,11 @@ export default function App(){
           </div>
           <div style={{textAlign:"center",width:50}}>
             <div style={{fontSize:18}}>{awayFlag}</div>
-            <div style={{fontSize:9,color:"#888",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",
+            <div style={{fontSize:10,color:"#888",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",
               textOverflow:"ellipsis",maxWidth:50}}>{awayName?.split(" ")[0]}</div>
           </div>
         </div>
-        <div style={{fontSize:9,color:"#444",textAlign:"center"}}>
+        <div style={{fontSize:10,color:"#444",textAlign:"center"}}>
           Based on score, time remaining, cards & possession
         </div>
       </div>
@@ -2842,7 +2842,7 @@ export default function App(){
           <span style={{fontSize:18}}>⚽</span>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:2,color:"#fcb900",lineHeight:1}}>FIFA 2026</div>
-            <div style={{fontSize:9,color:"#444"}}>Prediction Challenge</div>
+            <div style={{fontSize:10,color:"#444"}}>Prediction Challenge</div>
           </div>
           {myPts>0&&<div style={{background:"rgba(252,185,0,0.12)",border:"1px solid rgba(252,185,0,0.28)",
             borderRadius:6,padding:"3px 9px",fontSize:11,fontWeight:700,color:"#fcb900",flexShrink:0}}>🏅 {myPts}pts</div>}
@@ -3034,7 +3034,7 @@ export default function App(){
                   ].map((s,i)=>(
                     <div key={i} style={{background:"rgba(255,255,255,0.06)",
                       border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"10px 12px"}}>
-                      <div style={{fontSize:9,color:"#444",marginBottom:4}}>{s.label}</div>
+                      <div style={{fontSize:10,color:"#444",marginBottom:4}}>{s.label}</div>
                       <div style={{fontSize:15,fontWeight:700,color:s.color}}>{s.value}</div>
                     </div>
                   ))}
@@ -3044,7 +3044,7 @@ export default function App(){
                   <div style={{marginBottom:16,padding:"10px 12px",
                     background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",
                     borderRadius:10}}>
-                    <div style={{fontSize:9,color:"#444",marginBottom:6}}>📈 Rank History</div>
+                    <div style={{fontSize:10,color:"#444",marginBottom:6}}>📈 Rank History</div>
                     <svg width="100%" height="40" viewBox={`0 0 ${rankHistory.length*20} 40`}>
                       {rankHistory.map((r,i)=>{
                         const maxRank=Math.max(...rankHistory.map(x=>x.rank));
@@ -3076,7 +3076,7 @@ export default function App(){
                         background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",
                         borderRadius:8,fontSize:10}}>
                         <div style={{fontSize:14}}>{p.e}</div>
-                        <div style={{color:"#888",marginTop:2,fontSize:9}}>{p.t}</div>
+                        <div style={{color:"#888",marginTop:2,fontSize:10}}>{p.t}</div>
                       </div>
                     ))}
                   </div>
@@ -3110,7 +3110,7 @@ export default function App(){
       {/* AUTO-SAVE TOAST */}
       {autoSaveToast&&(
         <div style={{
-          position:"fixed",bottom:80,left:"50%",transform:"translateX(-50%)",
+          position:"fixed",bottom:100,left:"50%",transform:"translateX(-50%)",
           background:"rgba(34,197,94,0.9)",backdropFilter:"blur(8px)",
           color:"#000",padding:"6px 16px",borderRadius:20,
           fontSize:12,fontWeight:700,zIndex:9999,
@@ -3139,7 +3139,7 @@ export default function App(){
                     display:"flex",flexDirection:"column",alignItems:"center",gap:1,
                   }}>
                   <span style={{fontSize:18,lineHeight:1}}>{t.label}</span>
-                  <span style={{fontSize:9,fontWeight:isActive?700:400,
+                  <span style={{fontSize:10,fontWeight:isActive?700:400,
                     color:isActive?"#fcb900":t.restricted?"#6b5a4a":"#444",letterSpacing:0.3}}>{name}</span>
                   {t.id==="chat"&&chatUnread>0&&!isActive&&(
                     <span style={{
@@ -3405,7 +3405,7 @@ export default function App(){
                           }} style={{
                             marginTop:6,padding:"3px 8px",background:"rgba(139,92,246,0.15)",
                             border:"1px solid rgba(139,92,246,0.3)",borderRadius:4,
-                            color:"#a78bfa",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                            color:"#a78bfa",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
                           }}>Use</button>
                         )}
                       </div>
@@ -3576,7 +3576,7 @@ export default function App(){
               }}>
                 <div style={{textAlign:"center",flexShrink:0,width:52}}>
                   <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,color:r.color,lineHeight:1}}>{r.pts}</div>
-                  <div style={{fontSize:9,color:"#555"}}>pts</div>
+                  <div style={{fontSize:10,color:"#555"}}>pts</div>
                 </div>
                 <div>
                   <div style={{fontWeight:700,fontSize:12,marginBottom:2}}>{r.icon} {r.label}</div>
@@ -3592,7 +3592,7 @@ export default function App(){
             }}>
               <div style={{textAlign:"center",flexShrink:0,width:52}}>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,color:"#fcb900",lineHeight:1}}>6</div>
-                <div style={{fontSize:9,color:"#555"}}>max</div>
+                <div style={{fontSize:10,color:"#555"}}>max</div>
               </div>
               <div>
                 <div style={{fontWeight:700,fontSize:12,marginBottom:2}}>🏆 Max per match</div>
@@ -3823,7 +3823,7 @@ export default function App(){
                         <div style={{fontSize:11,color:"#555"}}>{draws} draws</div>
                         <div style={{fontSize:10,color:"#444"}}>{rows.filter(r=>r.r1&&r.r2).length} compared</div>
                         {rows.filter(r=>!r.r1||!r.r2).length>0&&(
-                          <div style={{fontSize:9,color:"#333",marginTop:2}}>
+                          <div style={{fontSize:10,color:"#333",marginTop:2}}>
                             {rows.filter(r=>!r.r1||!r.r2).length} skipped<br/>(missing pred)
                           </div>
                         )}
@@ -3846,7 +3846,7 @@ export default function App(){
                         }}>{r1?`+${r1.points}`:"—"}</div>
                         <div style={{flex:1,fontSize:10,color:"#666",textAlign:"center"}}>
                           {FLAGS[actual.home]||"🏳️"} {actual.homeScore}–{actual.awayScore} {FLAGS[actual.away]||"🏳️"}
-                          {(!r1||!r2)&&<div style={{fontSize:9,color:"#333"}}>no prediction</div>}
+                          {(!r1||!r2)&&<div style={{fontSize:10,color:"#333"}}>no prediction</div>}
                         </div>
                         <div style={{
                           width:28,textAlign:"center",fontFamily:"'Bebas Neue',sans-serif",fontSize:13,
@@ -4404,7 +4404,7 @@ export default function App(){
                             {status?.elapsed?`${status.elapsed}'`:status?.short}
                           </span>
                         </div>
-                        {isSelected&&<span style={{fontSize:9,color:"#555"}}>tap to close</span>}
+                        {isSelected&&<span style={{fontSize:10,color:"#555"}}>tap to close</span>}
                       </div>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
                         <div style={{display:"flex",alignItems:"center",gap:5,minWidth:0}}>
@@ -4520,7 +4520,7 @@ export default function App(){
                               <div key={k} style={{marginBottom:8}}>
                                 <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
                                   <span style={{color:"#fcb900",fontWeight:700}}>{hv}</span>
-                                  <span style={{color:"#555",fontSize:9}}>{k}</span>
+                                  <span style={{color:"#555",fontSize:10}}>{k}</span>
                                   <span style={{color:"#60a5fa",fontWeight:700}}>{av}</span>
                                 </div>
                                 <div style={{display:"flex",height:4,borderRadius:2,overflow:"hidden",background:"rgba(255,255,255,0.06)"}}>
@@ -4546,11 +4546,11 @@ export default function App(){
                         return(
                           <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",marginBottom:4,
                             borderRadius:6,background:`${c}08`,border:`1px solid ${c}18`}}>
-                            <span style={{fontSize:9,color:"#555",width:14,flexShrink:0}}>{isTop?`#${rank}`:"▼"}</span>
+                            <span style={{fontSize:10,color:"#555",width:14,flexShrink:0}}>{isTop?`#${rank}`:"▼"}</span>
                             <span style={{fontSize:11,flexShrink:0}}>{p.teamFlag}</span>
                             <div style={{flex:1,minWidth:0}}>
                               <div style={{fontSize:11,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
-                              <div style={{fontSize:9,color:"#555",display:"flex",gap:6,marginTop:1}}>
+                              <div style={{fontSize:10,color:"#555",display:"flex",gap:6,marginTop:1}}>
                                 {p.goals?.total>0&&<span>⚽{p.goals.total}</span>}
                                 {p.goals?.assists>0&&<span>🅰️{p.goals.assists}</span>}
                                 {p.passes?.accuracy&&<span>🎯{p.passes.accuracy}%</span>}
@@ -4659,14 +4659,14 @@ export default function App(){
                             color:"#22c55e",letterSpacing:1}}>
                             {f.goals?.home} – {f.goals?.away}
                           </div>
-                          <div style={{fontSize:9,color:"#22c55e"}}>{status}</div>
+                          <div style={{fontSize:10,color:"#22c55e"}}>{status}</div>
                         </>
                       ):(
                         <>
                           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#fcb900"}}>
                             {kickoff?.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}
                           </div>
-                          <div style={{fontSize:9,color:"#555"}}>KO</div>
+                          <div style={{fontSize:10,color:"#555"}}>KO</div>
                         </>
                       )}
                     </div>
@@ -4794,7 +4794,7 @@ export default function App(){
                       <div style={{width:`${(simMinute/90)*100}%`,height:"100%",
                         background:"#ef4444",borderRadius:2,transition:"width 0.5s"}}/>
                     </div>
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#444",marginTop:2}}>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#444",marginTop:2}}>
                       <span>0'</span><span>45' HT</span><span>90'</span>
                     </div>
                   </div>
@@ -4831,15 +4831,15 @@ export default function App(){
                           <div key={i} style={{display:"flex",alignItems:"flex-start",gap:5,
                             padding:"4px 0",borderTop:i>0?"1px solid rgba(255,255,255,0.06)":"none",
                             animation:"fadeIn 0.4s ease"}}>
-                            <span style={{fontSize:9,color:"#555",width:22,flexShrink:0,marginTop:1}}>{ev.min}'</span>
+                            <span style={{fontSize:10,color:"#555",width:22,flexShrink:0,marginTop:1}}>{ev.min}'</span>
                             <span style={{fontSize:11}}>{icon}</span>
                             <div style={{flex:1,minWidth:0}}>
                               <div style={{fontSize:10,fontWeight:600,
                                 color:isHome?"#fcb900":"#60a5fa",
                                 overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"
                               }}>{ev.player}</div>
-                              {ev.assist&&<div style={{fontSize:9,color:"#444"}}>↳ {ev.assist}</div>}
-                              {ev.type==="Sub"&&<div style={{fontSize:9,color:"#444"}}>↓ {ev.off}</div>}
+                              {ev.assist&&<div style={{fontSize:10,color:"#444"}}>↳ {ev.assist}</div>}
+                              {ev.type==="Sub"&&<div style={{fontSize:10,color:"#444"}}>↓ {ev.off}</div>}
                             </div>
                           </div>
                         );
@@ -4861,7 +4861,7 @@ export default function App(){
                           const total = s.hN+s.aN||1;
                           return(
                             <div key={i} style={{marginBottom:7}}>
-                              <div style={{display:"flex",justifyContent:"space-between",fontSize:9,marginBottom:2}}>
+                              <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:2}}>
                                 <span style={{color:"#fcb900",fontWeight:700}}>{s.h}</span>
                                 <span style={{color:"#444"}}>{s.label}</span>
                                 <span style={{color:"#60a5fa",fontWeight:700}}>{s.a}</span>
@@ -4909,7 +4909,7 @@ export default function App(){
                         <span style={{fontSize:10}}>{p.flag}</span>
                         <div style={{flex:1}}>
                           <div style={{fontSize:11,fontWeight:700}}>{p.name}</div>
-                          <div style={{fontSize:9,color:"#555",display:"flex",gap:5,marginTop:1}}>
+                          <div style={{fontSize:10,color:"#555",display:"flex",gap:5,marginTop:1}}>
                             {hasGoal(p.name)&&<span>⚽</span>}
                             {hasAssist(p.name)&&<span>🅰️</span>}
                             {isRedded(p.name)&&<span>🟥</span>}
@@ -5137,7 +5137,7 @@ export default function App(){
                         paddingRight:isMe?0:40,
                       }}>
                         {!sameUser&&(
-                          <div style={{fontSize:9,color:"#555",marginBottom:3,
+                          <div style={{fontSize:10,color:"#555",marginBottom:3,
                             paddingLeft:isMe?0:4,paddingRight:isMe?4:0}}>
                             {isMe?"You":msg.username}
                           </div>
@@ -5157,7 +5157,7 @@ export default function App(){
                           <div style={{fontSize:13,color:isMe?"#fcb900":"#ddd",lineHeight:1.5}}>
                             {msg.message}
                           </div>
-                          <div style={{fontSize:9,color:"#444",marginTop:3,textAlign:"right"}}>
+                          <div style={{fontSize:10,color:"#444",marginTop:3,textAlign:"right"}}>
                             {formatTime(msg.created_at)}
                           </div>
                         </div>
@@ -5199,7 +5199,7 @@ export default function App(){
                     {chatSending?"…":"Send"}
                   </button>
                 </div>
-                <div style={{fontSize:9,color:"#333",marginTop:5,textAlign:"center"}}>
+                <div style={{fontSize:10,color:"#333",marginTop:5,textAlign:"center"}}>
                   Messages visible to all players · Enter to send
                 </div>
               </div>
@@ -6076,63 +6076,82 @@ export default function App(){
             {
               icon:"🔐", title:"Getting Started",
               items:[
-                ["How do I join?","Open the artifact, enter your name and choose a PIN (min 4 characters). You'll use this PIN every time you log in."],
-                ["Will the app remember me?","Yes — tick 'Remember me for 30 days' when logging in. You'll be logged in automatically next time."],
-                ["I forgot my PIN — what do I do?","Use your recovery code. When you created your account, a code like WC26-XXXX-XXXX was shown. On the login screen enter your name, tap 'Forgot PIN? Use recovery code', enter your code, and set a new PIN."],
-                ["I lost my recovery code too","Contact the admin — they can reset your PIN from the Admin panel under User Management. Your predictions will be preserved."],
-                ["Where is my recovery code?","It was shown once when you first created your account. If you saved it somewhere (notes app, screenshot) use it via the 'Forgot PIN?' link. Otherwise ask the admin to reset your PIN."],
-                ["Can I use this without a Claude account?","You need a free Claude.ai account to open the artifact. Sign up at claude.ai — it's free."],
+                ["How do I join?","Go to the app URL, enter your name and choose a PIN (min 4 characters). You'll use this PIN every time you log in."],
+                ["Will the app remember me?","Yes — tick 'Remember me for 30 days' when logging in and you'll stay logged in automatically."],
+                ["I forgot my PIN","On the login screen, enter your name then tap 'Forgot PIN? Use recovery code'. Enter your WC26-XXXX-XXXX recovery code to set a new PIN."],
+                ["I lost my recovery code too","Ask the admin — they can reset your PIN from Admin → User Management. Your predictions are preserved."],
               ]
             },
             {
               icon:"⚽", title:"Making Predictions",
               items:[
-                ["When do predictions lock?","15 minutes before each match kicks off. After that you can't change your score for that game."],
-                ["What happens if I don't predict a match?","You get 0 points for that match. Try to fill in all predictions before they lock!"],
-                ["Can I change my predictions?","Yes, any time before the match locks. Just edit the score and tap Save."],
-                ["What's the podium pick?","Pick who finishes 1st, 2nd, and 3rd in the tournament. These lock on June 11, 2026 at 17:00 UTC (first kickoff)."],
+                ["When do predictions lock?","15 minutes before each match kicks off. The countdown shows on each match card."],
+                ["Do I need to save manually?","Tap Save anytime for an instant save. The app also auto-saves every 30 seconds when you have unsaved changes — you'll see a green '✓ Auto-saved' toast."],
+                ["Can I change my predictions?","Yes, any time before the match locks. Edit the score — it auto-saves within 30 seconds."],
+                ["What's the podium pick?","In 👑 My Pick, choose who finishes 1st, 2nd and 3rd in the whole tournament. Locks June 11 at 17:00 UTC."],
+                ["What are the 🤖 🔍 📊 buttons on each match?","🤖 shows an AI-predicted score · 🔍 shows expert tipster consensus from BBC Sport, ESPN etc · 📊 shows Polymarket crowd odds (real money prediction market). All three are optional hints to help you decide."],
               ]
             },
             {
               icon:"📊", title:"Scoring Rules",
               items:[
-                ["Exact score","You predicted the precise scoreline (e.g. 2-1) → 6 pts"],
+                ["Exact score","Predicted the precise scoreline → 6 pts"],
                 ["Correct goal difference","Right margin, wrong scores (e.g. predicted 3-2, actual 2-1) → 3 pts"],
                 ["Correct outcome only","Right winner or draw, wrong everything else → 2 pts"],
                 ["Wrong prediction","None of the above → 0 pts"],
-                ["Podium","🥇 1st place correct = 100 pts · 🥈 2nd = 50 pts · 🥉 3rd = 25 pts"],
-                ["Max per match","6 pts (exact score). Rules are mutually exclusive — no stacking."],
+                ["Podium bonus","🥇 Champion = 100 pts · 🥈 Runner-up = 50 pts · 🥉 3rd place = 25 pts"],
+                ["Rules are mutually exclusive","You get the highest applicable category only — no stacking."],
               ]
             },
             {
               icon:"💾", title:"Saving & Backup",
               items:[
-                ["How do I save my predictions?","Tap the Save button in the header after entering your scores."],
-                ["Will my predictions survive if I open a new version?","Yes — predictions are stored in your browser's localStorage and persist across app versions."],
-                ["What's the Export/Import for?","Use Export to save a JSON backup of your predictions. Use Import to restore them if something goes wrong."],
-                ["What does the ⚠️ backup warning mean?","You haven't exported a backup in 3+ days. Tap 📤 Export and save the JSON somewhere safe."],
-                ["The 🗑 Reset button in the header clears MY predictions only — it doesn't affect anyone else.",""],
+                ["How are predictions stored?","Everything is saved to the cloud (Supabase) — accessible from any device as long as you log in with the same name and PIN."],
+                ["What's 📦 Backup for?","Downloads a JSON file of your predictions as an offline safety copy. Use 📥 Import to restore from it if needed."],
+                ["What does the ⚠️ warning mean?","You haven't backed up in 3+ days. Tap 📦 Backup and save the file somewhere safe."],
+                ["The 🗑 Reset button","Clears only YOUR predictions — doesn't affect anyone else's."],
               ]
             },
             {
-              icon:"🏆", title:"Leaderboard & Results",
+              icon:"🥇", title:"Leaderboard & Stats",
               items:[
-                ["When do scores update?","When the admin enters results and taps Save. Everyone's scores update instantly."],
-                ["Can I see what others predicted?","Yes! After matches kick off, tap 👁 View on any leaderboard entry to see their predictions vs actual results."],
-                ["Why is my score 0?","Either no results have been entered by the admin yet, or your predictions all had wrong outcomes."],
-                ["How is the leaderboard ordered?","By total points, highest first. Ties show in the order predictions were saved."],
+                ["When do scores update?","When the admin enters results and taps Save. Everyone's scores update in real time."],
+                ["Can I see others' predictions?","Yes — tap 👁 View on any leaderboard entry to compare their picks vs actual results."],
+                ["What's the 📈 Stats tab?","Your personal accuracy breakdown — exact scores, correct outcomes, best/worst matches, and your rank history chart showing how your position changed over time."],
+                ["What's the 🤖 AI tab?","Three shared AI features: full tournament bracket prediction, leaderboard commentary, and a what-if calculator showing how results affect standings. Any player can generate — results are shared with everyone instantly."],
+              ]
+            },
+            {
+              icon:"💬", title:"Chat & Reactions",
+              items:[
+                ["Where's the group chat?","💬 Chat tab — send messages visible to all players in real time. Press Enter to send."],
+                ["What are the emoji buttons on match cards?","React to any match with 🔥😱😂👏💔🎯 — reactions are visible to all players and echo into the chat. Tap ＋ to see all emoji options. Tap again to undo within 2 seconds."],
+                ["Are reactions anonymous?","No — your name appears in the chat when you react."],
+              ]
+            },
+            {
+              icon:"🔴", title:"Live Tab",
+              items:[
+                ["What's the Live tab?","Real-time match scores, events, stats, formations, win probability, player ratings and AI match analysis. Updates when you tap 🔄 Refresh (60s cooldown to save API quota)."],
+                ["Why do I see a demo?","The tournament hasn't started yet. Press ▶ Start to preview the live experience with a simulated Mexico vs South Africa match. Real data replaces this automatically on June 11."],
+                ["What's the win probability bar?","A formula-based estimate using score, time remaining, red cards and possession. Updates every refresh."],
               ]
             },
             {
               icon:"🔧", title:"Admin",
               items:[
-                ["What's the admin PIN?","2026"],
                 ["Who should be admin?","One person in the group — ideally whoever is watching the games and can enter scores promptly."],
-                ["How do I enter results?","Admin tab → Group Stage → select group → enter scores → Save Results & Update Scores."],
-                ["How do knockout teams get filled?","After entering all group scores, tap ⚡ Fill R32 from standings. Then enter knockout scores round by round."],
-                ["I made a mistake — can I undo?","Yes! The Save History section in Admin shows the last 5 saves. Tap Rollback to restore any previous state."],
-                ["What does Reset to Blank do?","Clears ALL match scores, knockout teams and podium for everyone. Use with caution — but it's reversible via Rollback."],
-                ["How do I reset a user's PIN?","Admin tab → User Management section → enter their username → tap Reset PIN. Their predictions are preserved, but they'll need to create a new PIN on next login."],
+                ["How do I enter results?","Admin tab → Group Stage → select group → enter scores → Save Results."],
+                ["How do knockout teams get filled?","After all group scores are in, tap ⚡ Fill R32 from Standings. Then enter scores round by round as matches are played."],
+                ["Can I undo a save?","Yes — Save History shows the last 5 saves. Tap Rollback to restore any previous state."],
+                ["How do I generate AI knockout predictions?","Admin tab → 🤖 Generate KO AI Predictions. Claude searches for expert picks and saves them for all players to see."],
+                ["How do I reset a user's PIN?","Admin → User Management → enter their username → Reset PIN. Predictions are preserved."],
+              ]
+            },
+            {
+              icon:"📤", title:"Share Card",
+              items:[
+                ["How do I share my ranking?","Tap 📤 Share in the header action row. A card shows your rank, points, champion pick and rank history. Tap 'Share to WhatsApp' to send via the native share sheet, or 'Copy text' to paste anywhere."],
               ]
             },
           ].map((section,si)=>(
@@ -6156,7 +6175,7 @@ export default function App(){
 
           <div style={{marginTop:8,padding:"14px 16px",background:"rgba(96,165,250,0.07)",
             border:"1px solid rgba(96,165,250,0.2)",borderRadius:10,fontSize:12,color:"#60a5fa",lineHeight:1.7}}>
-            Still stuck? The app was built by Claude AI. If something isn't working, try refreshing or switching to a newer version.
+            Still stuck? Ask the group organiser or try refreshing the page. The app auto-saves your predictions every 30 seconds so you won't lose anything.
           </div>
         </div>}
 
