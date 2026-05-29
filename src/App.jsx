@@ -3167,8 +3167,8 @@ export default function App(){
               <button key={g} onClick={()=>setActiveGroup(g)} style={{
                 padding:"6px 12px",borderRadius:7,border:"1px solid",
                 borderColor:activeGroup===g?"#fcb900":"rgba(255,255,255,0.10)",
-                background:activeGroup===g?"rgba(252,185,0,0.12)":"transparent",
-                color:activeGroup===g?"#fcb900":"#666",
+                background:activeGroup===g?"#fcb900":"transparent",
+                color:activeGroup===g?"#000":"#666",
                 fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",
               }}>Group {g}</button>
             ))}
