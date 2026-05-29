@@ -1157,8 +1157,10 @@ export default function App(){
         if(aiContent?.bracket)   { setBracketPred(aiContent.bracket); setBracketGeneratedBy(aiContent.bracket_generated_by); }
         if(aiContent?.commentary){ setCommentary(aiContent.commentary); setCommentaryGeneratedBy(aiContent.commentary_generated_by); }
         // Load rank history
-        const rh = await sbGetRankHistory(sesh.username);
-        if(rh?.length) setRankHistory(rh);
+        if(session?.username) {
+          const rh = await sbGetRankHistory(session.username);
+          if(rh?.length) setRankHistory(rh);
+        }
       } catch(e) {
         console.error('Initial load error:', e);
         setAppError(`Load failed: ${e.message}`);
