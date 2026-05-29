@@ -618,27 +618,38 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
 
       {/* Tool buttons row */}
       {(aiPred&&!locked)||expertData||true?(
-        <div style={{display:"flex",gap:6,marginTop:6,paddingTop:5,
-          borderTop:"1px solid rgba(255,255,255,0.06)"}}>
-          {aiPred&&!locked&&(
-            <button onClick={()=>setShowAI(p=>!p)} style={{
-              padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
-              background:showAI?"rgba(139,92,246,0.2)":"rgba(139,92,246,0.08)",
-              border:"1px solid rgba(139,92,246,0.25)",borderRadius:5,color:"#a78bfa",
-            }}>🤖 AI prediction</button>
+        <div style={{marginTop:6,paddingTop:5,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
+          {/* Tip — only shown when nothing is open */}
+          {!showAI&&!showExperts&&!showOdds&&(
+            <div style={{fontSize:9,color:"#444",marginBottom:5}}>
+              💡 {[
+                aiPred&&!locked && "🤖 AI prediction",
+                expertData      && "🔍 expert picks",
+                                   "📊 market odds",
+              ].filter(Boolean).join(" · ")} available for this match
+            </div>
           )}
-          {expertData&&(
-            <button onClick={()=>setShowExperts(p=>!p)} style={{
+          <div style={{display:"flex",gap:6}}>
+            {aiPred&&!locked&&(
+              <button onClick={()=>setShowAI(p=>!p)} style={{
+                padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                background:showAI?"rgba(139,92,246,0.2)":"rgba(139,92,246,0.08)",
+                border:"1px solid rgba(139,92,246,0.25)",borderRadius:5,color:"#a78bfa",
+              }}>🤖 AI prediction</button>
+            )}
+            {expertData&&(
+              <button onClick={()=>setShowExperts(p=>!p)} style={{
+                padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                background:showExperts?"rgba(34,197,94,0.2)":"rgba(34,197,94,0.06)",
+                border:"1px solid rgba(34,197,94,0.2)",borderRadius:5,color:"#22c55e",
+              }}>🔍 Experts</button>
+            )}
+            <button onClick={fetchOdds} style={{
               padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
-              background:showExperts?"rgba(34,197,94,0.2)":"rgba(34,197,94,0.06)",
-              border:"1px solid rgba(34,197,94,0.2)",borderRadius:5,color:"#22c55e",
-            }}>🔍 Experts</button>
-          )}
-          <button onClick={fetchOdds} style={{
-            padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
-            background:showOdds?"rgba(96,165,250,0.2)":"rgba(96,165,250,0.05)",
-            border:"1px solid rgba(96,165,250,0.2)",borderRadius:5,color:"#60a5fa",
-          }}>📊 Market odds</button>
+              background:showOdds?"rgba(96,165,250,0.2)":"rgba(96,165,250,0.05)",
+              border:"1px solid rgba(96,165,250,0.2)",borderRadius:5,color:"#60a5fa",
+            }}>📊 Market odds</button>
+          </div>
         </div>
       ):null}
 
