@@ -732,6 +732,8 @@ function ReactionsBar({matchId, userName, home, away}) {
   const EMOJIS = ["🔥","😱","😂","👏","💔","🎯"];
   const [counts, setCounts] = useState({});
   const [mine, setMine] = useState(new Set());
+  const [undoEmoji, setUndoEmoji] = useState(null);
+  const undoTimer = React.useRef(null);
 
   const loadReactions = async () => {
     const rows = await sbGetReactions(matchId);
@@ -751,48 +753,71 @@ function ReactionsBar({matchId, userName, home, away}) {
   },[matchId]);
 
   const toggle = async(emoji) => {
-    // Optimistic UI update immediately
     const isOn = mine.has(emoji);
-    setMine(prev => {
-      const next = new Set(prev);
-      isOn ? next.delete(emoji) : next.add(emoji);
-      return next;
-    });
-    setCounts(prev => ({
-      ...prev,
-      [emoji]: Math.max(0, (prev[emoji]||0) + (isOn ? -1 : 1)),
-    }));
-    const added = await sbToggleReaction(matchId, userName, emoji);
-    // Echo to chat when adding (not removing) a reaction
-    if(added && home && away) {
-      await sbSendMessage('⚡', `${emoji} ${userName} reacted to ${home} vs ${away}`);
+    // Optimistic UI
+    setMine(prev => { const n=new Set(prev); isOn?n.delete(emoji):n.add(emoji); return n; });
+    setCounts(prev => ({ ...prev, [emoji]: Math.max(0,(prev[emoji]||0)+(isOn?-1:1)) }));
+
+    if(!isOn) {
+      // Show undo toast for 2 seconds
+      clearTimeout(undoTimer.current);
+      setUndoEmoji(emoji);
+      undoTimer.current = setTimeout(async()=>{
+        setUndoEmoji(null);
+        await sbToggleReaction(matchId, userName, emoji);
+        if(home && away) await sbSendMessage('⚡', `${emoji} ${userName} reacted to ${home} vs ${away}`);
+      }, 2000);
+    } else {
+      clearTimeout(undoTimer.current);
+      setUndoEmoji(null);
+      await sbToggleReaction(matchId, userName, emoji);
     }
   };
 
+  const undo = () => {
+    clearTimeout(undoTimer.current);
+    const emoji = undoEmoji;
+    setUndoEmoji(null);
+    // Revert optimistic update
+    setMine(prev => { const n=new Set(prev); n.delete(emoji); return n; });
+    setCounts(prev => ({ ...prev, [emoji]: Math.max(0,(prev[emoji]||0)-1) }));
+  };
+
   return(
-    <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>
-      {EMOJIS.map(e=>{
-        const active = mine.has(e);
-        const count = counts[e]||0;
-        return(
-          <button key={e} onClick={()=>toggle(e)} style={{
-            padding:"3px 8px",borderRadius:12,fontSize:12,cursor:"pointer",fontFamily:"inherit",
-            background:active?"rgba(252,185,0,0.2)":"rgba(255,255,255,0.04)",
-            border:`1px solid ${active?"rgba(252,185,0,0.6)":"rgba(255,255,255,0.08)"}`,
-            color:active?"#fcb900":"#666",
-            display:"flex",alignItems:"center",gap:3,
-            transform:active?"scale(1.1)":"scale(1)",
-            transition:"all 0.15s ease",
-            fontWeight:active?700:400,
-          }}>
-            <span>{e}</span>
-            {count>0&&<span style={{
-              fontSize:10,fontWeight:700,
-              color:active?"#fcb900":"#888",
-            }}>{count}</span>}
-          </button>
-        );
-      })}
+    <div style={{marginTop:6}}>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+        {EMOJIS.map(e=>{
+          const active = mine.has(e);
+          const count = counts[e]||0;
+          return(
+            <button key={e} onClick={()=>toggle(e)} style={{
+              padding:"3px 8px",borderRadius:12,fontSize:12,cursor:"pointer",fontFamily:"inherit",
+              background:active?"rgba(252,185,0,0.2)":"rgba(255,255,255,0.04)",
+              border:`1px solid ${active?"rgba(252,185,0,0.6)":"rgba(255,255,255,0.08)"}`,
+              color:active?"#fcb900":"#666",
+              display:"flex",alignItems:"center",gap:3,
+              transform:active?"scale(1.1)":"scale(1)",
+              transition:"all 0.15s ease",fontWeight:active?700:400,
+            }}>
+              <span>{e}</span>
+              {count>0&&<span style={{fontSize:10,fontWeight:700,color:active?"#fcb900":"#888"}}>{count}</span>}
+            </button>
+          );
+        })}
+      </div>
+      {undoEmoji&&(
+        <div style={{display:"flex",alignItems:"center",gap:8,marginTop:5,
+          padding:"4px 10px",borderRadius:8,
+          background:"rgba(252,185,0,0.1)",border:"1px solid rgba(252,185,0,0.25)"}}>
+          <span style={{fontSize:11,color:"#fcb900"}}>{undoEmoji} Reacted — sending in 2s</span>
+          <button onClick={undo} style={{
+            marginLeft:"auto",padding:"2px 8px",
+            background:"rgba(252,185,0,0.15)",border:"1px solid rgba(252,185,0,0.3)",
+            borderRadius:5,color:"#fcb900",fontSize:10,fontWeight:700,
+            cursor:"pointer",fontFamily:"inherit",
+          }}>Undo</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -2383,9 +2408,21 @@ export default function App(){
     await sbSavePrediction(userName, matches, knockout, podium);
     const lb = await sbUpsertLeaderboard(userName, podium, myPts);
     setLeaderboard(lb);
-    await saveBackup(matches, knockout, podium); // Options 1+3: auto-backup on every save
+    await saveBackup(matches, knockout, podium);
     setSaved(true); setTimeout(()=>setSaved(false),2500);
   };
+
+  // Auto-save every 30s when predictions are dirty
+  useEffect(()=>{
+    if(!userName || saved) return;
+    const timer = setTimeout(async()=>{
+      await sbSavePrediction(userName, matches, knockout, podium);
+      const lb = await sbUpsertLeaderboard(userName, podium, myPts);
+      setLeaderboard(lb);
+      setSaved(true); setTimeout(()=>setSaved(false),2000);
+    }, 30000);
+    return ()=>clearTimeout(timer);
+  },[matches, knockout, podium, userName]);
 
   const saveActualResults=async(newMatches, newKO)=>{
     await sbSaveActualResults(newMatches||actualMatches, newKO||actualKO, actualPodium);
@@ -2623,13 +2660,13 @@ export default function App(){
     {id:"groups",      label:"⚽", full:"⚽ Groups"},
     {id:"knockout",    label:"🏆", full:"🏆 Knockout"},
     {id:"champion",    label:"👑", full:"👑 My Pick"},
-    {id:"scoring",     label:"📊", full:"📊 Scoring"},
     {id:"leaderboard", label:"🥇", full:"🥇 Board"},
+    {id:"chat",        label:"💬", full:"💬 Chat"},
   ];
   const TABS_ROW2=[
-    {id:"stats",  label:"📈", full:"📈 Stats"},
     {id:"live",   label:"🔴", full:"🔴 Live"},
-    {id:"chat",   label:"💬", full:"💬 Chat"},
+    {id:"stats",  label:"📈", full:"📈 Stats"},
+    {id:"scoring",label:"📊", full:"📊 Scoring"},
     {id:"ai",     label:"🤖", full:"🤖 AI"},
     {id:"admin",  label:"🔧", full:"🔧 Admin"},
     {id:"help",   label:"❓", full:"❓ Help"},
@@ -2745,7 +2782,9 @@ export default function App(){
           <span style={{fontSize:10,color:"#444",flexShrink:0,maxWidth:70,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>👤 {userName}</span>
           <button onClick={savePreds} style={{padding:"6px 14px",background:saved?"#22c55e":"#fcb900",
             border:"none",borderRadius:7,color:"#000",fontWeight:700,fontSize:12,cursor:"pointer",
-            transition:"all 0.3s",fontFamily:"inherit",flexShrink:0}}>{saved?"✓":"Save"}</button>
+            transition:"all 0.3s",fontFamily:"inherit",flexShrink:0}}>
+            {saved?"✓ Saved":"Save"}
+          </button>
         </div>
 
         {/* Action row */}
@@ -2977,15 +3016,23 @@ export default function App(){
                 )}
                 <button onClick={handleShare} style={{
                   width:"100%",padding:"13px",
-                  background:"linear-gradient(135deg,#fcb900,#f59e0b)",
-                  border:"none",borderRadius:10,color:"#000",
+                  background:"linear-gradient(135deg,#25d366,#128c7e)",
+                  border:"none",borderRadius:10,color:"#fff",
                   fontFamily:"'Bebas Neue',sans-serif",fontSize:18,letterSpacing:1,
                   cursor:"pointer",
                 }}>📤 Share to WhatsApp</button>
+                <button onClick={()=>{
+                  navigator.clipboard?.writeText(shareText);
+                  alert("Copied to clipboard! Paste anywhere.");
+                }} style={{
+                  width:"100%",padding:"9px",marginTop:6,
+                  background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",
+                  borderRadius:10,color:"#888",fontSize:12,cursor:"pointer",fontFamily:"inherit",
+                }}>📋 Copy text</button>
                 <button onClick={()=>setShowShareCard(false)} style={{
-                  width:"100%",padding:"8px",marginTop:8,
-                  background:"transparent",border:"1px solid rgba(255,255,255,0.1)",
-                  borderRadius:8,color:"#555",fontSize:11,cursor:"pointer",fontFamily:"inherit",
+                  width:"100%",padding:"8px",marginTop:6,
+                  background:"transparent",border:"1px solid rgba(255,255,255,0.08)",
+                  borderRadius:8,color:"#444",fontSize:11,cursor:"pointer",fontFamily:"inherit",
                 }}>Close</button>
               </div>
             </div>
