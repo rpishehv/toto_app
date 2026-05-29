@@ -1106,6 +1106,8 @@ export default function App(){
   const [chatSending,setChatSending]=useState(false);
   const [chatUnread,setChatUnread]=useState(0);
   const chatBottomRef=React.useRef(null);
+  // Share card
+  const [showShareCard,setShowShareCard]=useState(false);
   // Rank history
   const [rankHistory,setRankHistory]=useState([]);
   // Reactions — matchId → { emoji → count, myEmojis: Set }
