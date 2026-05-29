@@ -3049,8 +3049,8 @@ export default function App(){
                     whiteSpace:"nowrap",position:"relative",
                     display:"flex",flexDirection:"column",alignItems:"center",gap:1,
                   }}>
-                  <span style={{fontSize:15,lineHeight:1}}>{t.label}</span>
-                  <span style={{fontSize:8,fontWeight:isActive?700:400,
+                  <span style={{fontSize:18,lineHeight:1}}>{t.label}</span>
+                  <span style={{fontSize:9,fontWeight:isActive?700:400,
                     color:isActive?"#fcb900":"#444",letterSpacing:0.3}}>{name}</span>
                   {t.id==="chat"&&chatUnread>0&&!isActive&&(
                     <span style={{
