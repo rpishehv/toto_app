@@ -559,7 +559,7 @@ function getAIPrediction(home, away, livePreds) {
   return null;
 }
 
-function MatchCard({match,actual,onUpdate,kickoffs,livePreds={}}){
+function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
   const locked = isMatchLocked(match, kickoffs);
   const countdown = !locked ? timeUntilLock(match, kickoffs) : null;
   const done=match.homeScore!==null&&match.awayScore!==null;
@@ -3040,7 +3040,7 @@ export default function App(){
             )}
 
             {/* Matches */}
-            {gm.map(m=><MatchCard key={m.id} match={m} actual={ga.find(a=>a.id===m.id)} onUpdate={upMatchAndSync} kickoffs={KICKOFFS} livePreds={livePredictions}/>)}
+            {gm.map(m=><MatchCard key={m.id} match={m} actual={ga.find(a=>a.id===m.id)} onUpdate={upMatchAndSync} kickoffs={KICKOFFS} livePreds={livePredictions} userName={userName}/>)}
           </div>
         </div>}
 
