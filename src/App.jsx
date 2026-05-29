@@ -434,7 +434,7 @@ function ScoreInput({value,onChange,readOnly=false}){
       onChange={e=>!readOnly&&onChange(e.target.value===""?null:Math.max(0,parseInt(e.target.value)||0))}
       style={{
         width:42,textAlign:"center",outline:"none",
-        background:readOnly?"rgba(255,255,255,0.03)":"rgba(255,255,255,0.09)",
+        background:readOnly?"rgba(255,255,255,0.03)":"rgba(255,255,255,0.10)",
         border:"1px solid rgba(255,255,255,0.15)",borderRadius:6,
         color:readOnly?"#555":"#fff",fontSize:17,fontWeight:700,
         padding:"4px 0",fontFamily:"inherit",cursor:readOnly?"default":"text",
@@ -457,7 +457,7 @@ function PointsBadge({result}){
       {hover&&(
         <div style={{
           position:"absolute",right:0,top:"115%",background:"#161b27",
-          border:"1px solid rgba(255,255,255,0.13)",borderRadius:9,padding:"9px 13px",
+          border:"1px solid rgba(255,255,255,0.12)",borderRadius:9,padding:"9px 13px",
           zIndex:999,boxShadow:"0 12px 40px rgba(0,0,0,0.65)",
           fontSize:12,color:"#bbb",whiteSpace:"nowrap",
         }}>{label} <span style={{color,fontWeight:700,marginLeft:8}}>+{points} pts</span></div>
@@ -591,8 +591,8 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
   };
   return(
     <div style={{
-      background:locked?"rgba(239,68,68,0.04)":done?"rgba(252,185,0,0.05)":"rgba(255,255,255,0.025)",
-      border:`1px solid ${locked?"rgba(239,68,68,0.2)":done?"rgba(252,185,0,0.2)":"rgba(255,255,255,0.07)"}`,
+      background:locked?"rgba(239,68,68,0.04)":done?"rgba(252,185,0,0.05)":"rgba(255,255,255,0.03)",
+      border:`1px solid ${locked?"rgba(239,68,68,0.2)":done?"rgba(252,185,0,0.2)":"rgba(255,255,255,0.06)"}`,
       borderRadius:11,padding:"10px 10px",marginBottom:8,
     }}>
       {/* Main match row — no buttons, full width for teams */}
@@ -619,7 +619,7 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
       {/* Tool buttons row */}
       {(aiPred&&!locked)||expertData||true?(
         <div style={{display:"flex",gap:6,marginTop:6,paddingTop:5,
-          borderTop:"1px solid rgba(255,255,255,0.04)"}}>
+          borderTop:"1px solid rgba(255,255,255,0.06)"}}>
           {aiPred&&!locked&&(
             <button onClick={()=>setShowAI(p=>!p)} style={{
               padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
@@ -653,8 +653,8 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
                 <span style={{fontSize:11,color:"#60a5fa",fontWeight:700}}>📊 Polymarket Crowd Odds</span>
                 {matchOdds.volume&&<span style={{fontSize:9,color:"#444",marginLeft:"auto"}}>{matchOdds.volume} vol</span>}
-                <button onClick={()=>setShowOdds(false)} style={{padding:"1px 6px",background:"rgba(255,255,255,0.05)",
-                  border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,color:"#555",
+                <button onClick={()=>setShowOdds(false)} style={{padding:"1px 6px",background:"rgba(255,255,255,0.06)",
+                  border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,color:"#555",
                   fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
               </div>
               {(matchOdds.outcomes?.length>0?matchOdds.outcomes:[
@@ -686,8 +686,8 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
               <span style={{fontSize:11,color:"#444"}}>
                 📊 {matchOdds?.message||"Markets open closer to June 11"}
               </span>
-              <button onClick={()=>setShowOdds(false)} style={{padding:"1px 6px",background:"rgba(255,255,255,0.05)",
-                border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,color:"#555",
+              <button onClick={()=>setShowOdds(false)} style={{padding:"1px 6px",background:"rgba(255,255,255,0.06)",
+                border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,color:"#555",
                 fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
             </div>
           )}
@@ -706,7 +706,7 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
             )}
             <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
               {!locked&&<button onClick={()=>{onUpdate({...match,homeScore:aiPred.h,awayScore:aiPred.a});setShowAI(false);}} style={{padding:"3px 10px",background:"rgba(139,92,246,0.2)",border:"1px solid rgba(139,92,246,0.4)",borderRadius:5,color:"#c4b5fd",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Use</button>}
-              <button onClick={()=>setShowAI(false)} style={{padding:"3px 8px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:5,color:"#555",fontSize:11,cursor:"pointer",fontFamily:"inherit",lineHeight:1}}>✕</button>
+              <button onClick={()=>setShowAI(false)} style={{padding:"3px 8px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.10)",borderRadius:5,color:"#555",fontSize:11,cursor:"pointer",fontFamily:"inherit",lineHeight:1}}>✕</button>
             </div>
           </div>
           {aiPred.insight&&(
@@ -792,8 +792,8 @@ function ReactionsBar({matchId, userName, home, away}) {
           return(
             <button key={e} onClick={()=>toggle(e)} style={{
               padding:"3px 8px",borderRadius:12,fontSize:12,cursor:"pointer",fontFamily:"inherit",
-              background:active?"rgba(252,185,0,0.2)":"rgba(255,255,255,0.04)",
-              border:`1px solid ${active?"rgba(252,185,0,0.6)":"rgba(255,255,255,0.08)"}`,
+              background:active?"rgba(252,185,0,0.2)":"rgba(255,255,255,0.06)",
+              border:`1px solid ${active?"rgba(252,185,0,0.6)":"rgba(255,255,255,0.10)"}`,
               color:active?"#fcb900":"#666",
               display:"flex",alignItems:"center",gap:3,
               transform:active?"scale(1.1)":"scale(1)",
@@ -824,15 +824,19 @@ function ReactionsBar({matchId, userName, home, away}) {
 
 function StandingsTable({teams,matches}){
   const rows=calcStandings(teams,matches);
-  const [compact,setCompact]=useState(false);
+  const [compact,setCompact]=useState(true); // default compact for mobile
   return(
     <div style={{marginTop:6}}>
-      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:4}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+        <span style={{fontSize:10,color:"#444",fontWeight:600}}>
+          {compact?"# / Team / GD / Pts":"Full table"}
+        </span>
         <button onClick={()=>setCompact(p=>!p)} style={{
-          padding:"2px 8px",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
-          background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",
-          borderRadius:4,color:"#555",
-        }}>{compact?"📋 Full table":"📱 Compact"}</button>
+          padding:"3px 10px",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+          background:compact?"rgba(252,185,0,0.10)":"rgba(255,255,255,0.06)",
+          border:`1px solid ${compact?"rgba(252,185,0,0.3)":"rgba(255,255,255,0.10)"}`,
+          borderRadius:6,color:compact?"#fcb900":"#555",
+        }}>{compact?"📋 Full":"📱 Compact"}</button>
       </div>
       {compact?(
         // Compact mobile view: # / Team / GD / Pts only
@@ -848,7 +852,7 @@ function StandingsTable({teams,matches}){
           <tbody>
             {rows.map((r,i)=>(
               <tr key={r.team} style={{background:i<2?"rgba(252,185,0,0.07)":"transparent",
-                borderTop:"1px solid rgba(255,255,255,0.04)"}}>
+                borderTop:"1px solid rgba(255,255,255,0.06)"}}>
                 <td style={{padding:"4px 4px",textAlign:"center",color:i<2?"#fcb900":"#444",fontWeight:700,fontSize:10}}>{i+1}</td>
                 <td style={{padding:"4px 4px",fontWeight:600,fontSize:11}}>{FLAGS[r.team]} {r.team}</td>
                 <td style={{padding:"4px 4px",textAlign:"center",fontSize:10,fontWeight:600,
@@ -873,7 +877,7 @@ function StandingsTable({teams,matches}){
             </thead>
             <tbody>
               {rows.map((r,i)=>(
-                <tr key={r.team} style={{background:i<2?"rgba(252,185,0,0.07)":"transparent",borderTop:"1px solid rgba(255,255,255,0.04)"}}>
+                <tr key={r.team} style={{background:i<2?"rgba(252,185,0,0.07)":"transparent",borderTop:"1px solid rgba(255,255,255,0.06)"}}>
                   <td style={{padding:"4px 5px",textAlign:"center",color:i<2?"#fcb900":"#444",fontWeight:700}}>{i+1}</td>
                   <td style={{padding:"4px 5px",fontWeight:600}}>{FLAGS[r.team]} {r.team}</td>
                   {[r.p,r.w,r.d,r.l,r.gd>0?`+${r.gd}`:r.gd,r.pts].map((v,j)=>(
@@ -891,7 +895,7 @@ function StandingsTable({teams,matches}){
 
 function ScoringBar(){
   return(
-    <div style={{background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:11,padding:"11px 15px",marginBottom:20,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:11,padding:"11px 15px",marginBottom:20,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
       <span style={{fontSize:11,fontWeight:700,color:"#fcb900",marginRight:2}}>📋 Scoring:</span>
       {[
         {pts:100,text:"1st place",color:"#f59e0b",icon:"🥇"},
@@ -935,7 +939,7 @@ function ExpertPanel({ home, away, data, loading }) {
       </div>
       {data.sources?.map((s,i)=>(
         <div key={i} style={{display:"flex",alignItems:"center",gap:8,
-          padding:"4px 0",borderTop:i>0?"1px solid rgba(255,255,255,0.04)":"none",fontSize:10}}>
+          padding:"4px 0",borderTop:i>0?"1px solid rgba(255,255,255,0.06)":"none",fontSize:10}}>
           <span style={{color:"#555",width:80,flexShrink:0,fontWeight:600}}>{s.name}</span>
           <span style={{flex:1,color:"#ccc"}}>{s.pick}</span>
           {s.pct!=null&&(
@@ -950,7 +954,7 @@ function ExpertPanel({ home, away, data, loading }) {
       ))}
       {data.summary&&(
         <div style={{marginTop:8,fontSize:11,color:"#555",lineHeight:1.6,
-          borderTop:"1px solid rgba(255,255,255,0.05)",paddingTop:7,fontStyle:"italic"}}>
+          borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:7,fontStyle:"italic"}}>
           {data.summary}
         </div>
       )}
@@ -998,7 +1002,7 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
 
   return(
     <div>
-      <div style={{display:"flex",gap:6,marginTop:8,paddingTop:8,borderTop:"1px solid rgba(255,255,255,0.04)"}}>
+      <div style={{display:"flex",gap:6,marginTop:8,paddingTop:8,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
         {aiP&&<button onClick={()=>setShowAI(p=>!p)} style={{
           padding:"3px 10px",background:"rgba(139,92,246,0.12)",
           border:"1px solid rgba(139,92,246,0.3)",borderRadius:5,
@@ -1024,7 +1028,7 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
             <span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>🤖 AI:</span>
             <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>{aiP.h} – {aiP.a}</span>
             {aiP.confidence&&<span style={{fontSize:9,color:"#6d5a9c",background:"rgba(139,92,246,0.15)",borderRadius:4,padding:"2px 6px"}}>{aiP.confidence}</span>}
-            <button onClick={()=>setShowAI(false)} style={{marginLeft:"auto",padding:"1px 6px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+            <button onClick={()=>setShowAI(false)} style={{marginLeft:"auto",padding:"1px 6px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
           </div>
           {aiP.insight&&<div style={{fontSize:11,color:"#8b7dbf",lineHeight:1.6,marginBottom:4}}>{aiP.insight}</div>}
           {aiP.key&&<div style={{fontSize:10,color:"#6d5a9c",fontStyle:"italic"}}>🔑 {aiP.key}</div>}
@@ -1044,7 +1048,7 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
                 <span style={{fontSize:11,color:"#60a5fa",fontWeight:700}}>📊 Polymarket</span>
                 {odds.volume&&<span style={{fontSize:9,color:"#444",marginLeft:"auto"}}>{odds.volume}</span>}
-                <button onClick={()=>setShowOdds(false)} style={{padding:"1px 6px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+                <button onClick={()=>setShowOdds(false)} style={{padding:"1px 6px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
               </div>
               {(odds.outcomes?.length>0?odds.outcomes:[
                 {label:liveHome,prob:odds.homeProb},
@@ -1071,7 +1075,7 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
           ):(
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
               <span style={{fontSize:11,color:"#444"}}>📊 {odds?.message||"Markets not open yet"}</span>
-              <button onClick={()=>setShowOdds(false)} style={{padding:"1px 6px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+              <button onClick={()=>setShowOdds(false)} style={{padding:"1px 6px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
             </div>
           )}
         </div>
@@ -1984,7 +1988,7 @@ export default function App(){
     const leader = home>away?"home":away>home?"away":null;
     return(
       <div style={{marginBottom:12,padding:"12px 14px",
-        background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:11}}>
+        background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:11}}>
         <div style={{fontSize:10,color:"#555",fontWeight:700,marginBottom:8,letterSpacing:1}}>WIN PROBABILITY</div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
           <div style={{textAlign:"center",width:50}}>
@@ -2474,7 +2478,7 @@ export default function App(){
   if(!userName) {
     const inputStyle={
       width:"100%",padding:"13px 16px",background:"rgba(255,255,255,0.06)",
-      border:"1px solid rgba(255,255,255,0.13)",borderRadius:10,
+      border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,
       color:"#fff",fontSize:14,fontFamily:"'DM Sans',sans-serif",outline:"none",
       marginBottom:10,boxSizing:"border-box",
     };
@@ -2537,7 +2541,7 @@ export default function App(){
               <button onClick={submitNewPin} style={btnStyle}>CREATE ACCOUNT</button>
               <button onClick={()=>{setPinStep("name");setPinInput("");setPinConfirm("");setPinError("");}}
                 style={{width:"100%",marginTop:8,padding:"9px",background:"transparent",
-                  border:"1px solid rgba(255,255,255,0.1)",borderRadius:9,color:"#555",
+                  border:"1px solid rgba(255,255,255,0.10)",borderRadius:9,color:"#555",
                   fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>← Back</button>
             </div>
           )}
@@ -2571,7 +2575,7 @@ export default function App(){
                   textDecoration:"underline"}}>Forgot PIN? Use recovery code</button>
               <button onClick={()=>{setPinStep("name");setPinInput("");setPinError("");}}
                 style={{width:"100%",marginTop:4,padding:"9px",background:"transparent",
-                  border:"1px solid rgba(255,255,255,0.1)",borderRadius:9,color:"#555",
+                  border:"1px solid rgba(255,255,255,0.10)",borderRadius:9,color:"#555",
                   fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>← Different name</button>
             </div>
           )}
@@ -2618,7 +2622,7 @@ export default function App(){
               <button onClick={submitRecoveryCode} style={btnStyle}>Verify Code →</button>
               <button onClick={()=>{setPinStep("pin-existing");setRecoveryInput("");setPinError("");}}
                 style={{width:"100%",marginTop:8,padding:"9px",background:"transparent",
-                  border:"1px solid rgba(255,255,255,0.1)",borderRadius:9,color:"#555",
+                  border:"1px solid rgba(255,255,255,0.10)",borderRadius:9,color:"#555",
                   fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>← Back to PIN</button>
             </div>
           )}
@@ -2679,6 +2683,17 @@ export default function App(){
       fontFamily:"'DM Sans',sans-serif",color:"#e8e8e8"}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;700&display=swap');
+        :root {
+          --fs-xs: 9px; --fs-sm: 11px; --fs-md: 13px; --fs-lg: 15px;
+          --border-subtle: rgba(255,255,255,0.06);
+          --border-mid:    rgba(255,255,255,0.10);
+          --border-strong: rgba(255,255,255,0.16);
+          --bg-card:   rgba(255,255,255,0.03);
+          --bg-hover:  rgba(255,255,255,0.06);
+          --col-gold:  #fcb900; --col-green: #22c55e;
+          --col-blue:  #60a5fa; --col-red:   #ef4444;
+          --col-purple:#a78bfa;
+        }
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -2758,8 +2773,8 @@ export default function App(){
                 color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",
               }}>⚽ Go to Predictions</button>
               <button onClick={()=>setShowPredReminder(false)} style={{
-                flex:1,padding:"12px",background:"rgba(255,255,255,0.05)",
-                border:"1px solid rgba(255,255,255,0.1)",borderRadius:9,
+                flex:1,padding:"12px",background:"rgba(255,255,255,0.06)",
+                border:"1px solid rgba(255,255,255,0.10)",borderRadius:9,
                 color:"#666",fontSize:13,cursor:"pointer",fontFamily:"inherit",
               }}>Later</button>
             </div>
@@ -2769,7 +2784,7 @@ export default function App(){
 
       {/* HEADER */}
       <div style={{background:"rgba(0,0,0,0.4)",backdropFilter:"blur(14px)",
-        position:"sticky",top:0,zIndex:100,borderBottom:"1px solid rgba(255,255,255,0.07)"}}>
+        position:"sticky",top:0,zIndex:100,borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
         {/* Main header row */}
         <div style={{padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:18}}>⚽</span>
@@ -2798,15 +2813,15 @@ export default function App(){
             borderRadius:6,color:"#fcb900",fontSize:10,cursor:"pointer",fontFamily:"inherit",
           }}>📥 Import</button>
           <button onClick={()=>setShowUserResetConfirm(true)} style={{
-            padding:"4px 9px",background:"transparent",border:"1px solid rgba(239,68,68,0.3)",
-            borderRadius:6,color:"#ef4444",fontSize:10,cursor:"pointer",fontFamily:"inherit",
+            padding:"4px 9px",background:"transparent",border:"1px solid rgba(251,146,60,0.3)",
+            borderRadius:6,color:"#fb923c",fontSize:10,cursor:"pointer",fontFamily:"inherit",
           }}>🗑 Reset</button>
           <button onClick={()=>setShowShareCard(true)} style={{
             padding:"4px 9px",background:"transparent",border:"1px solid rgba(34,197,94,0.3)",
             borderRadius:6,color:"#22c55e",fontSize:10,cursor:"pointer",fontFamily:"inherit",
           }}>📤 Share</button>
           <button onClick={()=>{clearSession();setUserName("");setNameInput("");setPinInput("");setPinConfirm("");setPinStep("name");setPinError("");}} style={{
-            padding:"4px 9px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",
+            padding:"4px 9px",background:"transparent",border:"1px solid rgba(255,255,255,0.10)",
             borderRadius:6,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit",marginLeft:"auto",
           }}>↩ Logout</button>
         </div>
@@ -2851,7 +2866,7 @@ export default function App(){
                 Yes, Reset Mine
               </button>
               <button onClick={()=>setShowUserResetConfirm(false)} style={{flex:1,padding:"11px",
-                background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",
+                background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",
                 borderRadius:8,color:"#888",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
                 Cancel
               </button>
@@ -2916,7 +2931,7 @@ export default function App(){
                 borderRadius:7,color:"#22c55e",fontSize:11,cursor:"pointer",fontFamily:"inherit",
               }}>♻️ Restore</button>
               <button onClick={()=>{setShowImport(false);setImportText("");}} style={{
-                padding:"8px 14px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",
+                padding:"8px 14px",background:"transparent",border:"1px solid rgba(255,255,255,0.10)",
                 borderRadius:7,color:"#555",fontSize:12,cursor:"pointer",fontFamily:"inherit",
               }}>Close</button>
             </div>
@@ -2965,8 +2980,8 @@ export default function App(){
                     {label:"Predicted",value:`${pct}%`,color:"#60a5fa"},
                     {label:"My Champion",value:podium?.first||"?",color:"#a78bfa"},
                   ].map((s,i)=>(
-                    <div key={i} style={{background:"rgba(255,255,255,0.04)",
-                      border:"1px solid rgba(255,255,255,0.07)",borderRadius:10,padding:"10px 12px"}}>
+                    <div key={i} style={{background:"rgba(255,255,255,0.06)",
+                      border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"10px 12px"}}>
                       <div style={{fontSize:9,color:"#444",marginBottom:4}}>{s.label}</div>
                       <div style={{fontSize:15,fontWeight:700,color:s.color}}>{s.value}</div>
                     </div>
@@ -2975,7 +2990,7 @@ export default function App(){
                 {/* Rank chart sparkline */}
                 {rankHistory.length>1&&(
                   <div style={{marginBottom:16,padding:"10px 12px",
-                    background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",
+                    background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",
                     borderRadius:10}}>
                     <div style={{fontSize:9,color:"#444",marginBottom:6}}>📈 Rank History</div>
                     <svg width="100%" height="40" viewBox={`0 0 ${rankHistory.length*20} 40`}>
@@ -3006,7 +3021,7 @@ export default function App(){
                     {[{e:"🥇",t:podium.first},{e:"🥈",t:podium.second},{e:"🥉",t:podium.third}]
                       .filter(p=>p.t).map((p,i)=>(
                       <div key={i} style={{flex:1,textAlign:"center",padding:"6px 4px",
-                        background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",
+                        background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",
                         borderRadius:8,fontSize:10}}>
                         <div style={{fontSize:14}}>{p.e}</div>
                         <div style={{color:"#888",marginTop:2,fontSize:9}}>{p.t}</div>
@@ -3031,7 +3046,7 @@ export default function App(){
                 }}>📋 Copy text</button>
                 <button onClick={()=>setShowShareCard(false)} style={{
                   width:"100%",padding:"8px",marginTop:6,
-                  background:"transparent",border:"1px solid rgba(255,255,255,0.08)",
+                  background:"transparent",border:"1px solid rgba(255,255,255,0.10)",
                   borderRadius:8,color:"#444",fontSize:11,cursor:"pointer",fontFamily:"inherit",
                 }}>Close</button>
               </div>
@@ -3041,9 +3056,9 @@ export default function App(){
       })()}
 
       {/* TABS */}
-      <div style={{borderBottom:"1px solid rgba(255,255,255,0.07)",background:"rgba(0,0,0,0.22)"}}>
+      <div style={{borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.22)"}}>
         {[TABS_ROW1, TABS_ROW2].map((row, ri)=>(
-          <div key={ri} style={{display:"flex",borderTop:ri>0?"1px solid rgba(255,255,255,0.04)":"none"}}>
+          <div key={ri} style={{display:"flex",borderTop:ri>0?"1px solid rgba(255,255,255,0.06)":"none"}}>
             {row.map(t=>{
               const isActive = tab===t.id;
               const name = t.full.split(" ").slice(1).join(" ");
@@ -3102,7 +3117,7 @@ export default function App(){
             {Object.keys(GROUPS).map(g=>(
               <button key={g} onClick={()=>setActiveGroup(g)} style={{
                 padding:"6px 12px",borderRadius:7,border:"1px solid",
-                borderColor:activeGroup===g?"#fcb900":"rgba(255,255,255,0.08)",
+                borderColor:activeGroup===g?"#fcb900":"rgba(255,255,255,0.10)",
                 background:activeGroup===g?"rgba(252,185,0,0.12)":"transparent",
                 color:activeGroup===g?"#fcb900":"#666",
                 fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",
@@ -3163,7 +3178,7 @@ export default function App(){
           </div>
           <div style={{
             fontSize:11,color:"#555",marginBottom:18,
-            background:"rgba(255,255,255,0.025)",borderRadius:8,padding:"10px 14px",
+            background:"rgba(255,255,255,0.03)",borderRadius:8,padding:"10px 14px",
             border:"1px solid rgba(255,255,255,0.06)",lineHeight:1.8,
           }}>
             <div style={{marginBottom:4}}>
@@ -3199,7 +3214,7 @@ export default function App(){
                   const locked=isMatchLocked({...m,home:liveHome,away:liveAway},allKickoffs);
                   const countdown=!locked?timeUntilLock({...m,home:liveHome,away:liveAway},allKickoffs):null;
                   return(
-                    <div key={m.id} style={{background:"rgba(255,255,255,0.025)",border:`1px solid ${locked?"rgba(239,68,68,0.2)":"rgba(255,255,255,0.07)"}`,
+                    <div key={m.id} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${locked?"rgba(239,68,68,0.2)":"rgba(255,255,255,0.06)"}`,
                       borderRadius:11,padding:"11px 13px",marginBottom:8}}>
                       {/* Live team names from feed */}
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:teamsKnown?8:0}}>
@@ -3218,7 +3233,7 @@ export default function App(){
                       {/* Score prediction — only when teams known and not locked */}
                       {teamsKnown&&(
                         <div style={{display:"flex",alignItems:"center",gap:8,
-                          paddingTop:8,borderTop:"1px solid rgba(255,255,255,0.05)"}}>
+                          paddingTop:8,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
                           <span style={{fontSize:10,color:"#555",flexShrink:0}}>Your score:</span>
                           <div style={{flex:1}}/>
                           <ScoreInput value={m.homeScore} onChange={v=>!locked&&upKO({...m,homeScore:v,home:liveHome,away:liveAway})} readOnly={locked}/>
@@ -3234,13 +3249,13 @@ export default function App(){
                           <input value={m.home==="TBD"?"":m.home} placeholder="✏️ Team 1…"
                             onChange={e=>upKO({...m,home:e.target.value||"TBD"})}
                             style={{flex:1,background:"transparent",border:"none",
-                              borderBottom:"1px solid rgba(255,255,255,0.08)",
+                              borderBottom:"1px solid rgba(255,255,255,0.10)",
                               color:"#aaa",fontSize:11,padding:"4px 0",outline:"none",fontFamily:"inherit"}}/>
                           <span style={{color:"#333",fontSize:10}}>vs</span>
                           <input value={m.away==="TBD"?"":m.away} placeholder="✏️ Team 2…"
                             onChange={e=>upKO({...m,away:e.target.value||"TBD"})}
                             style={{flex:1,textAlign:"right",background:"transparent",border:"none",
-                              borderBottom:"1px solid rgba(255,255,255,0.08)",
+                              borderBottom:"1px solid rgba(255,255,255,0.10)",
                               color:"#aaa",fontSize:11,padding:"4px 0",outline:"none",fontFamily:"inherit"}}/>
                         </div>
                       )}
@@ -3366,12 +3381,12 @@ export default function App(){
                   <div style={{
                     display:"flex",alignItems:"center",gap:10,marginBottom:10,
                   }}>
-                    <div style={{height:1,flex:1,background:"rgba(255,255,255,0.07)"}}/>
+                    <div style={{height:1,flex:1,background:"rgba(255,255,255,0.06)"}}/>
                     <span style={{
                       fontFamily:"'Bebas Neue',sans-serif",fontSize:15,letterSpacing:2,
                       color:place.color,whiteSpace:"nowrap",
                     }}>{place.label} — {place.pts} pts</span>
-                    <div style={{height:1,flex:1,background:"rgba(255,255,255,0.07)"}}/>
+                    <div style={{height:1,flex:1,background:"rgba(255,255,255,0.06)"}}/>
                   </div>
 
                   {/* Current pick card */}
@@ -3380,9 +3395,9 @@ export default function App(){
                       display:"flex",alignItems:"center",gap:10,
                       padding:"10px 14px",marginBottom:10,borderRadius:10,
                       background:place.actual&&podium[place.key]===place.actual
-                        ?"rgba(34,197,94,0.1)":"rgba(255,255,255,0.04)",
+                        ?"rgba(34,197,94,0.1)":"rgba(255,255,255,0.06)",
                       border:`1px solid ${place.actual&&podium[place.key]===place.actual
-                        ?"rgba(34,197,94,0.3)":"rgba(255,255,255,0.1)"}`,
+                        ?"rgba(34,197,94,0.3)":"rgba(255,255,255,0.10)"}`,
                     }}>
                       <span style={{fontSize:22}}>{FLAGS[podium[place.key]]}</span>
                       <span style={{fontWeight:700,fontSize:14,flex:1,
@@ -3421,7 +3436,7 @@ export default function App(){
                           placeholder={`🔍 Search team for ${place.label}…`}
                           style={{
                             width:"100%",padding:"9px 12px",marginBottom:8,
-                            background:"rgba(255,255,255,0.05)",
+                            background:"rgba(255,255,255,0.06)",
                             border:`1px solid ${place.color}40`,
                             borderRadius:8,color:"#fff",fontSize:12,
                             fontFamily:"inherit",outline:"none",boxSizing:"border-box",
@@ -3446,8 +3461,8 @@ export default function App(){
                                 }}
                                 style={{
                                   padding:"6px 11px",borderRadius:7,
-                                  border:`1px solid ${selected?place.color:"rgba(255,255,255,0.07)"}`,
-                                  background:selected?`${place.color}18`:"rgba(255,255,255,0.02)",
+                                  border:`1px solid ${selected?place.color:"rgba(255,255,255,0.06)"}`,
+                                  background:selected?`${place.color}18`:"rgba(255,255,255,0.03)",
                                   color:selected?place.color:usedElsewhere?"#333":"#888",
                                   fontWeight:600,fontSize:11,fontFamily:"inherit",
                                   cursor:usedElsewhere?"not-allowed":"pointer",
@@ -3558,7 +3573,7 @@ export default function App(){
 
           {/* Podium status */}
           <div style={{
-            background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",
+            background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.10)",
             borderRadius:11,padding:"12px 16px",marginBottom:20,
           }}>
             <div style={{fontSize:11,color:"#555",marginBottom:10}}>🏆 Podium Picks</div>
@@ -3573,7 +3588,7 @@ export default function App(){
               return(
                 <div key={place.key} style={{
                   display:"flex",alignItems:"center",gap:10,
-                  padding:"7px 0",borderTop:"1px solid rgba(255,255,255,0.05)",
+                  padding:"7px 0",borderTop:"1px solid rgba(255,255,255,0.06)",
                 }}>
                   <span style={{fontSize:12,color:place.color,width:80,flexShrink:0}}>{place.label}</span>
                   <span style={{flex:1,fontSize:13,fontWeight:600}}>
@@ -3603,7 +3618,7 @@ export default function App(){
                 return(
                   <div key={pred.id} style={{display:"flex",alignItems:"center",gap:9,
                     padding:"8px 12px",borderRadius:9,marginBottom:6,
-                    background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.06)",fontSize:11}}>
+                    background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",fontSize:11}}>
                     <span style={{fontWeight:600}}>{FLAGS[pred.home]||"🏳️"} {pred.home}</span>
                     <span style={{color:"#333",flex:1,textAlign:"center",fontFamily:"monospace",fontSize:10}}>
                       pred {pred.homeScore}–{pred.awayScore} · actual {actual.homeScore}–{actual.awayScore}
@@ -3643,7 +3658,7 @@ export default function App(){
                 return(
                   <div key={entry.username} style={{display:"flex",alignItems:"center",gap:13,
                     padding:"14px 17px",marginBottom:8,borderRadius:12,
-                    background:isMe?"rgba(252,185,0,0.07)":"rgba(255,255,255,0.025)",
+                    background:isMe?"rgba(252,185,0,0.07)":"rgba(255,255,255,0.03)",
                     border:`1px solid ${isMe?"rgba(252,185,0,0.25)":"rgba(255,255,255,0.06)"}`}}>
                     <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,width:28,textAlign:"center",
                       color:i===0?"#fcb900":i===1?"#aaa":i===2?"#cd7f32":"#333"}}>{medal||i+1}</span>
@@ -3674,7 +3689,7 @@ export default function App(){
               })}
             </div>
           )}
-          <div style={{marginTop:24,padding:"14px 17px",background:"rgba(255,255,255,0.025)",
+          <div style={{marginTop:24,padding:"14px 17px",background:"rgba(255,255,255,0.03)",
             borderRadius:11,border:"1px solid rgba(255,255,255,0.06)"}}>
             <div style={{fontWeight:700,marginBottom:7,fontSize:12}}>📋 How to compete</div>
             <ol style={{color:"#444",fontSize:11,margin:0,paddingLeft:16,lineHeight:2.1}}>
@@ -3688,7 +3703,7 @@ export default function App(){
 
           {/* Head-to-head comparison */}
           {actualMatches.some(m=>m.homeScore!==null)&&(
-            <div style={{marginTop:20,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"14px"}}>
+            <div style={{marginTop:20,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:12,padding:"14px"}}>
               <div style={{fontWeight:700,fontSize:12,marginBottom:10}}>⚔️ Head-to-Head Comparison</div>
               <div style={{display:"flex",gap:8,marginBottom:10}}>
                 {[0,1].map(i=>(
@@ -3701,8 +3716,8 @@ export default function App(){
                       const [p1,p2] = await Promise.all([sbGetPrediction(newUsers[0]),sbGetPrediction(newUsers[1])]);
                       setH2hData({[newUsers[0]]:p1,[newUsers[1]]:p2});
                     }
-                  }} style={{flex:1,padding:"8px 10px",background:"rgba(255,255,255,0.05)",
-                    border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,
+                  }} style={{flex:1,padding:"8px 10px",background:"rgba(255,255,255,0.06)",
+                    border:"1px solid rgba(255,255,255,0.10)",borderRadius:7,
                     color:"#fff",fontSize:12,fontFamily:"inherit",outline:"none"}}>
                     <option value="">Select player {i+1}…</option>
                     {leaderboard.map(e=><option key={e.username} value={e.username}>{e.username}</option>)}
@@ -3751,7 +3766,7 @@ export default function App(){
                     {rows.slice(0,8).map(({actual,r1,r2},i)=>(
                       <div key={i} style={{display:"flex",alignItems:"center",gap:6,
                         padding:"6px 8px",marginBottom:4,borderRadius:7,
-                        background:!r1||!r2?"rgba(255,255,255,0.01)":"rgba(255,255,255,0.02)",
+                        background:!r1||!r2?"rgba(255,255,255,0.03)":"rgba(255,255,255,0.03)",
                         opacity:!r1||!r2?0.4:1}}>
                         <div style={{
                           width:28,textAlign:"center",fontFamily:"'Bebas Neue',sans-serif",fontSize:13,
@@ -3781,7 +3796,7 @@ export default function App(){
               <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.82)",
                 display:"flex",alignItems:"flex-start",justifyContent:"center",
                 zIndex:9999,padding:"20px 16px",overflowY:"auto"}}>
-                <div style={{background:"#141922",border:"1px solid rgba(255,255,255,0.1)",
+                <div style={{background:"#141922",border:"1px solid rgba(255,255,255,0.10)",
                   borderRadius:16,width:"100%",maxWidth:480,padding:"22px 20px"}}>
                   {/* Header */}
                   <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:18}}>
@@ -3795,7 +3810,7 @@ export default function App(){
                     </div>
                     <button onClick={()=>setViewingUser(null)} style={{
                       padding:"6px 12px",background:"rgba(255,255,255,0.06)",
-                      border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,
+                      border:"1px solid rgba(255,255,255,0.10)",borderRadius:8,
                       color:"#888",fontSize:13,cursor:"pointer",fontFamily:"inherit",flexShrink:0,
                     }}>✕ Close</button>
                   </div>
@@ -3977,7 +3992,7 @@ export default function App(){
           const myRank = leaderboard.findIndex(e=>e.username===userName)+1;
 
           const StatBox = ({value,label,color="#fcb900",sub=""})=>(
-            <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:11,padding:"12px 10px",textAlign:"center"}}>
+            <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:11,padding:"12px 10px",textAlign:"center"}}>
               <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color,lineHeight:1}}>{value}</div>
               <div style={{fontSize:10,color:"#555",marginTop:3}}>{label}</div>
               {sub&&<div style={{fontSize:10,color:"#444",marginTop:2}}>{sub}</div>}
@@ -4092,7 +4107,7 @@ export default function App(){
                   {/* ── Rank History chart ── */}
                   {rankHistory.length>1&&(
                     <div style={{marginBottom:20,padding:"14px",
-                      background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",
+                      background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",
                       borderRadius:11}}>
                       <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"#fcb900",
                         letterSpacing:1,marginBottom:12}}>📈 Rank History</div>
@@ -4109,7 +4124,7 @@ export default function App(){
                             {/* Grid lines */}
                             {[1,Math.ceil(maxRank/2),maxRank].map(r=>(
                               <line key={r} x1="0" y1={toY(r)} x2={W} y2={toY(r)}
-                                stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+                                stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
                             ))}
                             {/* Line */}
                             <path d={pathD} fill="none" stroke="#fcb900" strokeWidth="2"
@@ -4160,7 +4175,7 @@ export default function App(){
                   </div>
 
                   {/* Points distribution */}
-                  <div style={{marginBottom:16,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:11,padding:"14px"}}>
+                  <div style={{marginBottom:16,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:11,padding:"14px"}}>
                     <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>Points Distribution</div>
                     <div style={{display:"flex",gap:8,marginBottom:10}}>
                       <StatBox value={leaderboard.length} label="Players" color="#60a5fa"/>
@@ -4176,7 +4191,7 @@ export default function App(){
                     ].map((b,i)=>(
                       <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                         <div style={{fontSize:11,width:120,color:"#888"}}>{b.label}</div>
-                        <div style={{flex:1,height:6,background:"rgba(255,255,255,0.05)",borderRadius:3,overflow:"hidden"}}>
+                        <div style={{flex:1,height:6,background:"rgba(255,255,255,0.06)",borderRadius:3,overflow:"hidden"}}>
                           <div style={{width:leaderboard.length>0?`${(b.count/leaderboard.length)*100}%`:"0%",
                             height:"100%",background:b.color,borderRadius:3,transition:"width 0.5s"}}/>
                         </div>
@@ -4204,7 +4219,7 @@ export default function App(){
                     ];
 
                     return(
-                      <div style={{background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:11,padding:"14px"}}>
+                      <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:11,padding:"14px"}}>
                         <div style={{fontSize:12,fontWeight:700,marginBottom:14}}>👑 Podium Picks</div>
                         {places.map(place=>{
                           const counts = placeCounts[place.key];
@@ -4222,7 +4237,7 @@ export default function App(){
                                 <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
                                   <span style={{fontSize:13}}>{FLAGS[team]||"🏳️"}</span>
                                   <span style={{fontSize:11,flex:1,fontWeight:600}}>{team}</span>
-                                  <div style={{flex:2,height:5,background:"rgba(255,255,255,0.05)",borderRadius:3,overflow:"hidden"}}>
+                                  <div style={{flex:2,height:5,background:"rgba(255,255,255,0.06)",borderRadius:3,overflow:"hidden"}}>
                                     <div style={{width:`${(count/leaderboard.length)*100}%`,
                                       height:"100%",background:place.color,borderRadius:3}}/>
                                   </div>
@@ -4239,7 +4254,7 @@ export default function App(){
                                   + {unknown} player{unknown>1?'s':''} haven't picked yet
                                 </div>
                               )}
-                              {place.key!=='third'&&<div style={{height:1,background:"rgba(255,255,255,0.05)",marginTop:10}}/>}
+                              {place.key!=='third'&&<div style={{height:1,background:"rgba(255,255,255,0.06)",marginTop:10}}/>}
                             </div>
                           );
                         })}
@@ -4266,7 +4281,7 @@ export default function App(){
             <button onClick={fetchLiveMatches} disabled={liveLoading||refreshCooldown>0} style={{
               marginLeft:"auto",padding:"6px 14px",
               background:refreshCooldown>0?"rgba(255,255,255,0.03)":"rgba(239,68,68,0.1)",
-              border:`1px solid ${refreshCooldown>0?"rgba(255,255,255,0.07)":"rgba(239,68,68,0.25)"}`,
+              border:`1px solid ${refreshCooldown>0?"rgba(255,255,255,0.06)":"rgba(239,68,68,0.25)"}`,
               borderRadius:7,color:refreshCooldown>0?"#444":"#ef4444",fontSize:12,fontWeight:700,
               cursor:liveLoading||refreshCooldown>0?"not-allowed":"pointer",fontFamily:"inherit",
               minWidth:90,textAlign:"center",
@@ -4352,7 +4367,7 @@ export default function App(){
                 const analysis=matchAnalysis[id];
                 return(
                   <div style={{marginBottom:12,padding:"14px",
-                    background:"rgba(255,255,255,0.025)",borderRadius:12,
+                    background:"rgba(255,255,255,0.03)",borderRadius:12,
                     border:"1px solid rgba(239,68,68,0.2)"}}>
                     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
                       <div style={{flex:1}}>
@@ -4401,7 +4416,7 @@ export default function App(){
                           const icon=ev.type==="Goal"?"⚽":ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):"🔄";
                           return(
                             <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",
-                              borderTop:i>0?"1px solid rgba(255,255,255,0.04)":"none"}}>
+                              borderTop:i>0?"1px solid rgba(255,255,255,0.06)":"none"}}>
                               <span style={{fontSize:10,color:"#555",width:28,textAlign:"center",flexShrink:0}}>{ev.time?.elapsed}'</span>
                               {!isHome&&<div style={{flex:1}}/>}
                               <span style={{fontSize:12}}>{icon}</span>
@@ -4436,7 +4451,7 @@ export default function App(){
                                   <span style={{color:"#555",fontSize:9}}>{k}</span>
                                   <span style={{color:"#60a5fa",fontWeight:700}}>{av}</span>
                                 </div>
-                                <div style={{display:"flex",height:4,borderRadius:2,overflow:"hidden",background:"rgba(255,255,255,0.05)"}}>
+                                <div style={{display:"flex",height:4,borderRadius:2,overflow:"hidden",background:"rgba(255,255,255,0.06)"}}>
                                   <div style={{width:`${(hn/tot)*100}%`,background:"#fcb900",borderRadius:"2px 0 0 2px"}}/>
                                   <div style={{width:`${(an/tot)*100}%`,background:"#60a5fa",borderRadius:"0 2px 2px 0"}}/>
                                 </div>
@@ -4498,7 +4513,7 @@ export default function App(){
                       return(
                         <div style={{marginBottom:12,padding:"10px 12px",
                           background:`${result?.color||"rgba(255,255,255,0.03)"}10`,
-                          border:`1px solid ${result?.color||"rgba(255,255,255,0.07)"}25`,borderRadius:8}}>
+                          border:`1px solid ${result?.color||"rgba(255,255,255,0.06)"}25`,borderRadius:8}}>
                           <div style={{fontSize:10,color:"#555",marginBottom:4}}>Your prediction</div>
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
                             <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#aaa"}}>{pred.homeScore}–{pred.awayScore}</span>
@@ -4519,8 +4534,8 @@ export default function App(){
                         <span>{analysis?.loading?"⏳":"🤖"}</span>
                         <span>{analysis?.loading?"Analysing…":analysis?.text?"🔄 Refresh Analysis":"AI Match Analysis"}</span>
                         <button onClick={(e)=>{e.stopPropagation();setSelectedFixture(null);}} style={{
-                          marginLeft:"auto",padding:"2px 8px",background:"rgba(255,255,255,0.05)",
-                          border:"1px solid rgba(255,255,255,0.1)",borderRadius:5,
+                          marginLeft:"auto",padding:"2px 8px",background:"rgba(255,255,255,0.06)",
+                          border:"1px solid rgba(255,255,255,0.10)",borderRadius:5,
                           color:"#555",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
                       </button>
                       {analysis?.text&&!analysis?.loading&&(
@@ -4554,8 +4569,8 @@ export default function App(){
                   <div key={f.fixture?.id} style={{
                     display:"flex",alignItems:"center",gap:10,
                     padding:"12px 14px",marginBottom:6,borderRadius:10,
-                    background:finished?"rgba(34,197,94,0.04)":"rgba(255,255,255,0.025)",
-                    border:`1px solid ${finished?"rgba(34,197,94,0.15)":"rgba(255,255,255,0.07)"}`,
+                    background:finished?"rgba(34,197,94,0.04)":"rgba(255,255,255,0.03)",
+                    border:`1px solid ${finished?"rgba(34,197,94,0.15)":"rgba(255,255,255,0.06)"}`,
                   }}>
                     <div style={{flex:1}}>
                       <div style={{fontSize:12,fontWeight:600}}>
@@ -4610,23 +4625,28 @@ export default function App(){
               <div>
                 {/* Demo banner */}
                 <div style={{
-                  background:"rgba(252,185,0,0.08)",border:"1px solid rgba(252,185,0,0.2)",
-                  borderRadius:9,padding:"8px 14px",marginBottom:16,
-                  display:"flex",alignItems:"center",gap:8,
+                  background:"linear-gradient(135deg,rgba(252,185,0,0.12),rgba(252,185,0,0.06))",
+                  border:"1px solid rgba(252,185,0,0.35)",
+                  borderRadius:11,padding:"12px 16px",marginBottom:16,
                 }}>
-                  <span style={{fontSize:13}}>🎮</span>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"#fcb900"}}>Demo Mode</div>
-                    <div style={{fontSize:10,color:"#555"}}>Simulating Mexico vs South Africa · June 11 live experience</div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                    <span style={{fontSize:16}}>🎮</span>
+                    <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,
+                      letterSpacing:1,color:"#fcb900"}}>Demo Mode — Live Preview</div>
                   </div>
-                  <div style={{fontSize:10,color:"#444"}}>Real data from June 11</div>
+                  <div style={{fontSize:11,color:"#888",lineHeight:1.6}}>
+                    This simulates exactly what you'll see during real matches from <strong style={{color:"#fcb900"}}>June 11</strong>. Press ▶ Start to try it — events, stats, formations and AI analysis all update live.
+                  </div>
+                  <div style={{marginTop:6,fontSize:10,color:"#555"}}>
+                    Real data replaces this automatically when matches begin.
+                  </div>
                 </div>
 
                 {/* Match card */}
                 <div style={{
                   padding:"18px 16px",borderRadius:14,marginBottom:12,
-                  background: simMinute>0 ? "rgba(239,68,68,0.06)" : "rgba(255,255,255,0.025)",
-                  border:`1px solid ${simMinute>0 ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.07)"}`,
+                  background: simMinute>0 ? "rgba(239,68,68,0.06)" : "rgba(255,255,255,0.03)",
+                  border:`1px solid ${simMinute>0 ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.06)"}`,
                 }}>
                   {/* Live badge */}
                   {simMinute>0&&!simEnded&&(
@@ -4687,8 +4707,8 @@ export default function App(){
                     )}
                     {(simMinute>0)&&(
                       <button onClick={startSim} style={{
-                        padding:"10px 14px",background:"rgba(255,255,255,0.05)",
-                        border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,
+                        padding:"10px 14px",background:"rgba(255,255,255,0.06)",
+                        border:"1px solid rgba(255,255,255,0.10)",borderRadius:8,
                         color:"#666",fontSize:12,cursor:"pointer",fontFamily:"inherit",
                       }}>↺ Restart</button>
                     )}
@@ -4726,8 +4746,8 @@ export default function App(){
                   <div style={{display:"flex",gap:10,marginBottom:12}}>
 
                     {/* Events */}
-                    <div style={{flex:1,background:"rgba(255,255,255,0.025)",
-                      border:"1px solid rgba(255,255,255,0.07)",borderRadius:10,padding:"10px"}}>
+                    <div style={{flex:1,background:"rgba(255,255,255,0.03)",
+                      border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"10px"}}>
                       <div style={{fontSize:10,fontWeight:700,color:"#fcb900",marginBottom:8}}>📋 Events</div>
                       {simEvents.filter(e=>e.type!=="End").length===0&&(
                         <div style={{fontSize:10,color:"#333",textAlign:"center",padding:"8px 0"}}>No events yet</div>
@@ -4737,7 +4757,7 @@ export default function App(){
                         const isHome = ev.side==="home";
                         return(
                           <div key={i} style={{display:"flex",alignItems:"flex-start",gap:5,
-                            padding:"4px 0",borderTop:i>0?"1px solid rgba(255,255,255,0.04)":"none",
+                            padding:"4px 0",borderTop:i>0?"1px solid rgba(255,255,255,0.06)":"none",
                             animation:"fadeIn 0.4s ease"}}>
                             <span style={{fontSize:9,color:"#555",width:22,flexShrink:0,marginTop:1}}>{ev.min}'</span>
                             <span style={{fontSize:11}}>{icon}</span>
@@ -4756,8 +4776,8 @@ export default function App(){
 
                     {/* Stats */}
                     {simStats&&(
-                      <div style={{flex:1,background:"rgba(255,255,255,0.025)",
-                        border:"1px solid rgba(255,255,255,0.07)",borderRadius:10,padding:"10px"}}>
+                      <div style={{flex:1,background:"rgba(255,255,255,0.03)",
+                        border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"10px"}}>
                         <div style={{fontSize:10,fontWeight:700,color:"#60a5fa",marginBottom:8}}>📊 Stats</div>
                         {[
                           {label:"Poss",h:`${simStats.possession.home}%`,a:`${simStats.possession.away}%`,hN:simStats.possession.home,aN:simStats.possession.away},
@@ -4774,7 +4794,7 @@ export default function App(){
                                 <span style={{color:"#444"}}>{s.label}</span>
                                 <span style={{color:"#60a5fa",fontWeight:700}}>{s.a}</span>
                               </div>
-                              <div style={{display:"flex",height:3,borderRadius:2,overflow:"hidden",background:"rgba(255,255,255,0.05)"}}>
+                              <div style={{display:"flex",height:3,borderRadius:2,overflow:"hidden",background:"rgba(255,255,255,0.06)"}}>
                                 <div style={{width:`${(s.hN/total)*100}%`,background:"#fcb900",transition:"width 0.8s"}}/>
                                 <div style={{width:`${(s.aN/total)*100}%`,background:"#60a5fa",transition:"width 0.8s"}}/>
                               </div>
@@ -4978,8 +4998,8 @@ export default function App(){
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
                   <button onClick={()=>sbGetMessages(50).then(msgs=>setChatMessages(msgs))} style={{
-                    padding:"3px 8px",background:"rgba(255,255,255,0.04)",
-                    border:"1px solid rgba(255,255,255,0.08)",borderRadius:6,
+                    padding:"3px 8px",background:"rgba(255,255,255,0.06)",
+                    border:"1px solid rgba(255,255,255,0.10)",borderRadius:6,
                     color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit",
                   }}>🔄</button>
                   <div style={{display:"flex",alignItems:"center",gap:4}}>
@@ -5015,9 +5035,9 @@ export default function App(){
                         <div style={{textAlign:"center",margin:"12px 0 8px",
                           fontSize:10,color:"#333",
                           display:"flex",alignItems:"center",gap:8}}>
-                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.05)"}}/>
+                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/>
                           {dateLabel}
-                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.05)"}}/>
+                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/>
                         </div>
                       )}
                       <div style={{textAlign:"center",margin:"4px 0",fontSize:11,color:"#444"}}>
@@ -5032,9 +5052,9 @@ export default function App(){
                         <div style={{textAlign:"center",margin:"12px 0 8px",
                           fontSize:10,color:"#333",
                           display:"flex",alignItems:"center",gap:8}}>
-                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.05)"}}/>
+                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/>
                           {dateLabel}
-                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.05)"}}/>
+                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/>
                         </div>
                       )}
                       <div style={{
@@ -5059,7 +5079,7 @@ export default function App(){
                             :"rgba(255,255,255,0.06)",
                           border:isMe
                             ?"1px solid rgba(252,185,0,0.3)"
-                            :"1px solid rgba(255,255,255,0.08)",
+                            :"1px solid rgba(255,255,255,0.10)",
                           wordBreak:"break-word",
                         }}>
                           <div style={{fontSize:13,color:isMe?"#fcb900":"#ddd",lineHeight:1.5}}>
@@ -5087,7 +5107,7 @@ export default function App(){
                     rows={1}
                     style={{
                       flex:1,padding:"10px 14px",
-                      background:"rgba(255,255,255,0.05)",
+                      background:"rgba(255,255,255,0.06)",
                       border:"1px solid rgba(255,255,255,0.12)",
                       borderRadius:12,color:"#fff",fontSize:13,
                       fontFamily:"inherit",outline:"none",
@@ -5097,7 +5117,7 @@ export default function App(){
                   />
                   <button onClick={sendMsg} disabled={!chatInput.trim()||chatSending} style={{
                     padding:"10px 16px",
-                    background:chatInput.trim()?"#fcb900":"rgba(255,255,255,0.05)",
+                    background:chatInput.trim()?"#fcb900":"rgba(255,255,255,0.06)",
                     border:"none",borderRadius:12,
                     color:chatInput.trim()?"#000":"#333",
                     fontWeight:700,fontSize:13,cursor:chatInput.trim()?"pointer":"default",
@@ -5175,8 +5195,8 @@ export default function App(){
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                     {(bracketPred.semiFinalists||[]).map((t,i)=>(
                       <div key={i} style={{display:"flex",alignItems:"center",gap:4,
-                        padding:"4px 10px",background:"rgba(255,255,255,0.04)",
-                        border:"1px solid rgba(255,255,255,0.08)",borderRadius:6,fontSize:11}}>
+                        padding:"4px 10px",background:"rgba(255,255,255,0.06)",
+                        border:"1px solid rgba(255,255,255,0.10)",borderRadius:6,fontSize:11}}>
                         <span>{FLAGS[t]||"🏳️"}</span><span>{t}</span>
                       </div>
                     ))}
@@ -5189,7 +5209,7 @@ export default function App(){
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
                     {Object.entries(bracketPred.groupWinners||{}).map(([g,t])=>(
                       <div key={g} style={{display:"flex",alignItems:"center",gap:6,
-                        padding:"4px 8px",background:"rgba(255,255,255,0.025)",
+                        padding:"4px 8px",background:"rgba(255,255,255,0.03)",
                         border:"1px solid rgba(255,255,255,0.06)",borderRadius:6,fontSize:11}}>
                         <span style={{color:"#555",width:12}}>G{g}</span>
                         <span>{FLAGS[t]||"🏳️"}</span>
@@ -5207,8 +5227,8 @@ export default function App(){
                   const matches = [match1,match2,match3].filter(Boolean).length;
                   return(
                     <div style={{marginTop:12,padding:"10px 12px",
-                      background:matches>0?"rgba(34,197,94,0.06)":"rgba(255,255,255,0.025)",
-                      border:`1px solid ${matches>0?"rgba(34,197,94,0.2)":"rgba(255,255,255,0.07)"}`,
+                      background:matches>0?"rgba(34,197,94,0.06)":"rgba(255,255,255,0.03)",
+                      border:`1px solid ${matches>0?"rgba(34,197,94,0.2)":"rgba(255,255,255,0.06)"}`,
                       borderRadius:8,fontSize:11}}>
                       <div style={{fontWeight:700,color:matches>0?"#22c55e":"#555",marginBottom:4}}>
                         {matches===3?"🎯 Perfect match with AI!":matches>0?`✅ ${matches}/3 picks match AI`:"> Your picks differ from AI"}
@@ -5277,7 +5297,7 @@ export default function App(){
 
             <div style={{display:"flex",gap:8,marginBottom:8}}>
               <select value={whatIfTeam} onChange={e=>setWhatIfTeam(e.target.value)} style={{
-                flex:2,padding:"10px 12px",background:"rgba(255,255,255,0.05)",
+                flex:2,padding:"10px 12px",background:"rgba(255,255,255,0.06)",
                 border:"1px solid rgba(139,92,246,0.25)",borderRadius:8,
                 color:whatIfTeam?"#fff":"#555",fontSize:12,fontFamily:"inherit",outline:"none",
               }}>
@@ -5287,7 +5307,7 @@ export default function App(){
                 ))}
               </select>
               <select value={whatIfPlace} onChange={e=>setWhatIfPlace(e.target.value)} style={{
-                flex:1,padding:"10px 12px",background:"rgba(255,255,255,0.05)",
+                flex:1,padding:"10px 12px",background:"rgba(255,255,255,0.06)",
                 border:"1px solid rgba(139,92,246,0.25)",borderRadius:8,
                 color:"#fff",fontSize:12,fontFamily:"inherit",outline:"none",
               }}>
@@ -5365,8 +5385,8 @@ export default function App(){
                 <input type="password" placeholder="Admin PIN…" value={adminPinInput}
                   onChange={e=>{setAdminPinInput(e.target.value);setAdminPinError("");}}
                   onKeyDown={e=>e.key==="Enter"&&(adminPinInput===ADMIN_PIN?(setAdminMode(true),setAdminPinInput(""),setAdminPinError("")):(setAdminPinError("Wrong PIN"),setAdminPinInput("")))}
-                  style={{flex:1,padding:"11px 14px",background:"rgba(255,255,255,0.05)",
-                    border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,
+                  style={{flex:1,padding:"11px 14px",background:"rgba(255,255,255,0.06)",
+                    border:"1px solid rgba(255,255,255,0.10)",borderRadius:8,
                     color:"#fff",fontSize:14,fontFamily:"inherit",outline:"none"}}/>
                 <button onClick={()=>{
                   if(adminPinInput===ADMIN_PIN){setAdminMode(true);setAdminPinInput("");setAdminPinError("");}
@@ -5524,7 +5544,7 @@ export default function App(){
                         Yes, Reset Everything
                       </button>
                       <button onClick={()=>setShowResetConfirm(false)} style={{flex:1,padding:"11px",
-                        background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",
+                        background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",
                         borderRadius:8,color:"#888",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
                         Cancel
                       </button>
@@ -5561,7 +5581,7 @@ export default function App(){
                         Yes, Rollback
                       </button>
                       <button onClick={()=>setRollbackTarget(null)} style={{flex:1,padding:"11px",
-                        background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",
+                        background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",
                         borderRadius:8,color:"#888",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
                         Cancel
                       </button>
@@ -5587,7 +5607,7 @@ export default function App(){
                       marginBottom:16,maxHeight:240,overflowY:"auto"}}>
                       {pendingChanges.map((c,i)=>(
                         <div key={i} style={{fontSize:12,color:"#ccc",padding:"4px 0",
-                          borderTop:i>0?"1px solid rgba(255,255,255,0.05)":"none"}}>{c}</div>
+                          borderTop:i>0?"1px solid rgba(255,255,255,0.06)":"none"}}>{c}</div>
                       ))}
                     </div>
                     <div style={{display:"flex",gap:10}}>
@@ -5614,7 +5634,7 @@ export default function App(){
                     <div key={snap.saved_at||snap.at} style={{
                       display:"flex",alignItems:"center",gap:10,
                       padding:"9px 12px",borderRadius:8,marginBottom:6,
-                      background:i===0?"rgba(34,197,94,0.05)":"rgba(255,255,255,0.02)",
+                      background:i===0?"rgba(34,197,94,0.05)":"rgba(255,255,255,0.03)",
                       border:`1px solid ${i===0?"rgba(34,197,94,0.2)":"rgba(255,255,255,0.06)"}`,
                     }}>
                       <div style={{flex:1}}>
@@ -5644,17 +5664,17 @@ export default function App(){
                   Participation Report
                 </div>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
-                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:9,padding:"10px",textAlign:"center"}}>
+                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:9,padding:"10px",textAlign:"center"}}>
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#fcb900"}}>{leaderboard.length}</div>
                     <div style={{fontSize:10,color:"#555"}}>Total players</div>
                   </div>
-                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:9,padding:"10px",textAlign:"center"}}>
+                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:9,padding:"10px",textAlign:"center"}}>
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#22c55e"}}>
                       {leaderboard.filter(e=>e.points>0).length}
                     </div>
                     <div style={{fontSize:10,color:"#555"}}>With predictions</div>
                   </div>
-                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:9,padding:"10px",textAlign:"center"}}>
+                  <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:9,padding:"10px",textAlign:"center"}}>
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#ef4444"}}>
                       {leaderboard.filter(e=>e.points===0).length}
                     </div>
@@ -5666,8 +5686,8 @@ export default function App(){
                     <div style={{fontSize:11,color:"#ef4444",fontWeight:700,marginBottom:6}}>⚠️ Haven't predicted yet:</div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                       {leaderboard.filter(e=>e.points===0).map(e=>(
-                        <span key={e.username} style={{fontSize:11,color:"#888",background:"rgba(255,255,255,0.04)",
-                          border:"1px solid rgba(255,255,255,0.08)",borderRadius:5,padding:"3px 8px"}}>
+                        <span key={e.username} style={{fontSize:11,color:"#888",background:"rgba(255,255,255,0.06)",
+                          border:"1px solid rgba(255,255,255,0.10)",borderRadius:5,padding:"3px 8px"}}>
                           {e.username}
                         </span>
                       ))}
@@ -5688,8 +5708,8 @@ export default function App(){
                   <input
                     placeholder="Username to reset…"
                     id="adminPinResetUser"
-                    style={{flex:1,padding:"8px 12px",background:"rgba(255,255,255,0.05)",
-                      border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,
+                    style={{flex:1,padding:"8px 12px",background:"rgba(255,255,255,0.06)",
+                      border:"1px solid rgba(255,255,255,0.10)",borderRadius:7,
                       color:"#fff",fontSize:12,fontFamily:"inherit",outline:"none"}}/>
                   <button onClick={async()=>{
                     const el = document.getElementById("adminPinResetUser");
@@ -5733,7 +5753,7 @@ export default function App(){
                   {Object.keys(GROUPS).map(g=>(
                     <button key={g} onClick={()=>setAdminActiveGroup(g)} style={{
                       padding:"5px 11px",borderRadius:6,border:"1px solid",
-                      borderColor:adminActiveGroup===g?"#22c55e":"rgba(255,255,255,0.08)",
+                      borderColor:adminActiveGroup===g?"#22c55e":"rgba(255,255,255,0.10)",
                       background:adminActiveGroup===g?"rgba(34,197,94,0.1)":"transparent",
                       color:adminActiveGroup===g?"#22c55e":"#555",
                       fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",
@@ -5773,7 +5793,7 @@ export default function App(){
                   {KO_ROUNDS.map(r=>(
                     <button key={r} onClick={()=>setAdminActiveRound(r)} style={{
                       padding:"5px 11px",borderRadius:6,border:"1px solid",
-                      borderColor:adminActiveRound===r?"#22c55e":"rgba(255,255,255,0.08)",
+                      borderColor:adminActiveRound===r?"#22c55e":"rgba(255,255,255,0.10)",
                       background:adminActiveRound===r?"rgba(34,197,94,0.1)":"transparent",
                       color:adminActiveRound===r?"#22c55e":"#555",
                       fontWeight:700,fontSize:10,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",
@@ -5800,14 +5820,14 @@ export default function App(){
                       <input value={m.home==="TBD"?"":m.home} placeholder="Home team"
                         onChange={e=>adminUpdateKO({...m,home:e.target.value||"TBD"})}
                         style={{flex:1,background:"transparent",border:"none",
-                          borderBottom:"1px solid rgba(255,255,255,0.1)",
+                          borderBottom:"1px solid rgba(255,255,255,0.10)",
                           color:"#fff",fontSize:13,fontWeight:700,padding:"3px 0",
                           outline:"none",fontFamily:"inherit"}}/>
                       <span style={{color:"#444",fontSize:12}}>vs</span>
                       <input value={m.away==="TBD"?"":m.away} placeholder="Away team"
                         onChange={e=>adminUpdateKO({...m,away:e.target.value||"TBD"})}
                         style={{flex:1,textAlign:"right",background:"transparent",border:"none",
-                          borderBottom:"1px solid rgba(255,255,255,0.1)",
+                          borderBottom:"1px solid rgba(255,255,255,0.10)",
                           color:"#fff",fontSize:13,fontWeight:700,padding:"3px 0",
                           outline:"none",fontFamily:"inherit"}}/>
                     </div>
@@ -5820,7 +5840,7 @@ export default function App(){
                           setKoKickoffs(prev=>ms ? {...prev,[m.id]:ms} : Object.fromEntries(Object.entries(prev).filter(([k])=>k!==m.id)));
                         }}
                         style={{
-                          flex:1,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",
+                          flex:1,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.10)",
                           borderRadius:6,color:"#ccc",fontSize:11,padding:"4px 8px",
                           fontFamily:"inherit",outline:"none",colorScheme:"dark",
                         }}/>
@@ -5877,7 +5897,7 @@ export default function App(){
                                   onChange={e=>setLivePredictions(prev=>({
                                     ...prev,"__podium__":{...(prev["__podium__"]||DEFAULT_AI_PODIUM),[p.key]:e.target.value}
                                   }))}
-                                  style={{flex:1,padding:"5px 8px",background:"rgba(255,255,255,0.05)",
+                                  style={{flex:1,padding:"5px 8px",background:"rgba(255,255,255,0.06)",
                                     border:"1px solid rgba(139,92,246,0.2)",borderRadius:6,
                                     color:"#fff",fontSize:11,outline:"none"}}/>
                               </div>
@@ -5888,7 +5908,7 @@ export default function App(){
                                 onChange={e=>setLivePredictions(prev=>({
                                   ...prev,"__podium__":{...(prev["__podium__"]||DEFAULT_AI_PODIUM),reason:e.target.value}
                                 }))}
-                                style={{flex:1,padding:"5px 8px",background:"rgba(255,255,255,0.05)",
+                                style={{flex:1,padding:"5px 8px",background:"rgba(255,255,255,0.06)",
                                   border:"1px solid rgba(139,92,246,0.2)",borderRadius:6,
                                   color:"#fff",fontSize:11,outline:"none"}}/>
                             </div>
@@ -5913,23 +5933,23 @@ export default function App(){
                     <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}}>
                       <input value={newPredKey} onChange={e=>setNewPredKey(e.target.value)}
                         placeholder="Brazil||France"
-                        style={{flex:2,minWidth:130,padding:"6px 8px",background:"rgba(255,255,255,0.05)",
+                        style={{flex:2,minWidth:130,padding:"6px 8px",background:"rgba(255,255,255,0.06)",
                           border:"1px solid rgba(139,92,246,0.2)",borderRadius:6,
                           color:"#fff",fontSize:11,fontFamily:"monospace",outline:"none"}}/>
                       <input type="number" value={newPredH} onChange={e=>setNewPredH(e.target.value)}
                         placeholder="H" min="0" max="20"
-                        style={{width:44,padding:"6px 4px",textAlign:"center",background:"rgba(255,255,255,0.05)",
+                        style={{width:44,padding:"6px 4px",textAlign:"center",background:"rgba(255,255,255,0.06)",
                           border:"1px solid rgba(139,92,246,0.2)",borderRadius:6,
                           color:"#fff",fontSize:11,outline:"none"}}/>
                       <span style={{color:"#555",alignSelf:"center"}}>–</span>
                       <input type="number" value={newPredA} onChange={e=>setNewPredA(e.target.value)}
                         placeholder="A" min="0" max="20"
-                        style={{width:44,padding:"6px 4px",textAlign:"center",background:"rgba(255,255,255,0.05)",
+                        style={{width:44,padding:"6px 4px",textAlign:"center",background:"rgba(255,255,255,0.06)",
                           border:"1px solid rgba(139,92,246,0.2)",borderRadius:6,
                           color:"#fff",fontSize:11,outline:"none"}}/>
                       <input value={newPredR} onChange={e=>setNewPredR(e.target.value)}
                         placeholder="Reason…"
-                        style={{flex:3,minWidth:120,padding:"6px 8px",background:"rgba(255,255,255,0.05)",
+                        style={{flex:3,minWidth:120,padding:"6px 8px",background:"rgba(255,255,255,0.06)",
                           border:"1px solid rgba(139,92,246,0.2)",borderRadius:6,
                           color:"#fff",fontSize:11,outline:"none"}}/>
                       <button onClick={()=>{
@@ -5963,8 +5983,8 @@ export default function App(){
                         <input value={actualPodium[p.key]||""}
                           placeholder="Team name…"
                           onChange={e=>setActualPodium(prev=>({...prev,[p.key]:e.target.value||null}))}
-                          style={{flex:1,padding:"6px 10px",background:"rgba(255,255,255,0.05)",
-                            border:"1px solid rgba(255,255,255,0.1)",borderRadius:6,
+                          style={{flex:1,padding:"6px 10px",background:"rgba(255,255,255,0.06)",
+                            border:"1px solid rgba(255,255,255,0.10)",borderRadius:6,
                             color:"#fff",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
                       </div>
                     ))}
