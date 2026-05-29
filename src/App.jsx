@@ -3035,31 +3035,35 @@ export default function App(){
       <div style={{display:"flex",borderBottom:"1px solid rgba(255,255,255,0.07)",
         background:"rgba(0,0,0,0.22)",overflowX:"auto",
         WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
-        {TABS.map(t=>(
-          <button key={t.id} onClick={()=>handleTabChange(t.id)}
-            title={tab!==t.id ? t.full : undefined}
-            style={{
-              flexShrink:0,
-              padding: tab===t.id ? "10px 12px" : "10px 8px",
-              background:"transparent",border:"none",
-              borderBottom:`2px solid ${tab===t.id?"#fcb900":"transparent"}`,
-              color:tab===t.id?"#fcb900":"#555",
-              fontSize: tab===t.id ? 11 : 16,
-              fontWeight:600,
-              cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",whiteSpace:"nowrap",
-              position:"relative",
-            }}>
-            {tab===t.id ? t.full : t.label}
-            {t.id==="chat"&&chatUnread>0&&tab!=="chat"&&(
-              <span style={{
-                position:"absolute",top:4,right:-2,
-                background:"#ef4444",color:"#fff",borderRadius:"50%",
-                width:14,height:14,fontSize:8,fontWeight:700,
-                display:"flex",alignItems:"center",justifyContent:"center",
-              }}>{chatUnread>9?"9+":chatUnread}</span>
-            )}
-          </button>
-        ))}
+        {TABS.map(t=>{
+          const isActive = tab===t.id;
+          const name = t.full.split(" ").slice(1).join(" "); // strip emoji from full label
+          return(
+            <button key={t.id} onClick={()=>handleTabChange(t.id)}
+              style={{
+                flexShrink:0,
+                padding:"7px 10px",
+                background:"transparent",border:"none",
+                borderBottom:`2px solid ${isActive?"#fcb900":"transparent"}`,
+                color:isActive?"#fcb900":"#555",
+                cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",
+                whiteSpace:"nowrap",position:"relative",
+                display:"flex",flexDirection:"column",alignItems:"center",gap:1,
+              }}>
+              <span style={{fontSize:16,lineHeight:1}}>{t.label}</span>
+              <span style={{fontSize:8,fontWeight:isActive?700:400,
+                color:isActive?"#fcb900":"#444",letterSpacing:0.3}}>{name}</span>
+              {t.id==="chat"&&chatUnread>0&&!isActive&&(
+                <span style={{
+                  position:"absolute",top:3,right:3,
+                  background:"#ef4444",color:"#fff",borderRadius:"50%",
+                  width:13,height:13,fontSize:7,fontWeight:700,
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                }}>{chatUnread>9?"9+":chatUnread}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div style={{maxWidth:820,margin:"0 auto",padding:"16px 12px"}}>
