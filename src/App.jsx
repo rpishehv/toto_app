@@ -619,16 +619,6 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
       {/* Tool buttons row */}
       {(aiPred&&!locked)||expertData||true?(
         <div style={{marginTop:6,paddingTop:5,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
-          {/* Tip — only shown when nothing is open */}
-          {!showAI&&!showExperts&&!showOdds&&(
-            <div style={{fontSize:9,color:"#444",marginBottom:5}}>
-              💡 {[
-                aiPred&&!locked && "🤖 AI prediction",
-                expertData      && "🔍 expert picks",
-                                   "📊 market odds",
-              ].filter(Boolean).join(" · ")} available for this match
-            </div>
-          )}
           <div style={{display:"flex",gap:6}}>
             {aiPred&&!locked&&(
               <button onClick={()=>setShowAI(p=>!p)} style={{
@@ -3136,10 +3126,10 @@ export default function App(){
             ))}
           </div>
           <div style={{position:"relative"}}>
-            {/* Hint */}
+            {/* One-time tip */}
             {!showStandings&&(
-              <div style={{fontSize:10,color:"#444",marginBottom:8,textAlign:"center"}}>
-                💡 Tap <span style={{color:"#fcb900",fontWeight:700}}>📊 Standings</span> to see the Group {activeGroup} table
+              <div style={{fontSize:10,color:"#444",marginBottom:8,lineHeight:1.6}}>
+                💡 Tap <span style={{color:"#fcb900",fontWeight:700}}>📊 Standings</span> to see the Group {activeGroup} table · Each match has <span style={{color:"#a78bfa",fontWeight:700}}>🤖</span> <span style={{color:"#22c55e",fontWeight:700}}>🔍</span> <span style={{color:"#60a5fa",fontWeight:700}}>📊</span> for AI, expert & market predictions
               </div>
             )}
             {/* Floating standings button */}
