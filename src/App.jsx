@@ -734,7 +734,20 @@ function ReactionsBar({matchId, userName, home, away}) {
   const [counts, setCounts] = useState({});
   const [mine, setMine] = useState(new Set());
   const [undoEmoji, setUndoEmoji] = useState(null);
+  const [loaded, setLoaded] = useState(false); // lazy load
+  const [showAll, setShowAll] = useState(false);
   const undoTimer = React.useRef(null);
+  const containerRef = React.useRef(null);
+
+  // Only load reactions when card scrolls into view
+  useEffect(()=>{
+    if (!containerRef.current) return;
+    const observer = new IntersectionObserver(([entry])=>{
+      if (entry.isIntersecting && !loaded) setLoaded(true);
+    }, { threshold: 0.1 });
+    observer.observe(containerRef.current);
+    return ()=>observer.disconnect();
+  },[]);
 
   const loadReactions = async () => {
     const rows = await sbGetReactions(matchId);
@@ -744,14 +757,14 @@ function ReactionsBar({matchId, userName, home, away}) {
   };
 
   useEffect(()=>{
-    if(!matchId) return;
+    if(!loaded||!matchId) return;
     loadReactions();
     const sub = supabase.channel(`reactions_${matchId}`)
       .on('postgres_changes',{event:'*',schema:'public',table:'reactions',
         filter:`match_id=eq.${matchId}`}, loadReactions)
       .subscribe();
     return ()=>supabase.removeChannel(sub);
-  },[matchId]);
+  },[loaded, matchId]);
 
   const toggle = async(emoji) => {
     const isOn = mine.has(emoji);
@@ -784,10 +797,13 @@ function ReactionsBar({matchId, userName, home, away}) {
     setCounts(prev => ({ ...prev, [emoji]: Math.max(0,(prev[emoji]||0)-1) }));
   };
 
+  const hasAnyReactions = EMOJIS.some(e => (counts[e]||0) > 0);
+
   return(
-    <div style={{marginTop:6}}>
-      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-        {EMOJIS.map(e=>{
+    <div ref={containerRef} style={{marginTop:6}}>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+        {/* Only show emojis with reactions, or all if expanded */}
+        {EMOJIS.filter(e => showAll || (counts[e]||0) > 0 || mine.has(e)).map(e=>{
           const active = mine.has(e);
           const count = counts[e]||0;
           return(
@@ -805,6 +821,14 @@ function ReactionsBar({matchId, userName, home, away}) {
             </button>
           );
         })}
+        {/* Toggle button */}
+        <button onClick={()=>setShowAll(p=>!p)} style={{
+          padding:"3px 7px",borderRadius:12,fontSize:11,cursor:"pointer",fontFamily:"inherit",
+          background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",
+          color:"#444",transition:"all 0.15s",
+        }}>
+          {showAll ? "✕" : hasAnyReactions ? "···" : "＋"}
+        </button>
       </div>
       {undoEmoji&&(
         <div style={{display:"flex",alignItems:"center",gap:8,marginTop:5,
@@ -1114,6 +1138,7 @@ export default function App(){
   },[tab]);
   const [userName,setUserName]=useState("");
   const [appError,setAppError]=useState(null);
+  const [appLoading,setAppLoading]=useState(true);
   const [recentPoints,setRecentPoints]=useState(null); // points earned notification
   const [predictionCount,setPredictionCount]=useState({done:0,total:0}); // completion indicator
   const [showPredReminder,setShowPredReminder]=useState(false);
@@ -1251,6 +1276,8 @@ export default function App(){
       } catch(e) {
         console.error('Initial load error:', e);
         setAppError(`Load failed: ${e.message}`);
+      } finally {
+        setAppLoading(false);
       }
     })();
     const nowInterval=setInterval(()=>setNow(Date.now()),60*1000);
@@ -2475,6 +2502,26 @@ export default function App(){
     );
   };
 
+  // LOADING SPINNER
+  if(appLoading) return(
+    <div style={{minHeight:"100vh",background:"#0a0d12",display:"flex",
+      flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}>
+      <div style={{fontSize:40}}>⚽</div>
+      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,
+        letterSpacing:3,color:"#fcb900"}}>FIFA 2026</div>
+      <div style={{display:"flex",gap:6,marginTop:8}}>
+        {[0,1,2].map(i=>(
+          <div key={i} style={{
+            width:8,height:8,borderRadius:"50%",background:"#fcb900",
+            animation:`pulse 1.2s ease ${i*0.2}s infinite`,
+          }}/>
+        ))}
+      </div>
+      <div style={{fontSize:11,color:"#444",marginTop:4}}>Loading…</div>
+      <style>{`@keyframes pulse{0%,100%{opacity:0.2}50%{opacity:1}}`}</style>
+    </div>
+  );
+
   // LOGIN (multi-step: name → PIN)
   if(!userName) {
     const inputStyle={
@@ -2673,7 +2720,7 @@ export default function App(){
     {id:"stats",  label:"📈", full:"📈 Stats"},
     {id:"scoring",label:"📊", full:"📊 Scoring"},
     {id:"ai",     label:"🤖", full:"🤖 AI"},
-    {id:"admin",  label:"🔧", full:"🔧 Admin"},
+    {id:"admin",  label:"🔧", full:"🔧 Admin", restricted:true},
     {id:"help",   label:"❓", full:"❓ Help"},
   ];
   const TABS=[...TABS_ROW1,...TABS_ROW2];
@@ -3067,16 +3114,17 @@ export default function App(){
                 <button key={t.id} onClick={()=>handleTabChange(t.id)}
                   style={{
                     flex:1,padding:"6px 4px",
-                    background:"transparent",border:"none",
+                    background:t.restricted?"rgba(251,146,60,0.04)":"transparent",
+                    border:"none",
                     borderBottom:`2px solid ${isActive?"#fcb900":"transparent"}`,
-                    color:isActive?"#fcb900":"#555",
+                    color:isActive?"#fcb900":t.restricted?"#6b5a4a":"#555",
                     cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",
                     whiteSpace:"nowrap",position:"relative",
                     display:"flex",flexDirection:"column",alignItems:"center",gap:1,
                   }}>
                   <span style={{fontSize:18,lineHeight:1}}>{t.label}</span>
                   <span style={{fontSize:9,fontWeight:isActive?700:400,
-                    color:isActive?"#fcb900":"#444",letterSpacing:0.3}}>{name}</span>
+                    color:isActive?"#fcb900":t.restricted?"#6b5a4a":"#444",letterSpacing:0.3}}>{name}</span>
                   {t.id==="chat"&&chatUnread>0&&!isActive&&(
                     <span style={{
                       position:"absolute",top:2,right:"calc(50% - 14px)",
@@ -3126,10 +3174,11 @@ export default function App(){
             ))}
           </div>
           <div style={{position:"relative"}}>
-            {/* One-time tip */}
+            {/* Two-line tips */}
             {!showStandings&&(
-              <div style={{fontSize:10,color:"#444",marginBottom:8,lineHeight:1.6}}>
-                💡 Tap <span style={{color:"#fcb900",fontWeight:700}}>📊 Standings</span> to see the Group {activeGroup} table · Each match has <span style={{color:"#a78bfa",fontWeight:700}}>🤖</span> <span style={{color:"#22c55e",fontWeight:700}}>🔍</span> <span style={{color:"#60a5fa",fontWeight:700}}>📊</span> for AI, expert & market predictions
+              <div style={{fontSize:10,color:"#444",marginBottom:8,lineHeight:1.8}}>
+                <div>💡 Tap <span style={{color:"#fcb900",fontWeight:700}}>📊 Standings</span> to see the Group {activeGroup} table</div>
+                <div>💡 Each match has <span style={{color:"#a78bfa",fontWeight:700}}>🤖 AI</span> · <span style={{color:"#22c55e",fontWeight:700}}>🔍 Experts</span> · <span style={{color:"#60a5fa",fontWeight:700}}>📊 Market odds</span> — tap the buttons below each match</div>
               </div>
             )}
             {/* Floating standings button */}
