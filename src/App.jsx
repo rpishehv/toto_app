@@ -3032,38 +3032,39 @@ export default function App(){
       })()}
 
       {/* TABS */}
-      <div style={{display:"flex",borderBottom:"1px solid rgba(255,255,255,0.07)",
-        background:"rgba(0,0,0,0.22)",overflowX:"auto",
-        WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
-        {TABS.map(t=>{
-          const isActive = tab===t.id;
-          const name = t.full.split(" ").slice(1).join(" "); // strip emoji from full label
-          return(
-            <button key={t.id} onClick={()=>handleTabChange(t.id)}
-              style={{
-                flexShrink:0,
-                padding:"7px 10px",
-                background:"transparent",border:"none",
-                borderBottom:`2px solid ${isActive?"#fcb900":"transparent"}`,
-                color:isActive?"#fcb900":"#555",
-                cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",
-                whiteSpace:"nowrap",position:"relative",
-                display:"flex",flexDirection:"column",alignItems:"center",gap:1,
-              }}>
-              <span style={{fontSize:16,lineHeight:1}}>{t.label}</span>
-              <span style={{fontSize:8,fontWeight:isActive?700:400,
-                color:isActive?"#fcb900":"#444",letterSpacing:0.3}}>{name}</span>
-              {t.id==="chat"&&chatUnread>0&&!isActive&&(
-                <span style={{
-                  position:"absolute",top:3,right:3,
-                  background:"#ef4444",color:"#fff",borderRadius:"50%",
-                  width:13,height:13,fontSize:7,fontWeight:700,
-                  display:"flex",alignItems:"center",justifyContent:"center",
-                }}>{chatUnread>9?"9+":chatUnread}</span>
-              )}
-            </button>
-          );
-        })}
+      <div style={{borderBottom:"1px solid rgba(255,255,255,0.07)",background:"rgba(0,0,0,0.22)"}}>
+        {[TABS_ROW1, TABS_ROW2].map((row, ri)=>(
+          <div key={ri} style={{display:"flex",borderTop:ri>0?"1px solid rgba(255,255,255,0.04)":"none"}}>
+            {row.map(t=>{
+              const isActive = tab===t.id;
+              const name = t.full.split(" ").slice(1).join(" ");
+              return(
+                <button key={t.id} onClick={()=>handleTabChange(t.id)}
+                  style={{
+                    flex:1,padding:"6px 4px",
+                    background:"transparent",border:"none",
+                    borderBottom:`2px solid ${isActive?"#fcb900":"transparent"}`,
+                    color:isActive?"#fcb900":"#555",
+                    cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",
+                    whiteSpace:"nowrap",position:"relative",
+                    display:"flex",flexDirection:"column",alignItems:"center",gap:1,
+                  }}>
+                  <span style={{fontSize:15,lineHeight:1}}>{t.label}</span>
+                  <span style={{fontSize:8,fontWeight:isActive?700:400,
+                    color:isActive?"#fcb900":"#444",letterSpacing:0.3}}>{name}</span>
+                  {t.id==="chat"&&chatUnread>0&&!isActive&&(
+                    <span style={{
+                      position:"absolute",top:2,right:"calc(50% - 14px)",
+                      background:"#ef4444",color:"#fff",borderRadius:"50%",
+                      width:13,height:13,fontSize:7,fontWeight:700,
+                      display:"flex",alignItems:"center",justifyContent:"center",
+                    }}>{chatUnread>9?"9+":chatUnread}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       <div style={{maxWidth:820,margin:"0 auto",padding:"16px 12px"}}>
