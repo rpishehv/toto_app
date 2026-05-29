@@ -751,6 +751,17 @@ function ReactionsBar({matchId, userName, home, away}) {
   },[matchId]);
 
   const toggle = async(emoji) => {
+    // Optimistic UI update immediately
+    const isOn = mine.has(emoji);
+    setMine(prev => {
+      const next = new Set(prev);
+      isOn ? next.delete(emoji) : next.add(emoji);
+      return next;
+    });
+    setCounts(prev => ({
+      ...prev,
+      [emoji]: Math.max(0, (prev[emoji]||0) + (isOn ? -1 : 1)),
+    }));
     const added = await sbToggleReaction(matchId, userName, emoji);
     // Echo to chat when adding (not removing) a reaction
     if(added && home && away) {
@@ -760,18 +771,28 @@ function ReactionsBar({matchId, userName, home, away}) {
 
   return(
     <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>
-      {EMOJIS.map(e=>(
-        <button key={e} onClick={()=>toggle(e)} style={{
-          padding:"2px 7px",borderRadius:12,fontSize:12,cursor:"pointer",fontFamily:"inherit",
-          background:mine.has(e)?"rgba(252,185,0,0.15)":"rgba(255,255,255,0.04)",
-          border:`1px solid ${mine.has(e)?"rgba(252,185,0,0.4)":"rgba(255,255,255,0.08)"}`,
-          color:mine.has(e)?"#fcb900":"#666",
-          display:"flex",alignItems:"center",gap:3,
-        }}>
-          <span>{e}</span>
-          {counts[e]>0&&<span style={{fontSize:9,fontWeight:700}}>{counts[e]}</span>}
-        </button>
-      ))}
+      {EMOJIS.map(e=>{
+        const active = mine.has(e);
+        const count = counts[e]||0;
+        return(
+          <button key={e} onClick={()=>toggle(e)} style={{
+            padding:"3px 8px",borderRadius:12,fontSize:12,cursor:"pointer",fontFamily:"inherit",
+            background:active?"rgba(252,185,0,0.2)":"rgba(255,255,255,0.04)",
+            border:`1px solid ${active?"rgba(252,185,0,0.6)":"rgba(255,255,255,0.08)"}`,
+            color:active?"#fcb900":"#666",
+            display:"flex",alignItems:"center",gap:3,
+            transform:active?"scale(1.1)":"scale(1)",
+            transition:"all 0.15s ease",
+            fontWeight:active?700:400,
+          }}>
+            <span>{e}</span>
+            {count>0&&<span style={{
+              fontSize:10,fontWeight:700,
+              color:active?"#fcb900":"#888",
+            }}>{count}</span>}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -3015,17 +3036,19 @@ export default function App(){
         background:"rgba(0,0,0,0.22)",overflowX:"auto",
         WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
         {TABS.map(t=>(
-          <button key={t.id} onClick={()=>handleTabChange(t.id)} style={{
-            flexShrink:0,
-            padding: tab===t.id ? "10px 12px" : "10px 8px",
-            background:"transparent",border:"none",
-            borderBottom:`2px solid ${tab===t.id?"#fcb900":"transparent"}`,
-            color:tab===t.id?"#fcb900":"#555",
-            fontSize: tab===t.id ? 11 : 16,
-            fontWeight:600,
-            cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",whiteSpace:"nowrap",
-            position:"relative",
-          }}>
+          <button key={t.id} onClick={()=>handleTabChange(t.id)}
+            title={tab!==t.id ? t.full : undefined}
+            style={{
+              flexShrink:0,
+              padding: tab===t.id ? "10px 12px" : "10px 8px",
+              background:"transparent",border:"none",
+              borderBottom:`2px solid ${tab===t.id?"#fcb900":"transparent"}`,
+              color:tab===t.id?"#fcb900":"#555",
+              fontSize: tab===t.id ? 11 : 16,
+              fontWeight:600,
+              cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",whiteSpace:"nowrap",
+              position:"relative",
+            }}>
             {tab===t.id ? t.full : t.label}
             {t.id==="chat"&&chatUnread>0&&tab!=="chat"&&(
               <span style={{
