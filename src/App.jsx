@@ -3125,6 +3125,12 @@ export default function App(){
             ))}
           </div>
           <div style={{position:"relative"}}>
+            {/* Hint */}
+            {!showStandings&&(
+              <div style={{fontSize:10,color:"#444",marginBottom:8,textAlign:"center"}}>
+                💡 Tap <span style={{color:"#fcb900",fontWeight:700}}>📊 Standings</span> to see the Group {activeGroup} table
+              </div>
+            )}
             {/* Floating standings button */}
             <button onClick={()=>setShowStandings(p=>!p)} style={{
               position:"sticky",top:4,zIndex:50,float:"right",
