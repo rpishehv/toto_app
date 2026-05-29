@@ -8,6 +8,7 @@ import {
   sbGetLeaderboard, sbUpsertLeaderboard,
   sbGetSaveHistory, sbAddSaveHistory,
   sbGetAIContent, sbSaveAIContent,
+  sbGetMessages, sbSendMessage, sbDeleteMessage,
   sbUpdateRankHistory, sbGetRankHistory,
   sbGetReactions, sbToggleReaction,
   saveSession, getSession, clearSession,
@@ -722,12 +723,12 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
         </div>
       )}
       {showExperts&&<ExpertPanel home={match.home} away={match.away} data={expertData}/>}
-      <ReactionsBar matchId={match.id} userName={userName}/>
+      <ReactionsBar matchId={match.id} userName={userName} home={match.home} away={match.away}/>
     </div>
   );
 }
 
-function ReactionsBar({matchId, userName}) {
+function ReactionsBar({matchId, userName, home, away}) {
   const EMOJIS = ["🔥","😱","😂","👏","💔","🎯"];
   const [counts, setCounts] = useState({});
   const [mine, setMine] = useState(new Set());
@@ -750,7 +751,11 @@ function ReactionsBar({matchId, userName}) {
   },[matchId]);
 
   const toggle = async(emoji) => {
-    await sbToggleReaction(matchId, userName, emoji);
+    const added = await sbToggleReaction(matchId, userName, emoji);
+    // Echo to chat when adding (not removing) a reaction
+    if(added && home && away) {
+      await sbSendMessage('⚡', `${emoji} ${userName} reacted to ${home} vs ${away}`);
+    }
   };
 
   return(
@@ -1031,6 +1036,13 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
 
 export default function App(){
   const [tab,setTab]=useState("groups");
+  const handleTabChange = (id) => {
+    setTab(id);
+    if(id==="chat") {
+      setChatUnread(0);
+      setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
+    }
+  };
   const [userName,setUserName]=useState("");
   const [appError,setAppError]=useState(null);
   const [recentPoints,setRecentPoints]=useState(null); // points earned notification
@@ -1088,8 +1100,12 @@ export default function App(){
   const [generatingAI,setGeneratingAI]=useState(false);
   const [aiGenStatus,setAiGenStatus]=useState(null);
   const [showStandings,setShowStandings]=useState(false);
-  // Share card
-  const [showShareCard,setShowShareCard]=useState(false);
+  // Chat
+  const [chatMessages,setChatMessages]=useState([]);
+  const [chatInput,setChatInput]=useState("");
+  const [chatSending,setChatSending]=useState(false);
+  const [chatUnread,setChatUnread]=useState(0);
+  const chatBottomRef=React.useRef(null);
   // Rank history
   const [rankHistory,setRankHistory]=useState([]);
   // Reactions — matchId → { emoji → count, myEmojis: Set }
@@ -1196,6 +1212,18 @@ export default function App(){
       })
       .subscribe();
 
+    // Load chat + subscribe to new messages
+    sbGetMessages(50).then(msgs => setChatMessages(msgs));
+    const chatSub = supabase
+      .channel('chat_messages_changes')
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'chat_messages' }, payload=>{
+        setChatMessages(prev => [...prev, payload.new]);
+        setChatUnread(u => u + 1);
+        // Auto-scroll if already at bottom
+        setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
+      })
+      .subscribe();
+
     // Subscribe to leaderboard changes
     const lbSub = supabase
       .channel('leaderboard_changes')
@@ -1209,6 +1237,7 @@ export default function App(){
       supabase.removeChannel(resultsSub);
       supabase.removeChannel(lbSub);
       supabase.removeChannel(aiSub);
+      supabase.removeChannel(chatSub);
     };
   },[]);
 
@@ -2543,18 +2572,19 @@ export default function App(){
   }
 
   const TABS_ROW1=[
-    {id:"groups",   label:"⚽ Groups"},
-    {id:"knockout", label:"🏆 Knockout"},
-    {id:"champion", label:"👑 My Pick"},
-    {id:"scoring",  label:"📊 Scoring"},
-    {id:"leaderboard",label:"🥇 Board"},
+    {id:"groups",      label:"⚽", full:"⚽ Groups"},
+    {id:"knockout",    label:"🏆", full:"🏆 Knockout"},
+    {id:"champion",    label:"👑", full:"👑 My Pick"},
+    {id:"scoring",     label:"📊", full:"📊 Scoring"},
+    {id:"leaderboard", label:"🥇", full:"🥇 Board"},
   ];
   const TABS_ROW2=[
-    {id:"stats",    label:"📈 Stats"},
-    {id:"live",     label:"🔴 Live"},
-    {id:"ai",       label:"🤖 AI"},
-    {id:"admin",    label:"🔧 Admin"},
-    {id:"help",     label:"❓ Help"},
+    {id:"stats",  label:"📈", full:"📈 Stats"},
+    {id:"live",   label:"🔴", full:"🔴 Live"},
+    {id:"chat",   label:"💬", full:"💬 Chat"},
+    {id:"ai",     label:"🤖", full:"🤖 AI"},
+    {id:"admin",  label:"🔧", full:"🔧 Admin"},
+    {id:"help",   label:"❓", full:"❓ Help"},
   ];
   const TABS=[...TABS_ROW1,...TABS_ROW2];
 
@@ -2958,7 +2988,7 @@ export default function App(){
         background:"rgba(0,0,0,0.22)",overflowX:"auto",
         WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
         {TABS.map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{
+          <button key={t.id} onClick={()=>handleTabChange(t.id)} style={{
             flexShrink:0,
             padding: tab===t.id ? "10px 12px" : "10px 8px",
             background:"transparent",border:"none",
@@ -2967,8 +2997,17 @@ export default function App(){
             fontSize: tab===t.id ? 11 : 16,
             fontWeight:600,
             cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",whiteSpace:"nowrap",
+            position:"relative",
           }}>
             {tab===t.id ? t.full : t.label}
+            {t.id==="chat"&&chatUnread>0&&tab!=="chat"&&(
+              <span style={{
+                position:"absolute",top:4,right:-2,
+                background:"#ef4444",color:"#fff",borderRadius:"50%",
+                width:14,height:14,fontSize:8,fontWeight:700,
+                display:"flex",alignItems:"center",justifyContent:"center",
+              }}>{chatUnread>9?"9+":chatUnread}</span>
+            )}
           </button>
         ))}
       </div>
@@ -4830,6 +4869,171 @@ export default function App(){
             Powered by API-Football · Tap 🔄 Refresh to update · Free plan: 100 requests/day
           </div>
         </div>}
+
+        {/* ── CHAT ── */}
+        {tab==="chat"&&(()=>{
+          const sendMsg = async () => {
+            const msg = chatInput.trim();
+            if (!msg || chatSending) return;
+            setChatSending(true);
+            setChatInput("");
+            await sbSendMessage(userName, msg);
+            setChatSending(false);
+            setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
+          };
+          const handleKey = e => { if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendMsg(); } };
+          const formatTime = ts => {
+            const d = new Date(ts);
+            return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+          };
+          const formatDate = ts => {
+            const d = new Date(ts);
+            const today = new Date();
+            if(d.toDateString()===today.toDateString()) return "Today";
+            return d.toLocaleDateString([],{month:'short',day:'numeric'});
+          };
+
+          // Group messages by date
+          let lastDate = null;
+
+          return(
+            <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 220px)",minHeight:400}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:2,
+                  color:"#fcb900",margin:0}}>💬 Group Chat</h2>
+                <div style={{fontSize:10,color:"#444"}}>
+                  {leaderboard.length} players
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:4,marginLeft:"auto"}}>
+                  <div style={{width:6,height:6,borderRadius:"50%",background:"#22c55e"}}/>
+                  <span style={{fontSize:10,color:"#22c55e"}}>Live</span>
+                </div>
+              </div>
+
+              {/* Messages */}
+              <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",
+                padding:"4px 0",scrollbarWidth:"thin"}}>
+                {chatMessages.length===0&&(
+                  <div style={{textAlign:"center",padding:"40px 20px",color:"#333"}}>
+                    <div style={{fontSize:32,marginBottom:8}}>💬</div>
+                    <div style={{fontSize:13,fontWeight:600,color:"#444"}}>No messages yet</div>
+                    <div style={{fontSize:11,marginTop:4}}>Be the first to say something!</div>
+                  </div>
+                )}
+                {chatMessages.map((msg,i)=>{
+                  const isMe = msg.username === userName;
+                  const isSystem = msg.username === '⚡';
+                  const dateLabel = formatDate(msg.created_at);
+                  const showDate = dateLabel !== lastDate;
+                  lastDate = dateLabel;
+                  const prevMsg = chatMessages[i-1];
+                  const sameUser = prevMsg?.username===msg.username&&!showDate&&!isSystem;
+
+                  // System messages (reactions echo) — centered, subtle
+                  if(isSystem) return(
+                    <div key={msg.id||i}>
+                      {showDate&&(
+                        <div style={{textAlign:"center",margin:"12px 0 8px",
+                          fontSize:10,color:"#333",
+                          display:"flex",alignItems:"center",gap:8}}>
+                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.05)"}}/>
+                          {dateLabel}
+                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.05)"}}/>
+                        </div>
+                      )}
+                      <div style={{textAlign:"center",margin:"4px 0",fontSize:11,color:"#444"}}>
+                        {msg.message}
+                      </div>
+                    </div>
+                  );
+
+                  return(
+                    <div key={msg.id||i}>
+                      {showDate&&(
+                        <div style={{textAlign:"center",margin:"12px 0 8px",
+                          fontSize:10,color:"#333",
+                          display:"flex",alignItems:"center",gap:8}}>
+                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.05)"}}/>
+                          {dateLabel}
+                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.05)"}}/>
+                        </div>
+                      )}
+                      <div style={{
+                        display:"flex",flexDirection:"column",
+                        alignItems:isMe?"flex-end":"flex-start",
+                        marginBottom:sameUser?3:10,
+                        paddingLeft:isMe?40:0,
+                        paddingRight:isMe?0:40,
+                      }}>
+                        {!sameUser&&(
+                          <div style={{fontSize:9,color:"#555",marginBottom:3,
+                            paddingLeft:isMe?0:4,paddingRight:isMe?4:0}}>
+                            {isMe?"You":msg.username}
+                          </div>
+                        )}
+                        <div style={{
+                          maxWidth:"85%",padding:"8px 12px",borderRadius:12,
+                          borderBottomRightRadius:isMe?2:12,
+                          borderBottomLeftRadius:isMe?12:2,
+                          background:isMe
+                            ?"linear-gradient(135deg,rgba(252,185,0,0.25),rgba(252,185,0,0.15))"
+                            :"rgba(255,255,255,0.06)",
+                          border:isMe
+                            ?"1px solid rgba(252,185,0,0.3)"
+                            :"1px solid rgba(255,255,255,0.08)",
+                          wordBreak:"break-word",
+                        }}>
+                          <div style={{fontSize:13,color:isMe?"#fcb900":"#ddd",lineHeight:1.5}}>
+                            {msg.message}
+                          </div>
+                          <div style={{fontSize:9,color:"#444",marginTop:3,textAlign:"right"}}>
+                            {formatTime(msg.created_at)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={chatBottomRef}/>
+              </div>
+
+              {/* Input */}
+              <div style={{paddingTop:10,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
+                <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+                  <textarea
+                    value={chatInput}
+                    onChange={e=>setChatInput(e.target.value)}
+                    onKeyDown={handleKey}
+                    placeholder="Say something… (Enter to send)"
+                    rows={1}
+                    style={{
+                      flex:1,padding:"10px 14px",
+                      background:"rgba(255,255,255,0.05)",
+                      border:"1px solid rgba(255,255,255,0.12)",
+                      borderRadius:12,color:"#fff",fontSize:13,
+                      fontFamily:"inherit",outline:"none",
+                      resize:"none",lineHeight:1.5,maxHeight:100,
+                      overflowY:"auto",
+                    }}
+                  />
+                  <button onClick={sendMsg} disabled={!chatInput.trim()||chatSending} style={{
+                    padding:"10px 16px",
+                    background:chatInput.trim()?"#fcb900":"rgba(255,255,255,0.05)",
+                    border:"none",borderRadius:12,
+                    color:chatInput.trim()?"#000":"#333",
+                    fontWeight:700,fontSize:13,cursor:chatInput.trim()?"pointer":"default",
+                    fontFamily:"inherit",flexShrink:0,transition:"all 0.2s",
+                  }}>
+                    {chatSending?"…":"Send"}
+                  </button>
+                </div>
+                <div style={{fontSize:9,color:"#333",marginTop:5,textAlign:"center"}}>
+                  Messages visible to all players · Enter to send
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── AI ── */}
         {tab==="ai"&&<div>

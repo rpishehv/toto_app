@@ -94,3 +94,15 @@ alter table reactions enable row level security;
 create policy "Anyone can read reactions" on reactions for select using (true);
 create policy "Anyone can insert reactions" on reactions for insert with check (true);
 create policy "Anyone can delete own reactions" on reactions for delete using (true);
+
+-- Chat messages (global, real-time)
+create table if not exists chat_messages (
+  id uuid primary key default gen_random_uuid(),
+  username text not null,
+  message text not null,
+  created_at timestamptz default now()
+);
+alter table chat_messages enable row level security;
+create policy "Anyone can read chat" on chat_messages for select using (true);
+create policy "Anyone can insert chat" on chat_messages for insert with check (true);
+create policy "Anyone can delete own chat" on chat_messages for delete using (true);

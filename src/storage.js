@@ -173,6 +173,31 @@ export async function detectStorage() { return 'supabase'; }
 // Stores shared AI-generated content (bracket prediction, commentary)
 // Single row table — id=1 always
 
+// ─── CHAT ─────────────────────────────────────────────────────────────────────
+export async function sbGetMessages(limit=50) {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .select('*')
+    .order('created_at', { ascending: true })
+    .limit(limit);
+  if (error) console.error('sbGetMessages error:', error.message);
+  return data || [];
+}
+
+export async function sbSendMessage(username, message) {
+  const { error } = await supabase
+    .from('chat_messages')
+    .insert({ username, message: message.trim() });
+  if (error) console.error('sbSendMessage error:', error.message);
+  return !error;
+}
+
+export async function sbDeleteMessage(id) {
+  const { error } = await supabase
+    .from('chat_messages').delete().eq('id', id);
+  if (error) console.error('sbDeleteMessage error:', error.message);
+}
+
 // ─── RANK HISTORY ─────────────────────────────────────────────────────────────
 export async function sbUpdateRankHistory(username, rank, points) {
   const { data } = await supabase
