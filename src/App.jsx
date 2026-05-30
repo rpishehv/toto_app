@@ -743,7 +743,7 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
           )}
         </div>
       )}
-      {showExperts&&<ExpertPanel home={match.home} away={match.away} data={expertData}/>}
+      {showExperts&&<ExpertPanel home={match.home} away={match.away} data={expertData} onClose={()=>setShowExperts(false)}/>}
       <ReactionsBar matchId={match.id} userName={userName} home={match.home} away={match.away}/>
     </div>
   );
@@ -960,7 +960,7 @@ function ScoringBar(){
   );
 }
 
-function ExpertPanel({ home, away, data, loading }) {
+function ExpertPanel({ home, away, data, loading, onClose }) {
   if (loading) return (
     <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,
       background:"rgba(34,197,94,0.05)",border:"1px solid rgba(34,197,94,0.15)",
@@ -980,6 +980,11 @@ function ExpertPanel({ home, away, data, loading }) {
           <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#4ade80",marginLeft:"auto"}}>
             {data.likelyScore}
           </span>
+        )}
+        {onClose&&(
+          <button onClick={onClose} style={{padding:"3px 8px",background:"rgba(255,255,255,0.06)",
+            border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,color:"#555",
+            fontSize:11,cursor:"pointer",fontFamily:"inherit",lineHeight:1,marginLeft:data.likelyScore?0:"auto"}}>✕</button>
         )}
       </div>
       {data.sources?.length>0&&(
@@ -1094,7 +1099,7 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
         </div>
       )}
       {(showExperts||expertLoading)&&(
-        <ExpertPanel home={liveHome} away={liveAway} data={expertData} loading={expertLoading}/>
+        <ExpertPanel home={liveHome} away={liveAway} data={expertData} loading={expertLoading} onClose={()=>setShowExperts(false)}/>
       )}
       {showOdds&&(
         <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,
