@@ -15,27 +15,22 @@ export default async function handler(req) {
 
   const prompt = `Search the web for the latest FIFA World Cup 2026 news from today or the last 48 hours.
 
-Find 6-8 of the most important and interesting stories covering:
-- Team news, injuries, suspensions, lineup leaks
-- Match previews and predictions
-- Post-match reactions and analysis
-- Surprise results or upsets
-- Key player updates (form, fitness, controversy)
-- Tournament standings and qualification battles
+Find 6-8 of the most important stories covering injuries, team news, match previews, results, and player updates.
 
-Respond ONLY with a valid JSON array, no other text:
+You MUST respond with ONLY a valid JSON array — no introduction, no explanation, no markdown, just the raw JSON array starting with [ and ending with ]:
 [
   {
-    "headline": "<punchy headline, max 80 chars>",
-    "summary": "<2-3 sentence summary of the story>",
-    "category": "<one of: Injury | Team News | Match Preview | Match Report | Analysis | Transfer | Standings>",
-    "team": "<main team involved, or 'General' if multiple>",
-    "source": "<publication name e.g. BBC Sport, ESPN, Sky Sports>",
-    "urgent": <true if breaking/very recent, false otherwise>
+    "headline": "punchy headline under 80 chars",
+    "summary": "2-3 sentence summary of the story",
+    "category": "Injury",
+    "team": "team name or General",
+    "source": "BBC Sport",
+    "urgent": false
   }
 ]
 
-Focus on stories that would help someone making match predictions. Be specific — name players, scores, dates.`;
+Category must be one of: Injury, Team News, Match Preview, Match Report, Analysis, Transfer, Standings
+urgent is true only for breaking news from the last few hours.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -56,21 +51,48 @@ Focus on stories that would help someone making match predictions. Be specific �
 
     if (!response.ok) {
       const err = await response.text();
-      return new Response(JSON.stringify({ error: err }), { status: 500 });
+      return new Response(JSON.stringify({ error: `API error: ${err}` }), { status: 500 });
     }
 
     const data = await response.json();
-    const text = data.content
-      ?.filter(b => b.type === 'text')
-      ?.map(b => b.text)
-      ?.join('') || '';
 
-    const match = text.match(/\[[\s\S]*\]/);
-    if (!match) {
-      return new Response(JSON.stringify({ error: 'No JSON array in response', raw: text }), { status: 500 });
+    // Extract all text blocks (web search returns tool_use + text blocks)
+    const textBlocks = data.content?.filter(b => b.type === 'text') || [];
+    const text = textBlocks.map(b => b.text).join('');
+
+    if (!text) {
+      return new Response(JSON.stringify({
+        error: 'No text in response',
+        blockTypes: data.content?.map(b => b.type),
+      }), { status: 500 });
     }
 
-    const stories = JSON.parse(match[0]);
+    // Try to extract JSON array - handle ```json fences and bare arrays
+    let jsonStr = null;
+
+    // Try fenced code block first
+    const fenced = text.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+    if (fenced) jsonStr = fenced[1];
+
+    // Try bare array
+    if (!jsonStr) {
+      const bare = text.match(/\[[\s\S]*\]/);
+      if (bare) jsonStr = bare[0];
+    }
+
+    if (!jsonStr) {
+      return new Response(JSON.stringify({
+        error: 'No JSON array found',
+        raw: text.slice(0, 500),
+      }), { status: 500 });
+    }
+
+    const stories = JSON.parse(jsonStr);
+
+    if (!Array.isArray(stories) || stories.length === 0) {
+      return new Response(JSON.stringify({ error: 'Empty or invalid stories array' }), { status: 500 });
+    }
+
     return new Response(JSON.stringify({ stories, fetchedAt: new Date().toISOString() }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

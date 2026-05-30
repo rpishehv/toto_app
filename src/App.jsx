@@ -1248,6 +1248,7 @@ export default function App(){
   const [newsCooldown,setNewsCooldown]=useState(0);
   const newsTimerRef=React.useRef(null);
   const NEWS_COOLDOWN_SECS=900;
+  const [newsError,setNewsError]=useState(null);
   // Share card
   const [showShareCard,setShowShareCard]=useState(false);
   // Rank history
@@ -1610,23 +1611,30 @@ export default function App(){
   const fetchNews = async () => {
     if(newsFetching||newsCooldown>0) return;
     setNewsFetching(true);
+    setNewsError(null);
     try {
       const res = await fetch('/api/news', { method:'POST',
         headers:{'Content-Type':'application/json'}, body: JSON.stringify({}) });
       const data = await res.json();
-      if(data.stories?.length) {
+      if(data.error) {
+        setNewsError(data.error + (data.raw ? ` — ${data.raw}` : ''));
+      } else if(data.stories?.length) {
         setNewsStories(data.stories);
         setNewsUpdatedBy(userName);
         setNewsUpdatedAt(new Date().toISOString());
         await sbSaveNews(data.stories, userName);
-        // Start cooldown
         setNewsCooldown(NEWS_COOLDOWN_SECS);
         clearInterval(newsTimerRef.current);
         newsTimerRef.current = setInterval(()=>{
           setNewsCooldown(c=>{ if(c<=1){ clearInterval(newsTimerRef.current); return 0; } return c-1; });
         }, 1000);
+      } else {
+        setNewsError('No stories returned — try again');
       }
-    } catch(e) { console.error('News fetch error:', e); }
+    } catch(e) {
+      setNewsError(e.message);
+      console.error('News fetch error:', e);
+    }
     setNewsFetching(false);
   };
 
@@ -5346,6 +5354,15 @@ export default function App(){
                   </button>
                 </div>
               </div>
+
+              {/* Error state */}
+              {newsError&&(
+                <div style={{marginBottom:12,padding:"10px 14px",borderRadius:8,
+                  background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",
+                  fontSize:11,color:"#fca5a5"}}>
+                  ⚠️ {newsError}
+                </div>
+              )}
 
               {/* Empty state */}
               {newsStories.length===0&&!newsFetching&&(
