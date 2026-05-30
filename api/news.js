@@ -13,24 +13,16 @@ export default async function handler(req) {
     return new Response(JSON.stringify({ error: 'API key not configured' }), { status: 500 });
   }
 
-  const prompt = `Search the web for the latest FIFA World Cup 2026 news from today or the last 48 hours.
+  const prompt = `Search the web for the latest FIFA World Cup 2026 news from the last 48 hours.
 
-Find 6-8 of the most important stories covering injuries, team news, match previews, results, and player updates.
+After searching, return ONLY a JSON array. No intro text, no markdown fences, no explanation. Start your response with [ and end with ].
 
-You MUST respond with ONLY a valid JSON array — no introduction, no explanation, no markdown, just the raw JSON array starting with [ and ending with ]:
-[
-  {
-    "headline": "punchy headline under 80 chars",
-    "summary": "2-3 sentence summary of the story",
-    "category": "Injury",
-    "team": "team name or General",
-    "source": "BBC Sport",
-    "urgent": false
-  }
-]
+Return 6-8 stories in this exact format:
+[{"headline":"...","summary":"...","category":"...","team":"...","source":"...","urgent":false}]
 
-Category must be one of: Injury, Team News, Match Preview, Match Report, Analysis, Transfer, Standings
-urgent is true only for breaking news from the last few hours.`;
+category must be one of: Injury, Team News, Match Preview, Match Report, Analysis, Transfer, Standings
+urgent is true only for breaking news from the last few hours
+headline max 80 chars, summary 2-3 sentences`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -51,49 +43,68 @@ urgent is true only for breaking news from the last few hours.`;
 
     if (!response.ok) {
       const err = await response.text();
-      return new Response(JSON.stringify({ error: `API error: ${err}` }), { status: 500 });
+      return new Response(JSON.stringify({ error: `API error: ${err.slice(0,200)}` }), { status: 500 });
     }
 
     const data = await response.json();
 
-    // Extract all text blocks (web search returns tool_use + text blocks)
-    const textBlocks = data.content?.filter(b => b.type === 'text') || [];
-    const text = textBlocks.map(b => b.text).join('');
+    // Collect all text from text blocks
+    const text = (data.content || [])
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('');
 
     if (!text) {
+      const blockTypes = (data.content || []).map(b => b.type).join(', ');
       return new Response(JSON.stringify({
-        error: 'No text in response',
-        blockTypes: data.content?.map(b => b.type),
+        error: `No text block in response. Block types: ${blockTypes}`,
       }), { status: 500 });
     }
 
-    // Try to extract JSON array - handle ```json fences and bare arrays
-    let jsonStr = null;
+    // Strip markdown fences if present
+    let cleaned = text
+      .replace(/```json\s*/gi, '')
+      .replace(/```\s*/g, '')
+      .trim();
 
-    // Try fenced code block first
-    const fenced = text.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
-    if (fenced) jsonStr = fenced[1];
+    // Find the JSON array — from first [ to last ]
+    const start = cleaned.indexOf('[');
+    const end = cleaned.lastIndexOf(']');
 
-    // Try bare array
-    if (!jsonStr) {
-      const bare = text.match(/\[[\s\S]*\]/);
-      if (bare) jsonStr = bare[0];
-    }
-
-    if (!jsonStr) {
+    if (start === -1 || end === -1 || end <= start) {
       return new Response(JSON.stringify({
-        error: 'No JSON array found',
-        raw: text.slice(0, 500),
+        error: 'No JSON array found in response',
+        raw: text.slice(0, 300),
       }), { status: 500 });
     }
 
-    const stories = JSON.parse(jsonStr);
+    const jsonStr = cleaned.slice(start, end + 1);
+
+    let stories;
+    try {
+      stories = JSON.parse(jsonStr);
+    } catch(parseErr) {
+      return new Response(JSON.stringify({
+        error: `JSON parse failed: ${parseErr.message}`,
+        raw: jsonStr.slice(0, 300),
+      }), { status: 500 });
+    }
 
     if (!Array.isArray(stories) || stories.length === 0) {
-      return new Response(JSON.stringify({ error: 'Empty or invalid stories array' }), { status: 500 });
+      return new Response(JSON.stringify({ error: 'Empty stories array' }), { status: 500 });
     }
 
-    return new Response(JSON.stringify({ stories, fetchedAt: new Date().toISOString() }), {
+    // Sanitise each story
+    const safe = stories.map(s => ({
+      headline: String(s.headline || '').slice(0, 100),
+      summary:  String(s.summary  || ''),
+      category: String(s.category || 'General'),
+      team:     String(s.team     || 'General'),
+      source:   String(s.source   || ''),
+      urgent:   Boolean(s.urgent),
+    }));
+
+    return new Response(JSON.stringify({ stories: safe, fetchedAt: new Date().toISOString() }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
