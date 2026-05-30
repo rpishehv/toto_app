@@ -6030,6 +6030,47 @@ export default function App(){
                     </div>
                   </div>
                 )}
+
+                {/* WhatsApp Reminder Button */}
+                {(()=>{
+                  const total = leaderboard.length;
+                  const withPreds = leaderboard.filter(e=>e.points>0).length;
+                  const missing = leaderboard.filter(e=>e.points===0).map(e=>e.username);
+                  const daysToKickoff = Math.max(0, Math.ceil((new Date('2026-06-11T17:00:00Z') - new Date()) / 86400000));
+                  const missingStr = missing.length > 0
+                    ? `\n⚠️ Still waiting on: ${missing.join(', ')}`
+                    : '\n✅ Everyone has predicted!';
+                  const msg = [
+                    `⚽ FIFA 2026 Predictions Reminder!`,
+                    ``,
+                    `📊 ${withPreds}/${total} players have saved predictions`,
+                    missingStr,
+                    ``,
+                    daysToKickoff > 0
+                      ? `⏱ Tournament kicks off in ${daysToKickoff} day${daysToKickoff!==1?'s':''}!`
+                      : `🔴 Tournament has started — predictions are locking!`,
+                    ``,
+                    `👉 Fill yours now: https://toto-app-oqdi.vercel.app`,
+                  ].join('\n');
+
+                  const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                  return(
+                    <a href={waUrl} target="_blank" rel="noopener noreferrer" style={{
+                      display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                      marginTop:10,padding:"11px",borderRadius:8,
+                      background:"linear-gradient(135deg,rgba(37,211,102,0.15),rgba(18,140,126,0.15))",
+                      border:"1px solid rgba(37,211,102,0.35)",
+                      color:"#25d366",fontSize:13,fontWeight:700,
+                      textDecoration:"none",
+                    }}>
+                      <span style={{fontSize:16}}>📱</span>
+                      Send WhatsApp Reminder
+                      <span style={{fontSize:11,color:"#166534",fontWeight:400}}>
+                        ({withPreds}/{total} predicted)
+                      </span>
+                    </a>
+                  );
+                })()}
               </div>
 
               {/* User Management — PIN Reset */}
