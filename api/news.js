@@ -1,16 +1,17 @@
-// api/news.js — Vercel serverless function
+// api/news.js — Vercel serverless function (Node.js runtime for longer timeout)
 // Fetches latest World Cup 2026 news using Claude web search
 
-export const config = { runtime: 'edge' };
+// Node.js runtime allows up to 60s — needed for web search
+export const config = { maxDuration: 60 };
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'API key not configured' }), { status: 500 });
+    return res.status(500).json({ error: 'API key not configured' });
   }
 
   const prompt = `Search the web for the latest FIFA World Cup 2026 news from the last 48 hours.
@@ -43,12 +44,11 @@ headline max 80 chars, summary 2-3 sentences`;
 
     if (!response.ok) {
       const err = await response.text();
-      return new Response(JSON.stringify({ error: `API error: ${err.slice(0,200)}` }), { status: 500 });
+      return res.status(500).json({ error: `API error: ${err.slice(0, 200)}` });
     }
 
     const data = await response.json();
 
-    // Collect all text from text blocks
     const text = (data.content || [])
       .filter(b => b.type === 'text')
       .map(b => b.text)
@@ -56,45 +56,28 @@ headline max 80 chars, summary 2-3 sentences`;
 
     if (!text) {
       const blockTypes = (data.content || []).map(b => b.type).join(', ');
-      return new Response(JSON.stringify({
-        error: `No text block in response. Block types: ${blockTypes}`,
-      }), { status: 500 });
+      return res.status(500).json({ error: `No text block. Block types: ${blockTypes}` });
     }
 
-    // Strip markdown fences if present
-    let cleaned = text
-      .replace(/```json\s*/gi, '')
-      .replace(/```\s*/g, '')
-      .trim();
-
-    // Find the JSON array — from first [ to last ]
+    let cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
     const start = cleaned.indexOf('[');
     const end = cleaned.lastIndexOf(']');
 
     if (start === -1 || end === -1 || end <= start) {
-      return new Response(JSON.stringify({
-        error: 'No JSON array found in response',
-        raw: text.slice(0, 300),
-      }), { status: 500 });
+      return res.status(500).json({ error: 'No JSON array found', raw: text.slice(0, 300) });
     }
-
-    const jsonStr = cleaned.slice(start, end + 1);
 
     let stories;
     try {
-      stories = JSON.parse(jsonStr);
-    } catch(parseErr) {
-      return new Response(JSON.stringify({
-        error: `JSON parse failed: ${parseErr.message}`,
-        raw: jsonStr.slice(0, 300),
-      }), { status: 500 });
+      stories = JSON.parse(cleaned.slice(start, end + 1));
+    } catch(e) {
+      return res.status(500).json({ error: `Parse failed: ${e.message}`, raw: cleaned.slice(start, start+300) });
     }
 
     if (!Array.isArray(stories) || stories.length === 0) {
-      return new Response(JSON.stringify({ error: 'Empty stories array' }), { status: 500 });
+      return res.status(500).json({ error: 'Empty stories array' });
     }
 
-    // Sanitise each story
     const safe = stories.map(s => ({
       headline: String(s.headline || '').slice(0, 100),
       summary:  String(s.summary  || ''),
@@ -104,12 +87,9 @@ headline max 80 chars, summary 2-3 sentences`;
       urgent:   Boolean(s.urgent),
     }));
 
-    return new Response(JSON.stringify({ stories: safe, fetchedAt: new Date().toISOString() }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json({ stories: safe, fetchedAt: new Date().toISOString() });
 
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+    return res.status(500).json({ error: e.message });
   }
 }
