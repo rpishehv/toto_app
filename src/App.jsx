@@ -945,7 +945,7 @@ function ScoringBar(){
       <span style={{fontSize:11,fontWeight:700,color:"#fcb900",marginRight:2}}>📋 Scoring:</span>
       {[
         {pts:100,text:"1st place",color:"#f59e0b",icon:"🥇"},
-        {pts:50,text:"2nd place",color:"#aaa",icon:"🥈"},
+        {pts:50,text:"2nd place",color:"#c0c0c0",icon:"🥈"},
         {pts:25,text:"3rd place",color:"#cd7f32",icon:"🥉"},
         {pts:6,text:"Exact score",color:"#22c55e",icon:"⭐"},
         {pts:4,text:"Correct GD",color:"#fcb900",icon:"📐"},
@@ -2904,7 +2904,7 @@ export default function App(){
               textAlign:"center",letterSpacing:1,marginBottom:10}}>
               Fill In Your Predictions!
             </div>
-            <div style={{fontSize:13,color:"#aaa",lineHeight:1.7,marginBottom:8,textAlign:"center"}}>
+            <div style={{fontSize:13,color:"#c0c0c0",lineHeight:1.7,marginBottom:8,textAlign:"center"}}>
               You've predicted{" "}
               <strong style={{color:"#fff"}}>
                 {matches.filter(m=>m.homeScore!==null).length}/{ALL_MATCHES.length}
@@ -3016,7 +3016,7 @@ export default function App(){
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:"#ef4444",marginBottom:10}}>
               Reset My Predictions?
             </div>
-            <div style={{fontSize:13,color:"#aaa",marginBottom:8,lineHeight:1.6}}>
+            <div style={{fontSize:13,color:"#c0c0c0",marginBottom:8,lineHeight:1.6}}>
               This will clear <strong style={{color:"#fff"}}>all your score predictions</strong> and <strong style={{color:"#fff"}}>podium picks</strong> back to blank.
             </div>
             <div style={{background:"rgba(239,68,68,0.07)",border:"1px solid rgba(239,68,68,0.2)",
@@ -3293,7 +3293,7 @@ export default function App(){
           <div style={{
             background:"rgba(239,68,68,0.07)",border:"1px solid rgba(239,68,68,0.2)",
             borderRadius:10,padding:"9px 14px",marginBottom:18,
-            fontSize:11,color:"#aaa",display:"flex",alignItems:"center",gap:8,
+            fontSize:11,color:"#c0c0c0",display:"flex",alignItems:"center",gap:8,
           }}>
             <span style={{fontSize:14}}>🔒</span>
             <span>
@@ -3381,9 +3381,9 @@ export default function App(){
             <div style={{marginBottom:4}}>
               <span style={{color:"#fcb900",fontWeight:700}}>How it works:</span>
             </div>
-            <div>🔧 <strong style={{color:"#aaa"}}>Admin fills team names</strong> — after the group stage, the admin uses ⚡ Fill R32 to populate teams from actual standings, then enters scores round by round.</div>
-            <div style={{marginTop:4}}>✏️ <strong style={{color:"#aaa"}}>You predict the scores</strong> for each match once teams are known. You can also type any team name manually to override.</div>
-            <div style={{marginTop:4}}>↺ <strong style={{color:"#aaa"}}>Reset to TBD</strong> clears all team names so the admin can repopulate cleanly.</div>
+            <div>🔧 <strong style={{color:"#c0c0c0"}}>Admin fills team names</strong> — after the group stage, the admin uses ⚡ Fill R32 to populate teams from actual standings, then enters scores round by round.</div>
+            <div style={{marginTop:4}}>✏️ <strong style={{color:"#c0c0c0"}}>You predict the scores</strong> for each match once teams are known. You can also type any team name manually to override.</div>
+            <div style={{marginTop:4}}>↺ <strong style={{color:"#c0c0c0"}}>Reset to TBD</strong> clears all team names so the admin can repopulate cleanly.</div>
           </div>
           {KO_ROUNDS.map(round=>{
             const rM=knockout.filter(m=>m.round===round);
@@ -3447,13 +3447,13 @@ export default function App(){
                             onChange={e=>upKO({...m,home:e.target.value||"TBD"})}
                             style={{flex:1,background:"transparent",border:"none",
                               borderBottom:"1px solid rgba(255,255,255,0.10)",
-                              color:"#aaa",fontSize:11,padding:"4px 0",outline:"none",fontFamily:"inherit"}}/>
+                              color:"#c0c0c0",fontSize:11,padding:"4px 0",outline:"none",fontFamily:"inherit"}}/>
                           <span style={{color:"#333",fontSize:10}}>vs</span>
                           <input value={m.away==="TBD"?"":m.away} placeholder="✏️ Team 2…"
                             onChange={e=>upKO({...m,away:e.target.value||"TBD"})}
                             style={{flex:1,textAlign:"right",background:"transparent",border:"none",
                               borderBottom:"1px solid rgba(255,255,255,0.10)",
-                              color:"#aaa",fontSize:11,padding:"4px 0",outline:"none",fontFamily:"inherit"}}/>
+                              color:"#c0c0c0",fontSize:11,padding:"4px 0",outline:"none",fontFamily:"inherit"}}/>
                         </div>
                       )}
                       {/* AI + Polymarket buttons for KO matches */}
@@ -3476,7 +3476,7 @@ export default function App(){
           const allTeams = Object.values(GROUPS).flat();
           const places = [
             {key:"first",  label:"1st Place 🥇", pts:100, color:"#f59e0b", actual:actualPodium?.first},
-            {key:"second", label:"2nd Place 🥈", pts:50,  color:"#aaa",    actual:actualPodium?.second},
+            {key:"second", label:"2nd Place 🥈", pts:50,  color:"#c0c0c0",    actual:actualPodium?.second},
             {key:"third",  label:"3rd Place 🥉", pts:25,  color:"#cd7f32", actual:actualPodium?.third},
           ];
 
@@ -3513,7 +3513,7 @@ export default function App(){
                   <div style={{display:"flex",gap:10,marginBottom:8}}>
                     {[
                       {place:"first", label:"🥇", color:"#f59e0b"},
-                      {place:"second",label:"🥈", color:"#aaa"},
+                      {place:"second",label:"🥈", color:"#c0c0c0"},
                       {place:"third", label:"🥉", color:"#cd7f32"},
                     ].map(p=>(
                       <div key={p.place} style={{
@@ -3732,7 +3732,7 @@ export default function App(){
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:20}}>
             {[
               {pts:100,label:"1st Place",icon:"🥇",desc:"Correct champion",         color:"#f59e0b"},
-              {pts:50, label:"2nd Place",icon:"🥈",desc:"Correct runner-up",        color:"#aaa"},
+              {pts:50, label:"2nd Place",icon:"🥈",desc:"Correct runner-up",        color:"#c0c0c0"},
               {pts:25, label:"3rd Place",icon:"🥉",desc:"Correct 3rd place playoff",color:"#cd7f32"},
             ].map(r=>(
               <div key={r.pts} style={{
@@ -3776,7 +3776,7 @@ export default function App(){
             <div style={{fontSize:11,color:"#555",marginBottom:10}}>🏆 Podium Picks</div>
             {[
               {key:"first", label:"🥇 1st Place", pts:100, color:"#f59e0b"},
-              {key:"second",label:"🥈 2nd Place", pts:50,  color:"#aaa"},
+              {key:"second",label:"🥈 2nd Place", pts:50,  color:"#c0c0c0"},
               {key:"third", label:"🥉 3rd Place", pts:25,  color:"#cd7f32"},
             ].map(place=>{
               const myPick   = podium?.[place.key];
@@ -3858,7 +3858,7 @@ export default function App(){
                     background:isMe?"rgba(252,185,0,0.07)":"rgba(255,255,255,0.03)",
                     border:`1px solid ${isMe?"rgba(252,185,0,0.25)":"rgba(255,255,255,0.06)"}`}}>
                     <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,width:28,textAlign:"center",
-                      color:i===0?"#fcb900":i===1?"#aaa":i===2?"#cd7f32":"#333"}}>{medal||i+1}</span>
+                      color:i===0?"#fcb900":i===1?"#c0c0c0":i===2?"#cd7f32":"#333"}}>{medal||i+1}</span>
                     <div style={{flex:1}}>
                       <div style={{fontWeight:700,fontSize:13}}>
                         {entry.username}{isMe&&<span style={{color:"#fcb900",fontSize:10,marginLeft:6}}>(you)</span>}
@@ -3878,7 +3878,7 @@ export default function App(){
                       }}>👁 View</button>
                     )}
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,
-                      color:i===0?"#fcb900":i===1?"#aaa":i===2?"#cd7f32":"#555"}}>
+                      color:i===0?"#fcb900":i===1?"#c0c0c0":i===2?"#cd7f32":"#555"}}>
                       {entry.points||0} <span style={{fontSize:12,color:"#333"}}>pts</span>
                     </div>
                   </div>
@@ -4020,7 +4020,7 @@ export default function App(){
                       <div style={{display:"flex",gap:8}}>
                         {[
                           {key:"first", label:"🥇",pts:100,color:"#f59e0b",actual:actualPodium?.first},
-                          {key:"second",label:"🥈",pts:50, color:"#aaa",   actual:actualPodium?.second},
+                          {key:"second",label:"🥈",pts:50, color:"#c0c0c0",   actual:actualPodium?.second},
                           {key:"third", label:"🥉",pts:25, color:"#cd7f32",actual:actualPodium?.third},
                         ].map(place=>{
                           const pick = p.podium[place.key];
@@ -4064,7 +4064,7 @@ export default function App(){
                             {/* Predicted */}
                             <div style={{textAlign:"center",minWidth:50}}>
                               <div style={{fontSize:10,color:"#444",marginBottom:1}}>pred</div>
-                              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"#aaa",letterSpacing:1}}>
+                              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"#c0c0c0",letterSpacing:1}}>
                                 {pred.homeScore}–{pred.awayScore}
                               </div>
                             </div>
@@ -4106,7 +4106,7 @@ export default function App(){
                                 <span style={{fontSize:11,flex:1,fontWeight:600}}>{actual.home}</span>
                                 <div style={{textAlign:"center",minWidth:50}}>
                                   <div style={{fontSize:10,color:"#444",marginBottom:1}}>pred</div>
-                                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"#aaa",letterSpacing:1}}>
+                                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"#c0c0c0",letterSpacing:1}}>
                                     {pred.homeScore}–{pred.awayScore}
                                   </div>
                                 </div>
@@ -4216,7 +4216,7 @@ export default function App(){
                   {/* Overview row */}
                   <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
                     <StatBox value={myPts} label="Total Pts" color="#fcb900"/>
-                    <StatBox value={`#${myRank}`} label="Rank" color={myRank===1?"#fcb900":myRank===2?"#aaa":myRank===3?"#cd7f32":"#60a5fa"}/>
+                    <StatBox value={`#${myRank}`} label="Rank" color={myRank===1?"#fcb900":myRank===2?"#c0c0c0":myRank===3?"#cd7f32":"#60a5fa"}/>
                     <StatBox value={`${accuracy}%`} label="Accuracy" color="#22c55e"/>
                     <StatBox value={total} label="Predicted"/>
                   </div>
@@ -4411,7 +4411,7 @@ export default function App(){
 
                     const places = [
                       {key:'first',  label:'🥇 1st Place', color:'#f59e0b', pts:100},
-                      {key:'second', label:'🥈 2nd Place', color:'#aaa',    pts:50},
+                      {key:'second', label:'🥈 2nd Place', color:'#c0c0c0',    pts:50},
                       {key:'third',  label:'🥉 3rd Place', color:'#cd7f32', pts:25},
                     ];
 
@@ -4713,7 +4713,7 @@ export default function App(){
                           border:`1px solid ${result?.color||"rgba(255,255,255,0.06)"}25`,borderRadius:8}}>
                           <div style={{fontSize:10,color:"#555",marginBottom:4}}>Your prediction</div>
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
-                            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#aaa"}}>{pred.homeScore}–{pred.awayScore}</span>
+                            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#c0c0c0"}}>{pred.homeScore}–{pred.awayScore}</span>
                             {result&&<span style={{fontSize:11,color:result.color,fontWeight:700}}>{result.label} {result.points>0?`+${result.points}pts`:""}</span>}
                           </div>
                         </div>
@@ -5512,7 +5512,7 @@ export default function App(){
                 <div style={{display:"flex",gap:8,marginBottom:14}}>
                   {[
                     {label:"🥇 Champion",team:bracketPred.champion,color:"#f59e0b"},
-                    {label:"🥈 Runner-up",team:bracketPred.runnerUp,color:"#aaa"},
+                    {label:"🥈 Runner-up",team:bracketPred.runnerUp,color:"#c0c0c0"},
                     {label:"🥉 3rd Place",team:bracketPred.thirdPlace,color:"#cd7f32"},
                   ].map((p,i)=>(
                     <div key={i} style={{flex:1,textAlign:"center",
@@ -5866,7 +5866,7 @@ export default function App(){
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:"#ef4444",marginBottom:10}}>
                       Reset All Results?
                     </div>
-                    <div style={{fontSize:13,color:"#aaa",marginBottom:8,lineHeight:1.6}}>
+                    <div style={{fontSize:13,color:"#c0c0c0",marginBottom:8,lineHeight:1.6}}>
                       Clears <strong style={{color:"#fff"}}>all scores</strong>, <strong style={{color:"#fff"}}>knockout teams</strong>, and <strong style={{color:"#fff"}}>podium</strong> back to blank for everyone.
                     </div>
                     <div style={{background:"rgba(239,68,68,0.07)",border:"1px solid rgba(239,68,68,0.2)",
@@ -5898,7 +5898,7 @@ export default function App(){
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#ef4444",marginBottom:10}}>
                       Confirm Rollback
                     </div>
-                    <div style={{fontSize:13,color:"#aaa",marginBottom:6}}>Restore results from:</div>
+                    <div style={{fontSize:13,color:"#c0c0c0",marginBottom:6}}>Restore results from:</div>
                     <div style={{background:"rgba(239,68,68,0.07)",border:"1px solid rgba(239,68,68,0.2)",
                       borderRadius:8,padding:"10px 14px",marginBottom:8}}>
                       <div style={{fontWeight:700,color:"#fff",fontSize:13}}>{rollbackTarget.label}</div>
