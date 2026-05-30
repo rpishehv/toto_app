@@ -395,7 +395,7 @@ function calcMatchPoints(pred, actual) {
   const actOut  = ah>aa?"W":ah<aa?"L":"D";
   const correctOut = predOut===actOut;
   if (exact)      return {points:6,label:"Exact score ⭐",     color:"#22c55e"};
-  if (correctGD)  return {points:3,label:"Correct goal diff 📐",color:"#fcb900"};
+  if (correctGD)  return {points:4,label:"Correct goal diff 📐",color:"#fcb900"};
   if (correctOut) return {points:2,label:"Correct outcome ✓",  color:"#60a5fa"};
   return            {points:0,label:"No points",               color:"#ef4444"};
 }
@@ -3585,11 +3585,11 @@ export default function App(){
           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,letterSpacing:1,color:"#888",marginBottom:10}}>⚽ MATCH PREDICTIONS</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:8}}>
             {[
-              {pts:6, label:"Exact Score (win)", icon:"⭐",desc:"Correct scoreline, non-draw",   color:"#22c55e",ex:"Pred 2-1 / Actual 2-1"},
-              {pts:6, label:"Exact Score (draw)",icon:"⭐",desc:"Correct draw scoreline",         color:"#22c55e",ex:"Pred 1-1 / Actual 1-1"},
-              {pts:3, label:"Correct GD",        icon:"📐",desc:"Right goal difference, wrong score",color:"#fcb900",ex:"Pred 3-2 / Actual 2-1"},
-              {pts:2, label:"Correct Winner",    icon:"✓", desc:"Right outcome, wrong score/GD", color:"#60a5fa",ex:"Pred 3-1 / Actual 2-1"},
-              {pts:2, label:"Draw Predicted",    icon:"✓", desc:"Draw correct, wrong score",     color:"#60a5fa",ex:"Pred 2-2 / Actual 1-1"},
+              {pts:6, label:"Exact Score (win)", icon:"⭐",desc:"Correct scoreline, non-draw",        color:"#22c55e",ex:"Pred 2-1 / Actual 2-1"},
+              {pts:6, label:"Exact Score (draw)",icon:"⭐",desc:"Correct draw scoreline",              color:"#22c55e",ex:"Pred 1-1 / Actual 1-1"},
+              {pts:4, label:"Correct GD",        icon:"📐",desc:"Right goal difference, wrong scores", color:"#fcb900",ex:"Pred 3-2 / Actual 2-1"},
+              {pts:2, label:"Correct Winner",    icon:"✓", desc:"Right outcome, wrong score/GD",      color:"#60a5fa",ex:"Pred 3-1 / Actual 2-1"},
+              {pts:2, label:"Draw Predicted",    icon:"✓", desc:"Draw correct, wrong score",          color:"#60a5fa",ex:"Pred 2-2 / Actual 1-1"},
             ].map((r,i)=>(
               <div key={i} style={{
                 background:`${r.color}0e`,border:`1px solid ${r.color}30`,
@@ -4046,7 +4046,7 @@ export default function App(){
           }).filter(Boolean);
 
           const exact   = myResults.filter(r=>r.points===6).length;
-          const gd      = myResults.filter(r=>r.points===3).length;
+          const gd      = myResults.filter(r=>r.points===4).length;
           const outcome = myResults.filter(r=>r.points===2).length;
           const wrong   = myResults.filter(r=>r.points===0).length;
           const total   = myResults.length;
@@ -6118,7 +6118,7 @@ export default function App(){
               icon:"📊", title:"Scoring Rules",
               items:[
                 ["Exact score","Predicted the precise scoreline → 6 pts"],
-                ["Correct goal difference","Right margin, wrong scores (e.g. predicted 3-2, actual 2-1) → 3 pts"],
+                ["Correct goal difference","Right margin, wrong scores (e.g. predicted 3-2, actual 2-1) → 4 pts"],
                 ["Correct outcome only","Right winner or draw, wrong everything else → 2 pts"],
                 ["Wrong prediction","None of the above → 0 pts"],
                 ["Podium bonus","🥇 Champion = 100 pts · 🥈 Runner-up = 50 pts · 🥉 3rd place = 25 pts"],
