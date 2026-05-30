@@ -18,6 +18,7 @@ import {
 import { fetchLiveFeed, parseFeed, applyFeedToState } from './liveFeed.js';
 import GROUP_INSIGHTS from './insights.js';
 import EXPERT_PREDICTIONS from './experts.js';
+import GROUP_AI_PREDICTIONS from './groupPredictions.js';
 
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
@@ -542,19 +543,26 @@ const DEFAULT_AI_PREDICTIONS = {
 };
 
 function getAIPrediction(home, away, livePreds) {
-  // Check group stage insights first
-  const insightKey = `${home}||${away}`;
-  const insightKeyRev = `${away}||${home}`;
-  const groupInsight = GROUP_INSIGHTS[insightKey] || (GROUP_INSIGHTS[insightKeyRev] ? {
-    ...GROUP_INSIGHTS[insightKeyRev], h: GROUP_INSIGHTS[insightKeyRev].a, a: GROUP_INSIGHTS[insightKeyRev].h
+  const key = `${home}||${away}`;
+  const keyRev = `${away}||${home}`;
+
+  // 1. Check new Claude Sonnet group predictions first
+  const groupAI = GROUP_AI_PREDICTIONS[key] || (GROUP_AI_PREDICTIONS[keyRev] ? {
+    ...GROUP_AI_PREDICTIONS[keyRev], h: GROUP_AI_PREDICTIONS[keyRev].a, a: GROUP_AI_PREDICTIONS[keyRev].h
+  } : null);
+  if (groupAI) return groupAI;
+
+  // 2. Fall back to legacy GROUP_INSIGHTS
+  const groupInsight = GROUP_INSIGHTS[key] || (GROUP_INSIGHTS[keyRev] ? {
+    ...GROUP_INSIGHTS[keyRev], h: GROUP_INSIGHTS[keyRev].a, a: GROUP_INSIGHTS[keyRev].h
   } : null);
   if (groupInsight) return groupInsight;
 
-  // Fall back to live predictions (KO or admin-generated)
+  // 3. Fall back to live predictions (KO or admin-generated)
   const merged = { ...DEFAULT_AI_PREDICTIONS, ...(livePreds||{}) };
-  if (merged[insightKey]) return merged[insightKey];
-  if (merged[insightKeyRev]) {
-    const p = merged[insightKeyRev];
+  if (merged[key]) return merged[key];
+  if (merged[keyRev]) {
+    const p = merged[keyRev];
     return { h: p.a, a: p.h, r: p.r, insight: p.insight, key: p.key, confidence: p.confidence };
   }
   return null;
@@ -697,8 +705,8 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
       {showAI&&aiPred&&(
         <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.2)"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>🤖 AI Prediction:</span>
-            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>{aiPred.h} – {aiPred.a}</span>
+            <span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>🤖 AI Prediction</span>
+            <span style={{fontSize:10,fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>{aiPred.h} – {aiPred.a}</span>
             {aiPred.confidence&&(
               <span style={{fontSize:10,color:"#6d5a9c",
                 background:"rgba(139,92,246,0.15)",borderRadius:4,padding:"2px 6px"}}>
