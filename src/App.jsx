@@ -1245,9 +1245,11 @@ export default function App(){
   const [newsUpdatedBy,setNewsUpdatedBy]=useState(null);
   const [newsUpdatedAt,setNewsUpdatedAt]=useState(null);
   const [newsFetching,setNewsFetching]=useState(false);
-  const [newsCooldown,setNewsCooldown]=useState(0); // seconds remaining
+  const [newsCooldown,setNewsCooldown]=useState(0);
   const newsTimerRef=React.useRef(null);
-  const NEWS_COOLDOWN_SECS=900; // 15 minutes
+  const NEWS_COOLDOWN_SECS=900;
+  // Share card
+  const [showShareCard,setShowShareCard]=useState(false);
   // Rank history
   const [rankHistory,setRankHistory]=useState([]);
   // Reactions — matchId → { emoji → count, myEmojis: Set }
