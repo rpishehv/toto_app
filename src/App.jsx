@@ -1248,6 +1248,19 @@ export default function App(){
   const [newsCooldown,setNewsCooldown]=useState(0);
   const newsTimerRef=React.useRef(null);
   const NEWS_COOLDOWN_SECS=7200; // 2 hours
+
+  // Restore news cooldown from localStorage on mount
+  useEffect(()=>{
+    const expiresAt = parseInt(localStorage.getItem('news_cooldown_expires')||'0');
+    const remaining = Math.floor((expiresAt - Date.now()) / 1000);
+    if(remaining > 0) {
+      setNewsCooldown(remaining);
+      newsTimerRef.current = setInterval(()=>{
+        setNewsCooldown(c=>{ if(c<=1){ clearInterval(newsTimerRef.current); return 0; } return c-1; });
+      }, 1000);
+    }
+    return ()=>clearInterval(newsTimerRef.current);
+  },[]);
   const [newsError,setNewsError]=useState(null);
   // Share card
   const [showShareCard,setShowShareCard]=useState(false);
@@ -1615,7 +1628,6 @@ export default function App(){
     try {
       const res = await fetch('/api/news', { method:'POST',
         headers:{'Content-Type':'application/json'}, body: JSON.stringify({}) });
-      // Read as text first — res.json() throws on non-JSON responses
       const raw = await res.text();
       let data;
       try { data = JSON.parse(raw); }
@@ -1628,6 +1640,9 @@ export default function App(){
         setNewsUpdatedBy(userName);
         setNewsUpdatedAt(new Date().toISOString());
         await sbSaveNews(data.stories, userName);
+        // Persist cooldown expiry in localStorage
+        const expiresAt = Date.now() + NEWS_COOLDOWN_SECS * 1000;
+        localStorage.setItem('news_cooldown_expires', String(expiresAt));
         setNewsCooldown(NEWS_COOLDOWN_SECS);
         clearInterval(newsTimerRef.current);
         newsTimerRef.current = setInterval(()=>{
@@ -5333,7 +5348,7 @@ export default function App(){
             if(hrs<24) return `${hrs}h ago`;
             return `${Math.round(hrs/24)}d ago`;
           };
-          const cooldownMins = Math.ceil(newsCooldown/60);
+          const cooldownLabel = newsCooldown>=3600 ? `${Math.floor(newsCooldown/3600)}h ${Math.floor((newsCooldown%3600)/60)}m` : `${Math.ceil(newsCooldown/60)}m`;
           return(
             <div>
               {/* Header */}
@@ -5355,7 +5370,7 @@ export default function App(){
                       border:`1px solid ${newsFetching||newsCooldown>0?"rgba(255,255,255,0.06)":"rgba(96,165,250,0.3)"}`,
                       color:newsFetching||newsCooldown>0?"#444":"#60a5fa",
                     }}>
-                    {newsFetching?"⏳ Fetching…":newsCooldown>0?`🔄 ${cooldownMins}m`:"🔄 Refresh"}
+                    {newsFetching?"⏳ Fetching…":newsCooldown>0?`🔄 ${cooldownLabel}`:"🔄 Refresh"}
                   </button>
                 </div>
               </div>
@@ -5448,7 +5463,7 @@ export default function App(){
                 <div style={{fontSize:10,color:"#333",textAlign:"center",marginTop:8,paddingTop:8,
                   borderTop:"1px solid rgba(255,255,255,0.06)"}}>
                   Stories fetched by Claude Sonnet via web search · {timeAgo(newsUpdatedAt)}
-                  {newsCooldown>0&&` · Next refresh in ${cooldownMins}m`}
+                  {newsCooldown>0&&` · Next refresh in ${cooldownLabel}`}
                 </div>
               )}
             </div>
