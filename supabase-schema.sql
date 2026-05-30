@@ -106,3 +106,8 @@ alter table chat_messages enable row level security;
 create policy "Anyone can read chat" on chat_messages for select using (true);
 create policy "Anyone can insert chat" on chat_messages for insert with check (true);
 create policy "Anyone can delete own chat" on chat_messages for delete using (true);
+
+-- News columns on ai_content table
+alter table ai_content add column if not exists news jsonb default null;
+alter table ai_content add column if not exists news_updated_by text default null;
+alter table ai_content add column if not exists news_updated_at timestamptz default null;

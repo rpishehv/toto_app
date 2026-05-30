@@ -8,6 +8,7 @@ import {
   sbGetLeaderboard, sbUpsertLeaderboard,
   sbGetSaveHistory, sbAddSaveHistory,
   sbGetAIContent, sbSaveAIContent,
+  sbGetNews, sbSaveNews,
   sbGetMessages, sbSendMessage, sbDeleteMessage,
   sbUpdateRankHistory, sbGetRankHistory,
   sbGetReactions, sbToggleReaction,
@@ -1239,8 +1240,14 @@ export default function App(){
   const [chatSending,setChatSending]=useState(false);
   const [chatUnread,setChatUnread]=useState(0);
   const chatBottomRef=React.useRef(null);
-  // Share card
-  const [showShareCard,setShowShareCard]=useState(false);
+  // News
+  const [newsStories,setNewsStories]=useState([]);
+  const [newsUpdatedBy,setNewsUpdatedBy]=useState(null);
+  const [newsUpdatedAt,setNewsUpdatedAt]=useState(null);
+  const [newsFetching,setNewsFetching]=useState(false);
+  const [newsCooldown,setNewsCooldown]=useState(0); // seconds remaining
+  const newsTimerRef=React.useRef(null);
+  const NEWS_COOLDOWN_SECS=900; // 15 minutes
   // Rank history
   const [rankHistory,setRankHistory]=useState([]);
   // Reactions — matchId → { emoji → count, myEmojis: Set }
@@ -1307,6 +1314,9 @@ export default function App(){
         const aiContent = await sbGetAIContent();
         if(aiContent?.bracket)   { setBracketPred(aiContent.bracket); setBracketGeneratedBy(aiContent.bracket_generated_by); }
         if(aiContent?.commentary){ setCommentary(aiContent.commentary); setCommentaryGeneratedBy(aiContent.commentary_generated_by); }
+        // Load news
+        const newsData = await sbGetNews();
+        if(newsData?.news){ setNewsStories(newsData.news); setNewsUpdatedBy(newsData.news_updated_by); setNewsUpdatedAt(newsData.news_updated_at); }
         // Load rank history
         if(session?.username) {
           const rh = await sbGetRankHistory(session.username);
@@ -1347,13 +1357,14 @@ export default function App(){
       })
       .subscribe();
 
-    // Subscribe to ai_content changes (any user generates bracket/commentary)
+    // Subscribe to ai_content changes (bracket, commentary, news)
     const aiSub = supabase
       .channel('ai_content_changes')
-      .on('postgres_changes', { event:'UPDATE', schema:'public', table:'ai_content' }, payload=>{
+      .on('postgres_changes', { event:'*', schema:'public', table:'ai_content' }, payload=>{
         const d = payload.new;
         if(d.bracket)    { setBracketPred(d.bracket);   setBracketGeneratedBy(d.bracket_generated_by); }
         if(d.commentary) { setCommentary(d.commentary); setCommentaryGeneratedBy(d.commentary_generated_by); }
+        if(d.news)       { setNewsStories(d.news);      setNewsUpdatedBy(d.news_updated_by); setNewsUpdatedAt(d.news_updated_at); }
       })
       .subscribe();
 
@@ -1592,6 +1603,29 @@ export default function App(){
         : `⏳ No Polymarket markets found yet — try again closer to June 11.`
     });
     setGeneratingOdds(false);
+  };
+
+  const fetchNews = async () => {
+    if(newsFetching||newsCooldown>0) return;
+    setNewsFetching(true);
+    try {
+      const res = await fetch('/api/news', { method:'POST',
+        headers:{'Content-Type':'application/json'}, body: JSON.stringify({}) });
+      const data = await res.json();
+      if(data.stories?.length) {
+        setNewsStories(data.stories);
+        setNewsUpdatedBy(userName);
+        setNewsUpdatedAt(new Date().toISOString());
+        await sbSaveNews(data.stories, userName);
+        // Start cooldown
+        setNewsCooldown(NEWS_COOLDOWN_SECS);
+        clearInterval(newsTimerRef.current);
+        newsTimerRef.current = setInterval(()=>{
+          setNewsCooldown(c=>{ if(c<=1){ clearInterval(newsTimerRef.current); return 0; } return c-1; });
+        }, 1000);
+      }
+    } catch(e) { console.error('News fetch error:', e); }
+    setNewsFetching(false);
   };
 
   const generateKOExpertPredictions = async () => {
@@ -2768,6 +2802,7 @@ export default function App(){
   ];
   const TABS_ROW2=[
     {id:"live",   label:"🔴", full:"🔴 Live"},
+    {id:"news",   label:"📰", full:"📰 News"},
     {id:"stats",  label:"📈", full:"📈 Stats"},
     {id:"scoring",label:"📊", full:"📊 Scoring"},
     {id:"ai",     label:"🤖", full:"🤖 AI"},
@@ -5263,6 +5298,135 @@ export default function App(){
                   Messages visible to all players · Enter to send
                 </div>
               </div>
+            </div>
+          );
+        })()}
+
+        {/* ── NEWS ── */}
+        {tab==="news"&&(()=>{
+          const CATEGORY_COLORS = {
+            "Injury":"#ef4444", "Team News":"#fcb900", "Match Preview":"#60a5fa",
+            "Match Report":"#22c55e", "Analysis":"#a78bfa", "Transfer":"#fb923c",
+            "Standings":"#4ade80", "General":"#555",
+          };
+          const timeAgo = ts => {
+            if(!ts) return "";
+            const mins = Math.round((Date.now()-new Date(ts))/60000);
+            if(mins<1) return "just now";
+            if(mins<60) return `${mins}m ago`;
+            const hrs = Math.round(mins/60);
+            if(hrs<24) return `${hrs}h ago`;
+            return `${Math.round(hrs/24)}d ago`;
+          };
+          const cooldownMins = Math.ceil(newsCooldown/60);
+          return(
+            <div>
+              {/* Header */}
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+                <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:2,
+                  color:"#fcb900",margin:0}}>📰 WC2026 News</h2>
+                <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
+                  {newsUpdatedAt&&(
+                    <span style={{fontSize:10,color:"#444"}}>
+                      {newsUpdatedBy&&`by ${newsUpdatedBy} · `}{timeAgo(newsUpdatedAt)}
+                    </span>
+                  )}
+                  <button onClick={fetchNews}
+                    disabled={newsFetching||newsCooldown>0}
+                    style={{
+                      padding:"6px 14px",borderRadius:8,fontFamily:"inherit",fontWeight:700,
+                      fontSize:12,cursor:newsFetching||newsCooldown>0?"not-allowed":"pointer",
+                      background:newsFetching||newsCooldown>0?"rgba(255,255,255,0.04)":"rgba(96,165,250,0.12)",
+                      border:`1px solid ${newsFetching||newsCooldown>0?"rgba(255,255,255,0.06)":"rgba(96,165,250,0.3)"}`,
+                      color:newsFetching||newsCooldown>0?"#444":"#60a5fa",
+                    }}>
+                    {newsFetching?"⏳ Fetching…":newsCooldown>0?`🔄 ${cooldownMins}m`:"🔄 Refresh"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Empty state */}
+              {newsStories.length===0&&!newsFetching&&(
+                <div style={{textAlign:"center",padding:"48px 20px"}}>
+                  <div style={{fontSize:40,marginBottom:12}}>📰</div>
+                  <div style={{fontSize:14,fontWeight:600,color:"#555",marginBottom:8}}>
+                    No news yet
+                  </div>
+                  <div style={{fontSize:12,color:"#444",marginBottom:20}}>
+                    Tap Refresh to fetch the latest World Cup 2026 news
+                  </div>
+                  <button onClick={fetchNews} style={{
+                    padding:"10px 24px",borderRadius:8,fontFamily:"inherit",fontWeight:700,
+                    fontSize:13,cursor:"pointer",
+                    background:"rgba(96,165,250,0.12)",border:"1px solid rgba(96,165,250,0.3)",
+                    color:"#60a5fa",
+                  }}>🔄 Get Latest News</button>
+                </div>
+              )}
+
+              {/* Loading state */}
+              {newsFetching&&newsStories.length===0&&(
+                <div style={{textAlign:"center",padding:"48px 20px",color:"#444"}}>
+                  <div style={{fontSize:32,marginBottom:12}}>⏳</div>
+                  <div style={{fontSize:12}}>Searching for latest WC2026 news…</div>
+                </div>
+              )}
+
+              {/* News cards */}
+              {newsStories.map((story,i)=>{
+                const catColor = CATEGORY_COLORS[story.category]||"#555";
+                return(
+                  <div key={i} style={{
+                    marginBottom:10,padding:"12px 14px",borderRadius:10,
+                    background:"rgba(255,255,255,0.03)",
+                    border:`1px solid rgba(255,255,255,0.06)`,
+                    borderLeft:`3px solid ${catColor}`,
+                  }}>
+                    {/* Category + urgent badge */}
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+                      <span style={{fontSize:10,fontWeight:700,color:catColor,
+                        background:`${catColor}18`,borderRadius:4,padding:"2px 7px"}}>
+                        {story.category}
+                      </span>
+                      {story.urgent&&(
+                        <span style={{fontSize:10,fontWeight:700,color:"#ef4444",
+                          background:"rgba(239,68,68,0.12)",borderRadius:4,padding:"2px 7px",
+                          animation:"pulse 1.5s infinite"}}>
+                          🔴 Breaking
+                        </span>
+                      )}
+                      {story.team&&story.team!=="General"&&(
+                        <span style={{fontSize:10,color:"#555",marginLeft:"auto"}}>
+                          🏳️ {story.team}
+                        </span>
+                      )}
+                    </div>
+                    {/* Headline */}
+                    <div style={{fontSize:13,fontWeight:700,color:"#ddd",marginBottom:6,lineHeight:1.4}}>
+                      {story.headline}
+                    </div>
+                    {/* Summary */}
+                    <div style={{fontSize:11,color:"#666",lineHeight:1.6}}>
+                      {story.summary}
+                    </div>
+                    {/* Source */}
+                    {story.source&&(
+                      <div style={{fontSize:10,color:"#444",marginTop:6,fontStyle:"italic"}}>
+                        — {story.source}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Attribution */}
+              {newsStories.length>0&&(
+                <div style={{fontSize:10,color:"#333",textAlign:"center",marginTop:8,paddingTop:8,
+                  borderTop:"1px solid rgba(255,255,255,0.06)"}}>
+                  Stories fetched by Claude Sonnet via web search · {timeAgo(newsUpdatedAt)}
+                  {newsCooldown>0&&` · Next refresh in ${cooldownMins}m`}
+                </div>
+              )}
             </div>
           );
         })()}

@@ -198,6 +198,22 @@ export async function sbDeleteMessage(id) {
   if (error) console.error('sbDeleteMessage error:', error.message);
 }
 
+// ─── NEWS ─────────────────────────────────────────────────────────────────────
+export async function sbGetNews() {
+  const { data } = await supabase
+    .from('ai_content').select('news, news_updated_by, news_updated_at').eq('id', 1).maybeSingle();
+  return data || null;
+}
+
+export async function sbSaveNews(stories, username) {
+  await supabase.from('ai_content').upsert({
+    id: 1,
+    news: stories,
+    news_updated_by: username,
+    news_updated_at: new Date().toISOString(),
+  }, { onConflict: 'id' });
+}
+
 // ─── RANK HISTORY ─────────────────────────────────────────────────────────────
 export async function sbUpdateRankHistory(username, rank, points) {
   const { data } = await supabase
