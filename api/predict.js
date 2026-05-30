@@ -1,6 +1,5 @@
 // api/predict.js — Vercel serverless function
-// Generates AI score predictions for knockout matches using Claude API
-// ANTHROPIC_API_KEY is stored securely in Vercel env vars (server-side only)
+// Generates rich AI predictions for knockout matches using Claude Sonnet 4.6
 
 export const config = { runtime: 'edge' };
 
@@ -15,28 +14,42 @@ export default async function handler(req) {
   }
 
   let body;
-  try {
-    body = await req.json();
-  } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 });
-  }
+  try { body = await req.json(); }
+  catch { return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 }); }
 
   const { home, away, round } = body;
   if (!home || !away) {
     return new Response(JSON.stringify({ error: 'Missing home or away team' }), { status: 400 });
   }
 
-  const prompt = `You are a World Cup 2026 football analyst. Predict the score for this knockout match:
+  const prompt = `You are an expert World Cup 2026 football analyst with deep knowledge of all 48 teams, their squads, form, tactics and key players heading into the tournament.
 
-${home} vs ${away} (${round})
+Predict the outcome of this knockout match:
+${home} vs ${away} (${round || 'Knockout'})
 
-Respond with ONLY a JSON object in this exact format, no other text:
-{"h": <home_goals>, "a": <away_goals>, "r": "<one sentence reason, max 80 chars>"}
+Consider:
+- Current FIFA rankings and recent form (last 6 months)
+- Key players and their current fitness/form
+- Tactical matchups and how each team's style suits this fixture
+- Tournament momentum and pressure
+- Historical head-to-head record if relevant
+- Home advantage if a host nation is involved
+
+Respond with ONLY valid JSON in this exact format, no other text:
+{
+  "h": <home_goals_integer_0_to_5>,
+  "a": <away_goals_integer_0_to_5>,
+  "confidence": "<High|Medium|Low>",
+  "r": "<one punchy sentence reason, max 90 chars>",
+  "insight": "<2-3 sentences of deeper tactical/form analysis — specific to these teams>",
+  "key": "<the single most important factor that will decide this match, max 60 chars>"
+}
 
 Rules:
 - Goals must be integers 0-5
-- In knockout rounds there must be a winner (no draws unless you expect extra time to be needed — in that case pick a draw)
-- Reason should be specific to these two teams`;
+- Knockout matches must have a winner (no draws) — if you expect extra time, pick the eventual winner with a 1-goal margin
+- insight must be specific to these two teams, not generic
+- key should name specific players or tactical elements`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -48,7 +61,7 @@ Rules:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 150,
+        max_tokens: 400,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -64,8 +77,7 @@ Rules:
     const data = await response.json();
     const text = data.content?.[0]?.text || '';
 
-    // Parse JSON from response
-    const match = text.match(/\{[^}]+\}/);
+    const match = text.match(/\{[\s\S]*?\}/);
     if (!match) {
       return new Response(JSON.stringify({ error: 'Could not parse prediction', raw: text }), { status: 500 });
     }

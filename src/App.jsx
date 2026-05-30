@@ -706,11 +706,13 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
         <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.2)"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>🤖 AI Prediction</span>
-            <span style={{fontSize:10,fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>{aiPred.h} – {aiPred.a}</span>
+            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>{aiPred.h} – {aiPred.a}</span>
             {aiPred.confidence&&(
-              <span style={{fontSize:10,color:"#6d5a9c",
+              <span style={{display:"flex",alignItems:"center",gap:3,
                 background:"rgba(139,92,246,0.15)",borderRadius:4,padding:"2px 6px"}}>
-                {aiPred.confidence} confidence
+                <span style={{width:5,height:5,borderRadius:"50%",background:
+                  aiPred.confidence==="High"?"#22c55e":aiPred.confidence==="Medium"?"#fcb900":"#555"}}/>
+                <span style={{fontSize:10,color:"#9d8ccf"}}>{aiPred.confidence}</span>
               </span>
             )}
             <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
@@ -718,16 +720,26 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
               <button onClick={()=>setShowAI(false)} style={{padding:"3px 8px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,color:"#555",fontSize:11,cursor:"pointer",fontFamily:"inherit",lineHeight:1}}>✕</button>
             </div>
           </div>
-          {aiPred.insight&&(
-            <div style={{fontSize:11,color:"#8b7dbf",lineHeight:1.6,marginBottom:6}}>{aiPred.insight}</div>
-          )}
-          {aiPred.key&&(
-            <div style={{fontSize:10,color:"#6d5a9c",fontStyle:"italic",borderTop:"1px solid rgba(139,92,246,0.15)",paddingTop:6}}>
-              🔑 Key factor: {aiPred.key}
+          {/* Short reason */}
+          {aiPred.r&&(
+            <div style={{fontSize:11,color:"#9d8ccf",fontStyle:"italic",marginBottom:aiPred.insight?6:0}}>
+              {aiPred.r}
             </div>
           )}
-          {!aiPred.insight&&aiPred.r&&(
-            <div style={{fontSize:10,color:"#7c6db3",fontStyle:"italic"}}>{aiPred.r}</div>
+          {/* Deeper insight */}
+          {aiPred.insight&&(
+            <div style={{fontSize:11,color:"#8b7dbf",lineHeight:1.6,marginBottom:aiPred.key?6:0,
+              borderTop:"1px solid rgba(139,92,246,0.12)",paddingTop:6}}>
+              {aiPred.insight}
+            </div>
+          )}
+          {/* Key factor */}
+          {aiPred.key&&(
+            <div style={{display:"flex",alignItems:"center",gap:5,
+              borderTop:"1px solid rgba(139,92,246,0.12)",paddingTop:6}}>
+              <span style={{fontSize:10,color:"#6d5a9c",fontWeight:700,flexShrink:0}}>🔑 Key factor:</span>
+              <span style={{fontSize:10,color:"#7c6db3",fontStyle:"italic"}}>{aiPred.key}</span>
+            </div>
           )}
         </div>
       )}
