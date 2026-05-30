@@ -1,7 +1,11 @@
 // ─── EXPERT CONSENSUS PREDICTIONS ────────────────────────────────────────────
-// Aggregated from BBC Sport, ESPN FC, WhoScored, Oddschecker tipsters
+// Aggregated from BBC Sport, ESPN FC, CBS Sports, RotoWire, WhoScored, Oddschecker
+// Updated May 2026 — reflects latest form, injuries and tournament odds
 // Key format: "Home||Away"
 
+// Tournament favourites per FanDuel/CBS: Spain +430, France +500, England +650
+// Dark horses: Germany, Portugal, Morocco (bracket2026.com)
+// Brazil flagged as slightly underperforming their ranking (inconsistent recent form)
 const EXPERT_PREDICTIONS = {
 
   // ── GROUP A ──────────────────────────────────────────────────────────────────
@@ -9,21 +13,23 @@ const EXPERT_PREDICTIONS = {
     sources: [
       { name:"BBC Sport",    pick:"Mexico 2–0", confidence:"High" },
       { name:"ESPN FC",      pick:"Mexico 2–1", confidence:"High" },
-      { name:"WhoScored",    pick:"Mexico 1–0", confidence:"Medium" },
-      { name:"Oddschecker",  pick:"Mexico win",  pct:81 },
+      { name:"CBS Sports",   pick:"Mexico win",  confidence:"High" },
+      { name:"RotoWire",     pick:"Mexico win",  pct:80 },
+      { name:"Oddschecker",  pick:"Mexico win",  pct:83 },
     ],
     consensus: "Mexico win", likelyScore:"2–1",
-    summary:"All major tipsters back Mexico on home soil. South Africa's lack of international pedigree makes this one-sided.",
+    summary:"Universal backing for Mexico on home soil. CBS Sports notes El Tri are ranked 15th in the world — nobody else in the group is above 25th. South Africa were docked World Cup qualifying points for fielding an ineligible player. RotoWire gives Mexico 80% qualification probability.",
   },
   "South Korea||Czechia": {
     sources: [
       { name:"BBC Sport",    pick:"Draw 1–1",    confidence:"Medium" },
       { name:"ESPN FC",      pick:"Czechia 2–1", confidence:"Low" },
+      { name:"RotoWire",     pick:"Draw",         pct:50 },
       { name:"WhoScored",    pick:"Draw 1–1",    confidence:"Medium" },
       { name:"Oddschecker",  pick:"Draw",         pct:38 },
     ],
     consensus: "Draw", likelyScore:"1–1",
-    summary:"Experts split on this one. South Korea's pressing vs Czechia's structure makes a draw the most likely outcome.",
+    summary:"RotoWire projects South Korea and Czechia nearly identically — 4.2 expected points each — making this the most genuinely 50/50 match of the group stage. South Korea sailed through Asian qualifying undefeated but this is a big step up.",
   },
   "Czechia||South Africa": {
     sources: [
@@ -319,11 +325,12 @@ const EXPERT_PREDICTIONS = {
     sources: [
       { name:"BBC Sport",    pick:"Netherlands 2–1", confidence:"High" },
       { name:"ESPN FC",      pick:"Netherlands 2–0", confidence:"High" },
-      { name:"WhoScored",    pick:"Netherlands 2–1", confidence:"High" },
-      { name:"Oddschecker",  pick:"Netherlands win",  pct:68 },
+      { name:"RotoWire",     pick:"Netherlands win",  pct:50 },
+      { name:"WhoScored",    pick:"Netherlands 2–1", confidence:"Medium" },
+      { name:"Oddschecker",  pick:"Netherlands win",  pct:65 },
     ],
     consensus: "Netherlands win", likelyScore:"2–1",
-    summary:"Netherlands backed but Japan proved in 2022 they can beat anyone on their day.",
+    summary:"Netherlands backed but RotoWire gives Japan second-highest Group F qualification odds at 58% — nearly matching Netherlands. Japan's 2022 giant-killing of Germany and Spain means no one is taking them lightly. Frenkie de Jong's hamstring injury adds uncertainty for the Dutch.",
   },
   "Sweden||Tunisia": {
     sources: [
@@ -381,11 +388,12 @@ const EXPERT_PREDICTIONS = {
     sources: [
       { name:"BBC Sport",    pick:"Belgium 3–0", confidence:"High" },
       { name:"ESPN FC",      pick:"Belgium 2–0", confidence:"High" },
+      { name:"RotoWire",     pick:"Belgium win",  pct:82 },
       { name:"WhoScored",    pick:"Belgium 3–0", confidence:"High" },
       { name:"Oddschecker",  pick:"Belgium win",  pct:82 },
     ],
     consensus: "Belgium win", likelyScore:"3–0",
-    summary:"De Bruyne and Lukaku too strong. Belgium open with a statement win.",
+    summary:"RotoWire projects Belgium as the most dominant group-stage team outside Spain — 65% group win probability and 6.3 projected goals, third highest of all 48 teams. De Bruyne and Lukaku too strong for Egypt even with Salah in the squad.",
   },
   "Iran||New Zealand": {
     sources: [
@@ -505,21 +513,23 @@ const EXPERT_PREDICTIONS = {
     sources: [
       { name:"BBC Sport",    pick:"France 2–1", confidence:"High" },
       { name:"ESPN FC",      pick:"France 2–0", confidence:"High" },
+      { name:"CBS Sports",   pick:"France win",  confidence:"High" },
       { name:"WhoScored",    pick:"France 2–1", confidence:"High" },
       { name:"Oddschecker",  pick:"France win",  pct:71 },
     ],
     consensus: "France win", likelyScore:"2–1",
-    summary:"Mbappe vs Mane is the headline duel. France's depth gives them the edge.",
+    summary:"France +500 tournament favourites per FanDuel. Mbappe vs Mane is the headline duel — France's squad depth across all positions makes them one of the strongest sides in the tournament.",
   },
   "Iraq||Norway": {
     sources: [
       { name:"BBC Sport",    pick:"Norway 3–0", confidence:"High" },
       { name:"ESPN FC",      pick:"Norway 3–1", confidence:"High" },
+      { name:"CBS Sports",   pick:"Norway win",  confidence:"High" },
       { name:"WhoScored",    pick:"Norway 4–0", confidence:"High" },
       { name:"Oddschecker",  pick:"Norway win",  pct:87 },
     ],
     consensus: "Norway win", likelyScore:"3–0",
-    summary:"Haaland against Iraq is about as one-sided as it gets. Goals galore for Norway.",
+    summary:"ESPN flags Mbappe vs Haaland as one of the tournament's marquee matchups when France meets Norway. But first Haaland gets to warm up against Iraq — about as one-sided a group opener as the draw could produce.",
   },
   "France||Iraq": {
     sources: [
@@ -567,11 +577,12 @@ const EXPERT_PREDICTIONS = {
     sources: [
       { name:"BBC Sport",    pick:"Argentina 3–0", confidence:"High" },
       { name:"ESPN FC",      pick:"Argentina 2–0", confidence:"High" },
+      { name:"CBS Sports",   pick:"Argentina win",  confidence:"High" },
       { name:"WhoScored",    pick:"Argentina 3–0", confidence:"High" },
       { name:"Oddschecker",  pick:"Argentina win",  pct:91 },
     ],
     consensus: "Argentina win", likelyScore:"3–0",
-    summary:"World champions expected to start strongly. Messi's genius should be on full display.",
+    summary:"Defending champions and tournament favourites. Messi on his final World Cup stage adds enormous expectation — but also motivation. CBS Sports flags Argentina as the highest-profile team in the tournament alongside Spain and France.",
   },
   "Austria||Jordan": {
     sources: [

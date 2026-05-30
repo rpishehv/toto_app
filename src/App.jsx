@@ -962,6 +962,14 @@ function ExpertPanel({ home, away, data, loading }) {
           </span>
         )}
       </div>
+      {data.sources?.length>0&&(
+        <div style={{display:"flex",gap:8,padding:"2px 0 5px",marginBottom:2,
+          borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+          <span style={{color:"#555",width:80,flexShrink:0,fontSize:9,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>Source</span>
+          <span style={{flex:1,color:"#555",fontSize:9,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>Pick</span>
+          <span style={{color:"#555",flexShrink:0,fontSize:9,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>Confidence</span>
+        </div>
+      )}
       {data.sources?.map((s,i)=>(
         <div key={i} style={{display:"flex",alignItems:"center",gap:8,
           padding:"4px 0",borderTop:i>0?"1px solid rgba(255,255,255,0.06)":"none",fontSize:10}}>
@@ -971,9 +979,14 @@ function ExpertPanel({ home, away, data, loading }) {
             <span style={{color:"#22c55e",fontWeight:700,flexShrink:0}}>{s.pct}%</span>
           )}
           {s.confidence&&(
-            <span style={{fontSize:10,color:
-              s.confidence==="High"?"#22c55e":s.confidence==="Medium"?"#fcb900":"#555",
-              flexShrink:0}}>{s.confidence}</span>
+            <span style={{display:"flex",alignItems:"center",gap:3,flexShrink:0}}>
+              <span style={{width:6,height:6,borderRadius:"50%",flexShrink:0,background:
+                s.confidence==="High"?"#22c55e":s.confidence==="Medium"?"#fcb900":"#555"}}/>
+              <span style={{fontSize:10,color:
+                s.confidence==="High"?"#22c55e":s.confidence==="Medium"?"#fcb900":"#555"}}>
+                {s.confidence}
+              </span>
+            </span>
           )}
         </div>
       ))}
