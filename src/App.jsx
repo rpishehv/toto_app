@@ -1247,7 +1247,7 @@ export default function App(){
   const [newsFetching,setNewsFetching]=useState(false);
   const [newsCooldown,setNewsCooldown]=useState(0);
   const newsTimerRef=React.useRef(null);
-  const NEWS_COOLDOWN_SECS=900;
+  const NEWS_COOLDOWN_SECS=7200; // 2 hours
   const [newsError,setNewsError]=useState(null);
   // Share card
   const [showShareCard,setShowShareCard]=useState(false);
@@ -1615,9 +1615,14 @@ export default function App(){
     try {
       const res = await fetch('/api/news', { method:'POST',
         headers:{'Content-Type':'application/json'}, body: JSON.stringify({}) });
-      const data = await res.json();
+      // Read as text first — res.json() throws on non-JSON responses
+      const raw = await res.text();
+      let data;
+      try { data = JSON.parse(raw); }
+      catch(e) { throw new Error(`Server returned non-JSON: ${raw.slice(0,200)}`); }
+
       if(data.error) {
-        setNewsError(data.error + (data.raw ? ` — ${data.raw}` : ''));
+        setNewsError(data.error + (data.raw ? ` — raw: ${data.raw}` : ''));
       } else if(data.stories?.length) {
         setNewsStories(data.stories);
         setNewsUpdatedBy(userName);
@@ -1629,7 +1634,7 @@ export default function App(){
           setNewsCooldown(c=>{ if(c<=1){ clearInterval(newsTimerRef.current); return 0; } return c-1; });
         }, 1000);
       } else {
-        setNewsError('No stories returned — try again');
+        setNewsError(`No stories in response — raw: ${raw.slice(0,200)}`);
       }
     } catch(e) {
       setNewsError(e.message);
