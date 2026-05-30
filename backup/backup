@@ -1,0 +1,3 @@
+SUPABASE_URL=https://noifigxmdlsnivlbyelp.supabase.co \
+SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5vaWZpZ3htZGxzbml2bGJ5ZWxwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTYwMjU4OCwiZXhwIjoyMDk1MTc4NTg4fQ.1O6zhyJ0_Xfq3okDZ-2AYe6wpcnT76JEUmjS_xTxJCE \
+node wc2026-backup.js
