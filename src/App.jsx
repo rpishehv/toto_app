@@ -927,7 +927,7 @@ function ScoringBar(){
         {pts:50,text:"2nd place",color:"#aaa",icon:"🥈"},
         {pts:25,text:"3rd place",color:"#cd7f32",icon:"🥉"},
         {pts:6,text:"Exact score",color:"#22c55e",icon:"⭐"},
-        {pts:3,text:"Correct GD",color:"#fcb900",icon:"📐"},
+        {pts:4,text:"Correct GD",color:"#fcb900",icon:"📐"},
         {pts:2,text:"Correct outcome",color:"#60a5fa",icon:"✓"},
       ].map((r,i)=>(
         <div key={i} style={{display:"flex",alignItems:"center",gap:5,background:`${r.color}12`,border:`1px solid ${r.color}30`,borderRadius:6,padding:"5px 11px"}}>
