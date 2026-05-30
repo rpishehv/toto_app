@@ -1247,7 +1247,7 @@ export default function App(){
   const [newsFetching,setNewsFetching]=useState(false);
   const [newsCooldown,setNewsCooldown]=useState(0);
   const newsTimerRef=React.useRef(null);
-  const NEWS_COOLDOWN_SECS=7200; // 2 hours
+  const NEWS_COOLDOWN_SECS=21600; // 6 hours
 
   // Restore news cooldown from localStorage on mount
   useEffect(()=>{
