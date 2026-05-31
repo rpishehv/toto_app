@@ -6072,20 +6072,44 @@ export default function App(){
 
                   const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
                   return(
-                    <a href={waUrl} target="_blank" rel="noopener noreferrer" style={{
-                      display:"flex",alignItems:"center",justifyContent:"center",gap:8,
-                      marginTop:10,padding:"11px",borderRadius:8,
-                      background:"linear-gradient(135deg,rgba(37,211,102,0.15),rgba(18,140,126,0.15))",
-                      border:"1px solid rgba(37,211,102,0.35)",
-                      color:"#25d366",fontSize:13,fontWeight:700,
-                      textDecoration:"none",
-                    }}>
-                      <span style={{fontSize:16}}>📱</span>
-                      Send WhatsApp Reminder
-                      <span style={{fontSize:11,color:"#166534",fontWeight:400}}>
-                        ({withPreds}/{total} predicted)
-                      </span>
-                    </a>
+                    <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
+                      <a href={waUrl} target="_blank" rel="noopener noreferrer" style={{
+                        display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                        padding:"11px",borderRadius:8,
+                        background:"linear-gradient(135deg,rgba(37,211,102,0.15),rgba(18,140,126,0.15))",
+                        border:"1px solid rgba(37,211,102,0.35)",
+                        color:"#25d366",fontSize:13,fontWeight:700,
+                        textDecoration:"none",
+                      }}>
+                        <span style={{fontSize:16}}>📱</span>
+                        Send WhatsApp Reminder
+                        <span style={{fontSize:11,color:"#166534",fontWeight:400}}>
+                          ({withPreds}/{total} predicted)
+                        </span>
+                      </a>
+                      <button onClick={async()=>{
+                        const chatMsg = [
+                          `📣 Admin Reminder`,
+                          `${withPreds}/${total} players have saved predictions.`,
+                          missing.length>0 ? `Still waiting on: ${missing.join(', ')}` : `Everyone has predicted — let's go! ⚽`,
+                          daysToKickoff>0 ? `Tournament kicks off in ${daysToKickoff} day${daysToKickoff!==1?'s':''}!` : `Predictions are locking — fill yours now!`,
+                        ].join('\n');
+                        await sbSendMessage('⚡', chatMsg);
+                      }} style={{
+                        display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                        padding:"11px",borderRadius:8,
+                        background:"rgba(252,185,0,0.08)",
+                        border:"1px solid rgba(252,185,0,0.25)",
+                        color:"#fcb900",fontSize:13,fontWeight:700,
+                        cursor:"pointer",fontFamily:"inherit",
+                      }}>
+                        <span style={{fontSize:16}}>💬</span>
+                        Send to Group Chat
+                        <span style={{fontSize:11,color:"#92400e",fontWeight:400}}>
+                          (visible to all players)
+                        </span>
+                      </button>
+                    </div>
                   );
                 })()}
               </div>
