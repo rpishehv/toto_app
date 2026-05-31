@@ -1256,8 +1256,15 @@ export default function App(){
     if(remaining > 0) {
       setNewsCooldown(remaining);
       newsTimerRef.current = setInterval(()=>{
-        setNewsCooldown(c=>{ if(c<=1){ clearInterval(newsTimerRef.current); return 0; } return c-1; });
+        setNewsCooldown(c=>{
+          if(c<=1){ clearInterval(newsTimerRef.current); localStorage.removeItem('news_cooldown_expires'); return 0; }
+          return c-1;
+        });
       }, 1000);
+    } else {
+      // Expired — clear localStorage
+      localStorage.removeItem('news_cooldown_expires');
+      setNewsCooldown(0);
     }
     return ()=>clearInterval(newsTimerRef.current);
   },[]);
