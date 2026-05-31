@@ -35,6 +35,15 @@ export async function sbClearUser(username) {
   if (error) console.error('sbClearUser error:', error.message)
 }
 
+export async function sbDeleteUser(username) {
+  // Delete all user data across all tables
+  await supabase.from('predictions').delete().eq('username', username);
+  await supabase.from('leaderboard').delete().eq('username', username);
+  await supabase.from('reactions').delete().eq('username', username);
+  await supabase.from('chat_messages').delete().eq('username', username);
+  await supabase.from('users').delete().eq('username', username);
+}
+
 // ─── PREDICTIONS ──────────────────────────────────────────────────────────────
 
 export async function sbGetPrediction(username) {

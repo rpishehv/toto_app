@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import React from "react";
 import { supabase } from './supabase.js';
 import {
-  sbGetUser, sbCreateUser, sbResetPin, sbVerifyRecovery, sbClearUser,
+  sbGetUser, sbCreateUser, sbResetPin, sbVerifyRecovery, sbClearUser, sbDeleteUser,
   sbGetPrediction, sbSavePrediction,
   sbGetActualResults, sbSaveActualResults,
   sbGetLeaderboard, sbUpsertLeaderboard,
@@ -1289,6 +1289,7 @@ export default function App(){
   const [adminMode,setAdminMode]=useState(false);
   const [adminPinInput,setAdminPinInput]=useState("");
   const [adminPinError,setAdminPinError]=useState("");
+  const [deleteConfirmUser,setDeleteConfirmUser]=useState(null);
   const [adminActiveGroup,setAdminActiveGroup]=useState("A");
   const [adminActiveRound,setAdminActiveRound]=useState("Round of 32");
   const [koKickoffs,setKoKickoffs]=useState({}); // "matchId" -> UTC ms
@@ -6073,42 +6074,78 @@ export default function App(){
                 })()}
               </div>
 
-              {/* User Management — PIN Reset */}
+              {/* User Management */}
               <div style={{marginBottom:24}}>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"#555",letterSpacing:1,marginBottom:10}}>
                   User Management
                 </div>
-                <p style={{fontSize:11,color:"#555",marginTop:0,marginBottom:12}}>
-                  Reset a user's PIN if they've lost access. They'll need to set a new PIN on next login.
-                </p>
-                <div style={{display:"flex",gap:8}}>
-                  <input
-                    placeholder="Username to reset…"
-                    id="adminPinResetUser"
-                    style={{flex:1,padding:"8px 12px",background:"rgba(255,255,255,0.06)",
-                      border:"1px solid rgba(255,255,255,0.10)",borderRadius:6,
-                      color:"#fff",fontSize:12,fontFamily:"inherit",outline:"none"}}/>
-                  <button onClick={async()=>{
-                    const el = document.getElementById("adminPinResetUser");
-                    const name = el?.value?.trim();
-                    if(!name){ setAdminPinError("Enter a username first."); setTimeout(()=>setAdminPinError(""),3000); return; }
-                    const user = await sbGetUser(name);
-                    if(!user){ setAdminPinError(`User "${name}" not found.`); setTimeout(()=>setAdminPinError(""),3000); return; }
-                    // Clear PIN and recovery code — forces new PIN creation
-                    lsDel(`wc26_pin_${name}`);
-                    lsDel(`wc26_recovery_${name}`);
 
-
-
-                    if(el) el.value="";
-                    setAdminPinError(`✅ PIN cleared for "${name}". They can create a new account.`);
-                    setTimeout(()=>setAdminPinError(""),4000);
-                  }} style={{
-                    padding:"8px 16px",background:"rgba(239,68,68,0.12)",
-                    border:"1px solid rgba(239,68,68,0.3)",borderRadius:6,
-                    color:"#ef4444",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0,
-                  }}>Reset PIN</button>
+                {/* User list with actions */}
+                <div style={{marginBottom:12}}>
+                  {leaderboard.map(e=>(
+                    <div key={e.username} style={{
+                      display:"flex",alignItems:"center",gap:8,
+                      padding:"7px 10px",marginBottom:4,borderRadius:6,
+                      background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",
+                    }}>
+                      <span style={{flex:1,fontSize:12,color:"#ccc",fontWeight:e.username===userName?700:400}}>
+                        {e.username}{e.username===userName?" (you)":""}
+                      </span>
+                      <span style={{fontSize:10,color:"#555"}}>{e.points}pts</span>
+                      <button onClick={async()=>{
+                        const user = await sbGetUser(e.username);
+                        if(!user){ setAdminPinError(`User "${e.username}" not found.`); return; }
+                        await sbClearUser(e.username);
+                        setAdminPinError(`✅ PIN reset for "${e.username}".`);
+                        setTimeout(()=>setAdminPinError(""),3000);
+                      }} style={{
+                        padding:"3px 8px",background:"rgba(96,165,250,0.08)",
+                        border:"1px solid rgba(96,165,250,0.2)",borderRadius:4,
+                        color:"#60a5fa",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                      }}>Reset PIN</button>
+                      {e.username!==userName&&(
+                        <button onClick={()=>setDeleteConfirmUser(e.username)} style={{
+                          padding:"3px 8px",background:"rgba(239,68,68,0.08)",
+                          border:"1px solid rgba(239,68,68,0.2)",borderRadius:4,
+                          color:"#ef4444",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                        }}>🗑 Delete</button>
+                      )}
+                    </div>
+                  ))}
                 </div>
+
+                {/* Delete confirmation modal */}
+                {deleteConfirmUser&&(
+                  <div style={{padding:"14px",borderRadius:8,
+                    background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.3)"}}>
+                    <div style={{fontSize:12,color:"#fca5a5",fontWeight:700,marginBottom:8}}>
+                      ⚠️ Delete "{deleteConfirmUser}"?
+                    </div>
+                    <div style={{fontSize:11,color:"#555",marginBottom:12}}>
+                      This will permanently remove their account, predictions, reactions and chat messages. This cannot be undone.
+                    </div>
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={async()=>{
+                        await sbDeleteUser(deleteConfirmUser);
+                        const lb = await sbGetLeaderboard();
+                        if(lb) setLeaderboard(lb);
+                        setAdminPinError(`✅ "${deleteConfirmUser}" deleted.`);
+                        setDeleteConfirmUser(null);
+                        setTimeout(()=>setAdminPinError(""),3000);
+                      }} style={{
+                        flex:1,padding:"8px",background:"rgba(239,68,68,0.2)",
+                        border:"1px solid rgba(239,68,68,0.4)",borderRadius:6,
+                        color:"#ef4444",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                      }}>Yes, delete permanently</button>
+                      <button onClick={()=>setDeleteConfirmUser(null)} style={{
+                        flex:1,padding:"8px",background:"rgba(255,255,255,0.06)",
+                        border:"1px solid rgba(255,255,255,0.10)",borderRadius:6,
+                        color:"#555",fontSize:12,cursor:"pointer",fontFamily:"inherit",
+                      }}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+
                 {adminPinError&&<div style={{fontSize:11,marginTop:6,color:adminPinError.startsWith("✅")?"#22c55e":"#ef4444"}}>{adminPinError}</div>}
               </div>
 
