@@ -6087,28 +6087,36 @@ export default function App(){
                           ({withPreds}/{total} predicted)
                         </span>
                       </a>
-                      <button onClick={async()=>{
-                        const chatMsg = [
-                          `📣 Admin Reminder`,
-                          `${withPreds}/${total} players have saved predictions.`,
-                          missing.length>0 ? `Still waiting on: ${missing.join(', ')}` : `Everyone has predicted — let's go! ⚽`,
-                          daysToKickoff>0 ? `Tournament kicks off in ${daysToKickoff} day${daysToKickoff!==1?'s':''}!` : `Predictions are locking — fill yours now!`,
-                        ].join('\n');
-                        await sbSendMessage('⚡', chatMsg);
-                      }} style={{
-                        display:"flex",alignItems:"center",justifyContent:"center",gap:8,
-                        padding:"11px",borderRadius:8,
-                        background:"rgba(252,185,0,0.08)",
-                        border:"1px solid rgba(252,185,0,0.25)",
-                        color:"#fcb900",fontSize:13,fontWeight:700,
-                        cursor:"pointer",fontFamily:"inherit",
-                      }}>
-                        <span style={{fontSize:16}}>💬</span>
-                        Send to Group Chat
-                        <span style={{fontSize:11,color:"#92400e",fontWeight:400}}>
-                          (visible to all players)
-                        </span>
-                      </button>
+                      {(()=>{
+                        const [chatSent,setChatSent]=React.useState(false);
+                        return(
+                          <button onClick={async()=>{
+                            const chatMsg = [
+                              `📣 Admin Reminder`,
+                              `${withPreds}/${total} players have saved predictions.`,
+                              missing.length>0 ? `Still waiting on: ${missing.join(', ')}` : `Everyone has predicted — let's go! ⚽`,
+                              daysToKickoff>0 ? `Tournament kicks off in ${daysToKickoff} day${daysToKickoff!==1?'s':''}!` : `Predictions are locking — fill yours now!`,
+                            ].join('\n');
+                            await sbSendMessage('⚡', chatMsg);
+                            setChatSent(true);
+                            setTimeout(()=>setChatSent(false), 3000);
+                          }} style={{
+                            display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                            padding:"11px",borderRadius:8,
+                            background:chatSent?"rgba(34,197,94,0.15)":"rgba(252,185,0,0.08)",
+                            border:`1px solid ${chatSent?"rgba(34,197,94,0.4)":"rgba(252,185,0,0.25)"}`,
+                            color:chatSent?"#22c55e":"#fcb900",fontSize:13,fontWeight:700,
+                            cursor:"pointer",fontFamily:"inherit",
+                            transition:"all 0.3s",
+                          }}>
+                            <span style={{fontSize:16}}>{chatSent?"✓":"💬"}</span>
+                            {chatSent?"Reminder sent to chat!":"Send to Group Chat"}
+                            {!chatSent&&<span style={{fontSize:11,color:"#92400e",fontWeight:400}}>
+                              (visible to all players)
+                            </span>}
+                          </button>
+                        );
+                      })()}
                     </div>
                   );
                 })()}
