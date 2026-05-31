@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import React from "react";
 import { supabase } from './supabase.js';
 import {
-  sbGetUser, sbCreateUser, sbResetPin, sbVerifyRecovery, sbClearUser, sbDeleteUser,
+  sbGetUser, sbCreateUser, sbResetPin, sbVerifyRecovery, sbClearUser, sbDeleteUser, sbTogglePaid,
   sbGetPrediction, sbSavePrediction,
   sbGetActualResults, sbSaveActualResults,
   sbGetLeaderboard, sbUpsertLeaderboard,
@@ -3868,8 +3868,17 @@ export default function App(){
                     <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,width:28,textAlign:"center",
                       color:i===0?"#fcb900":i===1?"#c0c0c0":i===2?"#cd7f32":"#333"}}>{medal||i+1}</span>
                     <div style={{flex:1}}>
-                      <div style={{fontWeight:700,fontSize:13}}>
-                        {entry.username}{isMe&&<span style={{color:"#fcb900",fontSize:10,marginLeft:6}}>(you)</span>}
+                      <div style={{fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:6}}>
+                        {entry.username}{isMe&&<span style={{color:"#fcb900",fontSize:10}}>(you)</span>}
+                        {entry.paid&&(
+                          <span title="Paid" style={{
+                            display:"inline-flex",alignItems:"center",justifyContent:"center",
+                            width:16,height:16,borderRadius:"50%",
+                            background:"#22c55e",flexShrink:0,
+                          }}>
+                            <span style={{color:"#000",fontSize:9,fontWeight:900,lineHeight:1}}>✓</span>
+                          </span>
+                        )}
                       </div>
                       <div style={{fontSize:11,color:"#444",marginTop:1}}>
                         🥇 {FLAGS[entry.champion]||"?"} {entry.champion||"?"}
@@ -6099,6 +6108,21 @@ export default function App(){
                         {e.username}{e.username===userName?" (you)":""}
                       </span>
                       <span style={{fontSize:10,color:"#555"}}>{e.points}pts</span>
+                      {/* Paid toggle */}
+                      <button onClick={async()=>{
+                        const newPaid = !e.paid;
+                        await sbTogglePaid(e.username, newPaid);
+                        setLeaderboard(prev=>prev.map(x=>x.username===e.username?{...x,paid:newPaid}:x));
+                      }} style={{
+                        padding:"3px 8px",
+                        background:e.paid?"rgba(34,197,94,0.15)":"rgba(255,255,255,0.04)",
+                        border:`1px solid ${e.paid?"rgba(34,197,94,0.4)":"rgba(255,255,255,0.10)"}`,
+                        borderRadius:4,
+                        color:e.paid?"#22c55e":"#555",
+                        fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                      }}>
+                        {e.paid?"✓ Paid":"Unpaid"}
+                      </button>
                       <button onClick={async()=>{
                         const user = await sbGetUser(e.username);
                         if(!user){ setAdminPinError(`User "${e.username}" not found.`); return; }

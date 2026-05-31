@@ -111,3 +111,6 @@ create policy "Anyone can delete own chat" on chat_messages for delete using (tr
 alter table ai_content add column if not exists news jsonb default null;
 alter table ai_content add column if not exists news_updated_by text default null;
 alter table ai_content add column if not exists news_updated_at timestamptz default null;
+
+-- Paid status on leaderboard
+alter table leaderboard add column if not exists paid boolean default false;

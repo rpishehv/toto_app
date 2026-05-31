@@ -207,6 +207,12 @@ export async function sbDeleteMessage(id) {
   if (error) console.error('sbDeleteMessage error:', error.message);
 }
 
+export async function sbTogglePaid(username, paid) {
+  const { error } = await supabase.from('leaderboard')
+    .update({ paid }).eq('username', username);
+  if (error) console.error('sbTogglePaid error:', error.message);
+}
+
 // ─── NEWS ─────────────────────────────────────────────────────────────────────
 export async function sbGetNews() {
   const { data } = await supabase
