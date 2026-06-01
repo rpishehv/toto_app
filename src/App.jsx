@@ -1676,8 +1676,9 @@ export default function App(){
       catch(e) { throw new Error(`Non-JSON response: ${raw.slice(0,300)}`); }
       if(data.error) throw new Error(data.error);
       if(!data.analysis) throw new Error(`API returned no analysis. Response keys: ${Object.keys(data).join(', ')}`);
-      // Validate required fields exist
       const a = data.analysis;
+      // Validate it's the expected object shape, not an array
+      if(Array.isArray(a)) throw new Error(`Got array instead of analysis object — unexpected response shape`);
       if(!a.headline && !a.player_profiles) throw new Error(`Analysis missing expected fields. Got: ${Object.keys(a).join(', ')}`);
       setGroupAnalytics(data.analysis);
       setAnalyticsGeneratedBy(userName);
@@ -4654,7 +4655,7 @@ export default function App(){
                 </div>
               )}
 
-              {groupAnalytics&&(()=>{
+              {groupAnalytics&&!Array.isArray(groupAnalytics)&&(()=>{
                 const a = groupAnalytics;
                 return(
                   <div>
