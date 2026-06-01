@@ -93,3 +93,5 @@ headline max 80 chars, summary 2-3 sentences`;
     return res.status(500).json({ error: e.message });
   }
 }
+
+module.exports = handler;
