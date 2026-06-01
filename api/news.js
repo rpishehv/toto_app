@@ -2,7 +2,7 @@
 // Fetches latest World Cup 2026 news using Claude web search
 
 // Node.js runtime allows up to 60s — needed for web search
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 60, api: { bodyParser: { sizeLimit: '1mb' } } };
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
