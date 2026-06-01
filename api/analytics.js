@@ -1,97 +1,88 @@
-// api/analytics.js — Group analytics agent (CommonJS for Node.js runtime)
+// api/analytics.js — Group analytics agent (edge runtime)
 
-module.exports = async function handler(req, res) {
+export const config = { runtime: 'edge' };
+
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
+  if (!apiKey) return new Response(JSON.stringify({ error: 'No API key' }), { status: 500 });
 
-  const { players, actualResults } = req.body || {};
+  let body;
+  try { body = await req.json(); } catch(e) { return new Response(JSON.stringify({ error: 'Bad JSON' }), { status: 400 }); }
 
+  const { players, actualResults } = body || {};
   if (!players?.length || !actualResults?.length) {
-    return res.status(400).json({ error: 'Missing players or results data' });
+    return new Response(JSON.stringify({ error: 'Missing data' }), { status: 400 });
   }
 
   const played = actualResults.filter(m => m.homeScore !== null);
   if (played.length === 0) {
-    return res.status(400).json({ error: 'No match results yet — admin needs to save scores first!' });
+    return new Response(JSON.stringify({ error: 'No results yet' }), { status: 400 });
   }
 
-  // Pre-compute stats per player
-  const playerStats = players.map(p => {
+  // Compact stats per player
+  const stats = players.map(p => {
     const preds = p.predictions || [];
-    let exact=0, gd=0, outcome=0, wrong=0, totalPred=0, totalActual=0, count=0;
-    const missedDraws = [], nailedExact = [];
-
+    let e=0, g=0, o=0, w=0;
     for (const actual of played) {
       const pred = preds.find(x => x.id === actual.id);
       if (!pred || pred.homeScore == null) continue;
-      count++;
-      totalPred += pred.homeScore + pred.awayScore;
-      totalActual += actual.homeScore + actual.awayScore;
       const isExact = pred.homeScore === actual.homeScore && pred.awayScore === actual.awayScore;
       const isGD = (pred.homeScore - pred.awayScore) === (actual.homeScore - actual.awayScore);
       const predOut = pred.homeScore > pred.awayScore ? 'W' : pred.homeScore < pred.awayScore ? 'L' : 'D';
       const actOut  = actual.homeScore > actual.awayScore ? 'W' : actual.homeScore < actual.awayScore ? 'L' : 'D';
-      if (isExact) { exact++; nailedExact.push(`${actual.home}-${actual.away}(${actual.homeScore}-${actual.awayScore})`); }
-      else if (isGD) gd++;
-      else if (predOut === actOut) outcome++;
-      else { wrong++; if (actOut === 'D') missedDraws.push(`${actual.home}-${actual.away}`); }
+      if (isExact) e++;
+      else if (isGD) g++;
+      else if (predOut === actOut) o++;
+      else w++;
     }
+    return `${p.rank}.${p.username}:${p.points}pts E${e}G${g}O${o}W${w}`;
+  }).join(', ');
 
-    return {
-      username: p.username, rank: p.rank, points: p.points,
-      exact, gd, outcome, wrong, count,
-      avgPred: count > 0 ? (totalPred/count).toFixed(1) : '0',
-      accuracy: count > 0 ? Math.round((exact+gd+outcome)/count*100) : 0,
-      nailedExact: nailedExact.slice(0,2).join(';') || 'none',
-      missedDraws: missedDraws.slice(0,2).join(';') || 'none',
-    };
-  });
+  const prompt = `WC2026 prediction league stats after ${played.length} matches: ${stats}
 
-  const statsLine = playerStats.map(p =>
-    `${p.rank}.${p.username}:${p.points}pts,E${p.exact}G${p.gd}O${p.outcome}W${p.wrong},acc${p.accuracy}%,avgGoals${p.avgPred},best:${p.nailedExact},missedDraws:${p.missedDraws}`
-  ).join(' | ');
-
-  const prompt = `Analyse this WC2026 prediction league (${played.length} matches played): ${statsLine}
-
-Return ONLY this JSON object with short single-line string values (no newlines in values):
-{"headline":"short punchy summary","leader_analysis":"why they lead","most_skillful":"username","luckiest":"username","biggest_weakness":"main weakness","player_profiles":[{"username":"name","style":"3 words","insight":"1 sentence","tip":"1 sentence"}],"prediction":"who will win and why","banter":"funny 1-liner roast"}`;
+Reply with ONLY this JSON (all values single-line strings, no newlines inside values):
+{"headline":"summary","leader_analysis":"why leader is winning","most_skillful":"username","luckiest":"username","biggest_weakness":"weakness","player_profiles":[{"username":"name","style":"label","insight":"observation","tip":"advice"}],"prediction":"winner prediction","banter":"funny roast"}`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type':'application/json', 'x-api-key':apiKey, 'anthropic-version':'2023-06-01' },
-      body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1000, messages:[{role:'user',content:prompt}] }),
+      body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:800, messages:[{role:'user',content:prompt}] }),
     });
 
     if (!response.ok) {
       const err = await response.text();
-      return res.status(500).json({ error: `Claude error: ${err.slice(0,200)}` });
+      return new Response(JSON.stringify({ error: `Claude: ${err.slice(0,200)}` }), { status: 500 });
     }
 
     const data = await response.json();
     const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
-    if (!text) return res.status(500).json({ error: 'No text from Claude' });
+    if (!text) return new Response(JSON.stringify({ error: 'No text from Claude' }), { status: 500 });
 
     const start = text.indexOf('{');
     const end   = text.lastIndexOf('}');
-    if (start === -1 || end === -1) return res.status(500).json({ error: 'No JSON found', raw: text.slice(0,300) });
+    if (start === -1 || end === -1) {
+      return new Response(JSON.stringify({ error: 'No JSON', raw: text.slice(0,200) }), { status: 500 });
+    }
 
     const jsonStr = text.slice(start, end+1)
-      .replace(/\n/g,' ').replace(/\r/g,' ').replace(/\t/g,' ')
+      .replace(/\n/g,' ').replace(/\r/g,' ')
       .replace(/[\x00-\x1F\x7F]/g,' ')
       .replace(/,\s*}/g,'}').replace(/,\s*]/g,']');
 
     let analysis;
     try { analysis = JSON.parse(jsonStr); }
-    catch(e) { return res.status(500).json({ error: `Parse failed: ${e.message}`, raw: jsonStr.slice(0,400) }); }
+    catch(e) { return new Response(JSON.stringify({ error: `Parse: ${e.message}`, raw: jsonStr.slice(0,300) }), { status: 500 }); }
 
-    return res.status(200).json({ analysis, generatedAt: new Date().toISOString() });
+    return new Response(JSON.stringify({ analysis, generatedAt: new Date().toISOString() }), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
+    });
 
   } catch(e) {
-    return res.status(500).json({ error: e.message });
+    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
   }
-};
+}
