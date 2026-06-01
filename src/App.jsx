@@ -4321,10 +4321,9 @@ export default function App(){
 
           // ── Group analytics ─────────────────────────────────────────────
           // Per-match: how many players got it right
-          const groupAnalytics = playedMatches.map(actual=>{
+          const matchGroupStats = playedMatches.map(actual=>{
             let exactCount=0, anyPointsCount=0, totalPreds=0;
             leaderboard.forEach(e=>{
-              // We can only use what's on the leaderboard — points already calc'd
               totalPreds++;
             });
             return { actual, exactCount, anyPointsCount, totalPreds };
