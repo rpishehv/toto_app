@@ -1,33 +1,36 @@
 // api/analytics.js — Group analytics agent
 // Analyses all predictions vs results and generates group insights
 
-export const config = { runtime: 'edge' };
+export const config = { maxDuration: 60 };
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'API key not configured' }), { status: 500 });
+    return res.status(500).json({ error: 'API key not configured' });
   }
 
   let body;
-  try { body = await req.json(); }
-  catch { return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 }); }
+  try {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    body = JSON.parse(Buffer.concat(chunks).toString());
+  } catch { return res.status(400).json({ error: 'Invalid JSON' }); }
 
-  const { players, actualResults, generatedBy } = body;
+  const { players, actualResults } = body;
   // players: [{username, predictions:[{id,homeScore,awayScore}], points, rank}]
   // actualResults: [{id,home,away,homeScore,awayScore}]
 
   if (!players?.length || !actualResults?.length) {
-    return new Response(JSON.stringify({ error: 'Missing players or results data' }), { status: 400 });
+    return res.status(400).json({ error: 'Missing players or results data' });
   }
 
   const played = actualResults.filter(m => m.homeScore !== null);
   if (played.length === 0) {
-    return new Response(JSON.stringify({ error: 'No results yet — play some matches first!' }), { status: 400 });
+    return res.status(400).json({ error: 'No results yet — play some matches first!' });
   }
 
   // Pre-compute stats for each player to send to Claude
@@ -132,7 +135,7 @@ Return ONLY valid JSON, no other text.`;
 
     if (!response.ok) {
       const err = await response.text();
-      return new Response(JSON.stringify({ error: `API error: ${err.slice(0,200)}` }), { status: 500 });
+      return res.status(500).json({ error: `API error: ${err.slice(0,200)}` });
     }
 
     const data = await response.json();
@@ -141,16 +144,13 @@ Return ONLY valid JSON, no other text.`;
     const start = text.indexOf('{');
     const end = text.lastIndexOf('}');
     if (start === -1 || end === -1) {
-      return new Response(JSON.stringify({ error: 'No JSON in response', raw: text.slice(0,300) }), { status: 500 });
+      return res.status(500).json({ error: 'No JSON in response', raw: text.slice(0,300) });
     }
 
     const analysis = JSON.parse(text.slice(start, end + 1));
-    return new Response(JSON.stringify({ analysis, generatedBy, generatedAt: new Date().toISOString() }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json({ analysis, generatedAt: new Date().toISOString() });
 
   } catch(e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+    return res.status(500).json({ error: e.message });
   }
 }
