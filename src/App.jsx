@@ -1644,6 +1644,11 @@ export default function App(){
   };
 
   const generateGroupAnalytics = async () => {
+    const playedCount = actualMatches.filter(m => m.homeScore !== null).length;
+    if(playedCount === 0) {
+      setAnalyticsError('No match results yet — admin needs to save some scores first.');
+      return;
+    }
     setAnalyticsLoading(true);
     setAnalyticsError(null);
     try {
@@ -1668,8 +1673,12 @@ export default function App(){
       const raw = await res.text();
       let data;
       try { data = JSON.parse(raw); }
-      catch(e) { throw new Error(`Non-JSON response: ${raw.slice(0,200)}`); }
+      catch(e) { throw new Error(`Non-JSON response: ${raw.slice(0,300)}`); }
       if(data.error) throw new Error(data.error);
+      if(!data.analysis) throw new Error(`API returned no analysis. Response keys: ${Object.keys(data).join(', ')}`);
+      // Validate required fields exist
+      const a = data.analysis;
+      if(!a.headline && !a.player_profiles) throw new Error(`Analysis missing expected fields. Got: ${Object.keys(a).join(', ')}`);
       setGroupAnalytics(data.analysis);
       setAnalyticsGeneratedBy(userName);
       setAnalyticsGeneratedAt(new Date().toISOString());
@@ -4650,20 +4659,20 @@ export default function App(){
                 return(
                   <div>
                     {/* Headline */}
-                    <div style={{padding:"12px 16px",borderRadius:10,marginBottom:12,
+                    {a.headline&&<div style={{padding:"12px 16px",borderRadius:10,marginBottom:12,
                       background:"linear-gradient(135deg,rgba(139,92,246,0.12),rgba(139,92,246,0.06))",
                       border:"1px solid rgba(139,92,246,0.25)"}}>
                       <div style={{fontSize:14,fontWeight:700,color:"#c4b5fd",lineHeight:1.4}}>{a.headline}</div>
-                    </div>
+                    </div>}
 
                     {/* Key callouts */}
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
                       {[
-                        {label:"🏆 Leader analysis", value:a.leader_analysis, color:"#fcb900"},
-                        {label:"🎯 Most skillful", value:`${a.most_skillful} — ${a.player_profiles?.find(p=>p.username===a.most_skillful)?.insight||""}`, color:"#22c55e"},
-                        {label:"🍀 Luckiest player", value:a.luckiest, color:"#60a5fa"},
-                        {label:"📉 Group weakness", value:a.biggest_weakness, color:"#fb923c"},
-                      ].map((item,i)=>(
+                        {label:"🏆 Leader", value:a.leader_analysis, color:"#fcb900"},
+                        {label:"🎯 Most skillful", value:a.most_skillful, color:"#22c55e"},
+                        {label:"🍀 Luckiest", value:a.luckiest, color:"#60a5fa"},
+                        {label:"📉 Weakness", value:a.biggest_weakness, color:"#fb923c"},
+                      ].filter(x=>x.value).map((item,i)=>(
                         <div key={i} style={{padding:"10px 12px",borderRadius:8,
                           background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)"}}>
                           <div style={{fontSize:10,fontWeight:700,color:item.color,marginBottom:4}}>{item.label}</div>
@@ -4673,34 +4682,46 @@ export default function App(){
                     </div>
 
                     {/* Player profiles */}
-                    <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,color:"#555",
-                      letterSpacing:1,marginBottom:8}}>Player Profiles</div>
-                    {a.player_profiles?.map((p,i)=>(
-                      <div key={i} style={{marginBottom:8,padding:"10px 14px",borderRadius:8,
-                        background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)"}}>
-                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                          <span style={{fontSize:12,fontWeight:700,color:"#ddd"}}>{p.username}</span>
-                          <span style={{fontSize:10,color:"#a78bfa",background:"rgba(139,92,246,0.12)",
-                            borderRadius:4,padding:"2px 7px"}}>{p.style}</span>
+                    {a.player_profiles?.length>0&&<>
+                      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,color:"#555",
+                        letterSpacing:1,marginBottom:8}}>Player Profiles</div>
+                      {a.player_profiles.map((p,i)=>(
+                        <div key={i} style={{marginBottom:8,padding:"10px 14px",borderRadius:8,
+                          background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                            <span style={{fontSize:12,fontWeight:700,color:"#ddd"}}>{p.username}</span>
+                            {p.style&&<span style={{fontSize:10,color:"#a78bfa",background:"rgba(139,92,246,0.12)",
+                              borderRadius:4,padding:"2px 7px"}}>{p.style}</span>}
+                          </div>
+                          {p.insight&&<div style={{fontSize:11,color:"#666",lineHeight:1.5,marginBottom:4}}>{p.insight}</div>}
+                          {p.tip&&<div style={{fontSize:10,color:"#22c55e"}}>💡 {p.tip}</div>}
                         </div>
-                        <div style={{fontSize:11,color:"#666",lineHeight:1.5,marginBottom:4}}>{p.insight}</div>
-                        <div style={{fontSize:10,color:"#22c55e"}}>💡 {p.tip}</div>
-                      </div>
-                    ))}
+                      ))}
+                    </>}
 
                     {/* Prediction + Banter */}
                     <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:4}}>
-                      <div style={{padding:"10px 14px",borderRadius:8,
+                      {a.prediction&&<div style={{padding:"10px 14px",borderRadius:8,
                         background:"rgba(252,185,0,0.06)",border:"1px solid rgba(252,185,0,0.2)"}}>
                         <div style={{fontSize:10,color:"#fcb900",fontWeight:700,marginBottom:4}}>🏆 Who wins this?</div>
                         <div style={{fontSize:11,color:"#888",lineHeight:1.5}}>{a.prediction}</div>
-                      </div>
-                      <div style={{padding:"10px 14px",borderRadius:8,
+                      </div>}
+                      {a.banter&&<div style={{padding:"10px 14px",borderRadius:8,
                         background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)"}}>
                         <div style={{fontSize:10,color:"#fb923c",fontWeight:700,marginBottom:4}}>😂 Banter corner</div>
                         <div style={{fontSize:11,color:"#888",lineHeight:1.5,fontStyle:"italic"}}>{a.banter}</div>
-                      </div>
+                      </div>}
                     </div>
+
+                    {/* Fallback: show raw if nothing rendered */}
+                    {!a.headline&&!a.player_profiles?.length&&(
+                      <div style={{fontSize:11,color:"#555",padding:"10px",borderRadius:8,
+                        background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)"}}>
+                        <pre style={{margin:0,whiteSpace:"pre-wrap",wordBreak:"break-all",fontSize:10}}>
+                          {JSON.stringify(a, null, 2)}
+                        </pre>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
