@@ -1298,6 +1298,8 @@ export default function App(){
   const [adminPinError,setAdminPinError]=useState("");
   const [deleteConfirmUser,setDeleteConfirmUser]=useState(null);
   const [chatReminderSent,setChatReminderSent]=useState(false);
+  // Agentic features — track which reminders have already fired
+  const firedRemindersRef = React.useRef(new Set());
   const [adminActiveGroup,setAdminActiveGroup]=useState("A");
   const [adminActiveRound,setAdminActiveRound]=useState("Round of 32");
   const [koKickoffs,setKoKickoffs]=useState({}); // "matchId" -> UTC ms
@@ -2580,9 +2582,45 @@ export default function App(){
     return ()=>clearTimeout(timer);
   },[matches, knockout, podium, userName]);
 
+  // ── AGENT #7: Prediction deadline reminder ────────────────────────────────
+  // Posts to chat when a match locks in ~2 hours, if players haven't predicted
+  useEffect(()=>{
+    if(!userName || !adminMode) return; // only admin triggers this
+    const check = async () => {
+      const now = Date.now();
+      const TWO_HOURS = 2 * 60 * 60 * 1000;
+      const unpredictedUsers = leaderboard.filter(e=>e.points===0).map(e=>e.username);
+
+      for(const m of matches){
+        const kickoff = KICKOFFS[m.id];
+        if(!kickoff) continue;
+        const lockTime = new Date(kickoff).getTime() - (15 * 60 * 1000);
+        const timeToLock = lockTime - now;
+
+        // Fires once when 90-120 minutes to lock
+        if(timeToLock > 0 && timeToLock < TWO_HOURS && !firedRemindersRef.current.has(m.id)) {
+          firedRemindersRef.current.add(m.id);
+          const minsToLock = Math.round(timeToLock / 60000);
+          const msg = [
+            `⏰ Match locking in ~${minsToLock} mins!`,
+            `${m.home} vs ${m.away}`,
+            unpredictedUsers.length > 0
+              ? `⚠️ Still needs predictions: ${unpredictedUsers.join(', ')}`
+              : `✅ All players have predicted this match!`,
+          ].join('\n');
+          await sbSendMessage('⚡', msg);
+        }
+      }
+    };
+    const interval = setInterval(check, 60 * 1000); // check every minute
+    check(); // run immediately
+    return () => clearInterval(interval);
+  }, [adminMode, userName, matches, leaderboard]);
+
   const saveActualResults=async(newMatches, newKO)=>{
     await sbSaveActualResults(newMatches||actualMatches, newKO||actualKO, actualPodium);
     const lb=await sbGetLeaderboard();
+    const prevTop3 = leaderboard.slice(0,3).map(e=>e.username);
     for(const e of lb){
       const p=await sbGetPrediction(e.username);
       if(p){
@@ -2599,6 +2637,47 @@ export default function App(){
     // Refresh own rank history
     const rh = await sbGetRankHistory(userName);
     if(rh?.length) setRankHistory(rh);
+
+    // ── AGENT #3: Leaderboard shake-up alert ─────────────────────────────────
+    const newTop3 = lb.slice(0,3).map(e=>e.username);
+    const changed = newTop3.some((u,i)=>u!==prevTop3[i]);
+    if(changed && lb.length > 0) {
+      const medals = ["🥇","🥈","🥉"];
+      const top3Str = lb.slice(0,3).map((e,i)=>`${medals[i]} ${e.username} — ${e.points}pts`).join('\n');
+      const newLeader = newTop3[0] !== prevTop3[0];
+      const msg = [
+        newLeader
+          ? `🚨 New leader! ${newTop3[0]} takes the top spot!`
+          : `📊 Leaderboard update — top 3 has changed!`,
+        ``,
+        top3Str,
+        ``,
+        `Check the 🥇 Board for full standings.`,
+      ].join('\n');
+      await sbSendMessage('⚡', msg);
+    }
+
+    // ── AGENT #2: Post-match analysis ────────────────────────────────────────
+    const justCompleted = (newMatches||actualMatches).filter(m=>{
+      const prev = actualMatches.find(p=>p.id===m.id);
+      return m.homeScore!==null && prev?.homeScore===null;
+    });
+    for(const m of justCompleted){
+      const exactCount  = lb.filter(e=>{
+        const pred = e.predictions?.find?.(p=>p.id===m.id);
+        return pred && pred.homeScore===m.homeScore && pred.awayScore===m.awayScore;
+      }).length;
+      const winner = m.homeScore > m.awayScore ? m.home : m.homeScore < m.awayScore ? m.away : "Draw";
+      const msg = [
+        `⚽ Full time: ${m.home} ${m.homeScore}–${m.awayScore} ${m.away}`,
+        winner==="Draw" ? `🤝 It ends all square!` : `🏆 ${winner} take the points!`,
+        exactCount > 0
+          ? `🎯 ${exactCount} player${exactCount!==1?"s":""} nailed the exact score — 6pts each!`
+          : `No exact scores this time.`,
+        `Check your points on 🥇 Board.`,
+      ].join('\n');
+      await sbSendMessage('⚡', msg);
+    }
   };
 
   const gm=matches.filter(m=>m.group===activeGroup);
