@@ -65,18 +65,12 @@ export default async function handler(req, res) {
     };
   });
 
-  const prompt = `You are a sharp, witty football analytics pundit analysing a World Cup 2026 prediction league among friends.
+  const statsText = playerStats.map(p => `${p.rank}. ${p.username}: ${p.points}pts, Exact:${p.exact}, GD:${p.gd}, Outcome:${p.outcome}, Wrong:${p.wrong}, AvgPredGoals:${p.avgPredGoals}, Accuracy:${p.accuracy}%, BestCalls:[${p.nailedExact.join(',')||'none'}], MissedDraws:[${p.missedDraws.join(',')||'none'}]`).join(' | ');
 
-Here is the group data after ${played.length} matches played:
+  const prompt = `Analyse this World Cup 2026 prediction league after ${played.length} matches. Data: ${statsText}
 
-LEADERBOARD & STATS:
-${playerStats.map(p => `${p.rank}. ${p.username} — ${p.points}pts | Exact:${p.exact} GD:${p.gd} Outcome:${p.outcome} Wrong:${p.wrong} | Avg goals pred:${p.avgPredGoals} actual:${p.avgActualGoals} | Accuracy:${p.accuracy}% | Best calls: ${p.nailedExact.join(', ')||'none'} | Missed draws: ${p.missedDraws.join(', ')||'none'}`).join('\n')}
-
-Write a group analytics report. Be specific, witty, data-driven and comparative.
-
-CRITICAL: Return ONLY a single-line JSON object. No newlines inside string values. No markdown. No explanation. Just raw JSON.
-
-{"headline":"...","leader_analysis":"...","most_skillful":"username","luckiest":"username","biggest_weakness":"...","player_profiles":[{"username":"...","style":"...","insight":"...","tip":"..."}],"prediction":"...","banter":"..."}`;
+Respond with ONLY this JSON (no markdown, no explanation, keep all string values SHORT and on ONE line):
+{"headline":"<60 char summary>","leader_analysis":"<who leads and why, 1 sentence>","most_skillful":"<username>","luckiest":"<username>","biggest_weakness":"<1 sentence>","player_profiles":[{"username":"<name>","style":"<3 words>","insight":"<1 sentence>","tip":"<1 sentence>"}],"prediction":"<1 sentence>","banter":"<1 funny sentence>"}\`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -116,10 +110,16 @@ CRITICAL: Return ONLY a single-line JSON object. No newlines inside string value
 
     let analysis;
     try {
-      const jsonStr = cleaned.slice(start, end + 1)
-        .replace(/[\x00-\x1F\x7F]/g, ' ')
-        .replace(/,\s*}/g, '}')
-        .replace(/,\s*]/g, ']');
+      // Aggressively clean the JSON string
+      let jsonStr = cleaned.slice(start, end + 1);
+      // Replace actual newlines/tabs inside strings with spaces
+      jsonStr = jsonStr.replace(/\n/g, ' ').replace(/\r/g, ' ').replace(/\t/g, ' ');
+      // Remove control characters
+      jsonStr = jsonStr.replace(/[\x00-\x1F\x7F]/g, ' ');
+      // Fix trailing commas
+      jsonStr = jsonStr.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+      // Collapse multiple spaces
+      jsonStr = jsonStr.replace(/  +/g, ' ');
       analysis = JSON.parse(jsonStr);
     } catch(e) {
       return res.status(500).json({ error: `Parse failed: ${e.message}`, raw: cleaned.slice(start, start + 400) });
