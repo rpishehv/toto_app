@@ -213,6 +213,22 @@ export async function sbTogglePaid(username, paid) {
   if (error) console.error('sbTogglePaid error:', error.message);
 }
 
+// ─── ANALYTICS ───────────────────────────────────────────────────────────────────
+export async function sbGetAnalytics() {
+  const { data } = await supabase
+    .from('ai_content').select('analytics, analytics_generated_by, analytics_generated_at').eq('id', 1).maybeSingle();
+  return data || null;
+}
+
+export async function sbSaveAnalytics(analysis, username) {
+  await supabase.from('ai_content').upsert({
+    id: 1,
+    analytics: analysis,
+    analytics_generated_by: username,
+    analytics_generated_at: new Date().toISOString(),
+  }, { onConflict: 'id' });
+}
+
 // ─── NEWS ─────────────────────────────────────────────────────────────────────
 export async function sbGetNews() {
   const { data } = await supabase

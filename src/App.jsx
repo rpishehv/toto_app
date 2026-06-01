@@ -8,6 +8,7 @@ import {
   sbGetLeaderboard, sbUpsertLeaderboard,
   sbGetSaveHistory, sbAddSaveHistory,
   sbGetAIContent, sbSaveAIContent,
+  sbGetAnalytics, sbSaveAnalytics,
   sbGetNews, sbSaveNews,
   sbGetMessages, sbSendMessage, sbDeleteMessage,
   sbUpdateRankHistory, sbGetRankHistory,
@@ -1240,6 +1241,12 @@ export default function App(){
   const [chatSending,setChatSending]=useState(false);
   const [chatUnread,setChatUnread]=useState(0);
   const chatBottomRef=React.useRef(null);
+  // Analytics
+  const [groupAnalytics,setGroupAnalytics]=useState(null);
+  const [analyticsGeneratedBy,setAnalyticsGeneratedBy]=useState(null);
+  const [analyticsGeneratedAt,setAnalyticsGeneratedAt]=useState(null);
+  const [analyticsLoading,setAnalyticsLoading]=useState(false);
+  const [analyticsError,setAnalyticsError]=useState(null);
   // News
   const [newsStories,setNewsStories]=useState([]);
   const [newsUpdatedBy,setNewsUpdatedBy]=useState(null);
@@ -1344,6 +1351,9 @@ export default function App(){
         // Load news
         const newsData = await sbGetNews();
         if(newsData?.news){ setNewsStories(newsData.news); setNewsUpdatedBy(newsData.news_updated_by); setNewsUpdatedAt(newsData.news_updated_at); }
+        // Load analytics
+        const analyticsData = await sbGetAnalytics();
+        if(analyticsData?.analytics){ setGroupAnalytics(analyticsData.analytics); setAnalyticsGeneratedBy(analyticsData.analytics_generated_by); setAnalyticsGeneratedAt(analyticsData.analytics_generated_at); }
         // Load rank history
         if(session?.username) {
           const rh = await sbGetRankHistory(session.username);
@@ -1392,6 +1402,7 @@ export default function App(){
         if(d.bracket)    { setBracketPred(d.bracket);   setBracketGeneratedBy(d.bracket_generated_by); }
         if(d.commentary) { setCommentary(d.commentary); setCommentaryGeneratedBy(d.commentary_generated_by); }
         if(d.news)       { setNewsStories(d.news);      setNewsUpdatedBy(d.news_updated_by); setNewsUpdatedAt(d.news_updated_at); }
+        if(d.analytics)  { setGroupAnalytics(d.analytics); setAnalyticsGeneratedBy(d.analytics_generated_by); setAnalyticsGeneratedAt(d.analytics_generated_at); }
       })
       .subscribe();
 
@@ -1630,6 +1641,43 @@ export default function App(){
         : `⏳ No Polymarket markets found yet — try again closer to June 11.`
     });
     setGeneratingOdds(false);
+  };
+
+  const generateGroupAnalytics = async () => {
+    setAnalyticsLoading(true);
+    setAnalyticsError(null);
+    try {
+      // Build players payload with predictions
+      const players = await Promise.all(leaderboard.map(async(e, i) => {
+        const pred = await sbGetPrediction(e.username);
+        return {
+          username: e.username,
+          rank: i + 1,
+          points: e.points,
+          predictions: pred?.matches || [],
+        };
+      }));
+      const res = await fetch('/api/analytics', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          players,
+          actualResults: actualMatches,
+          generatedBy: userName,
+        }),
+      });
+      const raw = await res.text();
+      let data;
+      try { data = JSON.parse(raw); }
+      catch(e) { throw new Error(`Non-JSON response: ${raw.slice(0,200)}`); }
+      if(data.error) throw new Error(data.error);
+      setGroupAnalytics(data.analysis);
+      setAnalyticsGeneratedBy(userName);
+      setAnalyticsGeneratedAt(new Date().toISOString());
+      await sbSaveAnalytics(data.analysis, userName);
+    } catch(e) {
+      setAnalyticsError(e.message);
+    }
+    setAnalyticsLoading(false);
   };
 
   const fetchNews = async () => {
@@ -4557,6 +4605,105 @@ export default function App(){
                   })()}
                 </>
               )}
+
+              {/* ── Group Analytics ── */}
+              <div style={{height:1,background:"rgba(255,255,255,0.06)",margin:"20px 0 16px"}}/>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#a78bfa",letterSpacing:1}}>
+                  🔍 Group Analytics
+                </div>
+                <button onClick={generateGroupAnalytics} disabled={analyticsLoading} style={{
+                  padding:"6px 14px",borderRadius:8,fontFamily:"inherit",fontWeight:700,fontSize:12,
+                  cursor:analyticsLoading?"wait":"pointer",
+                  background:analyticsLoading?"rgba(139,92,246,0.04)":"rgba(139,92,246,0.12)",
+                  border:"1px solid rgba(139,92,246,0.3)",
+                  color:analyticsLoading?"#444":"#a78bfa",
+                  opacity:analyticsLoading?0.7:1,
+                }}>
+                  {analyticsLoading?"⏳ Analysing…":"🔍 Generate Analysis"}
+                </button>
+              </div>
+
+              {analyticsError&&(
+                <div style={{padding:"10px 14px",borderRadius:8,marginBottom:12,
+                  background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",
+                  fontSize:11,color:"#fca5a5"}}>⚠️ {analyticsError}</div>
+              )}
+
+              {analyticsGeneratedBy&&analyticsGeneratedAt&&(
+                <div style={{fontSize:10,color:"#444",marginBottom:10}}>
+                  Generated by {analyticsGeneratedBy} · {new Date(analyticsGeneratedAt).toLocaleString()}
+                  {" · "}visible to all players
+                </div>
+              )}
+
+              {!groupAnalytics&&!analyticsLoading&&(
+                <div style={{textAlign:"center",padding:"32px 20px",color:"#444"}}>
+                  <div style={{fontSize:32,marginBottom:8}}>🔍</div>
+                  <div style={{fontSize:12,marginBottom:4}}>No analysis yet</div>
+                  <div style={{fontSize:11,color:"#333"}}>Generate once matches have been played — results shared with everyone</div>
+                </div>
+              )}
+
+              {groupAnalytics&&(()=>{
+                const a = groupAnalytics;
+                return(
+                  <div>
+                    {/* Headline */}
+                    <div style={{padding:"12px 16px",borderRadius:10,marginBottom:12,
+                      background:"linear-gradient(135deg,rgba(139,92,246,0.12),rgba(139,92,246,0.06))",
+                      border:"1px solid rgba(139,92,246,0.25)"}}>
+                      <div style={{fontSize:14,fontWeight:700,color:"#c4b5fd",lineHeight:1.4}}>{a.headline}</div>
+                    </div>
+
+                    {/* Key callouts */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+                      {[
+                        {label:"🏆 Leader analysis", value:a.leader_analysis, color:"#fcb900"},
+                        {label:"🎯 Most skillful", value:`${a.most_skillful} — ${a.player_profiles?.find(p=>p.username===a.most_skillful)?.insight||""}`, color:"#22c55e"},
+                        {label:"🍀 Luckiest player", value:a.luckiest, color:"#60a5fa"},
+                        {label:"📉 Group weakness", value:a.biggest_weakness, color:"#fb923c"},
+                      ].map((item,i)=>(
+                        <div key={i} style={{padding:"10px 12px",borderRadius:8,
+                          background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)"}}>
+                          <div style={{fontSize:10,fontWeight:700,color:item.color,marginBottom:4}}>{item.label}</div>
+                          <div style={{fontSize:11,color:"#888",lineHeight:1.5}}>{item.value}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Player profiles */}
+                    <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,color:"#555",
+                      letterSpacing:1,marginBottom:8}}>Player Profiles</div>
+                    {a.player_profiles?.map((p,i)=>(
+                      <div key={i} style={{marginBottom:8,padding:"10px 14px",borderRadius:8,
+                        background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                          <span style={{fontSize:12,fontWeight:700,color:"#ddd"}}>{p.username}</span>
+                          <span style={{fontSize:10,color:"#a78bfa",background:"rgba(139,92,246,0.12)",
+                            borderRadius:4,padding:"2px 7px"}}>{p.style}</span>
+                        </div>
+                        <div style={{fontSize:11,color:"#666",lineHeight:1.5,marginBottom:4}}>{p.insight}</div>
+                        <div style={{fontSize:10,color:"#22c55e"}}>💡 {p.tip}</div>
+                      </div>
+                    ))}
+
+                    {/* Prediction + Banter */}
+                    <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:4}}>
+                      <div style={{padding:"10px 14px",borderRadius:8,
+                        background:"rgba(252,185,0,0.06)",border:"1px solid rgba(252,185,0,0.2)"}}>
+                        <div style={{fontSize:10,color:"#fcb900",fontWeight:700,marginBottom:4}}>🏆 Who wins this?</div>
+                        <div style={{fontSize:11,color:"#888",lineHeight:1.5}}>{a.prediction}</div>
+                      </div>
+                      <div style={{padding:"10px 14px",borderRadius:8,
+                        background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)"}}>
+                        <div style={{fontSize:10,color:"#fb923c",fontWeight:700,marginBottom:4}}>😂 Banter corner</div>
+                        <div style={{fontSize:11,color:"#888",lineHeight:1.5,fontStyle:"italic"}}>{a.banter}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           );
         })()}

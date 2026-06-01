@@ -114,3 +114,8 @@ alter table ai_content add column if not exists news_updated_at timestamptz defa
 
 -- Paid status on leaderboard
 alter table leaderboard add column if not exists paid boolean default false;
+
+-- Analytics columns on ai_content
+alter table ai_content add column if not exists analytics jsonb default null;
+alter table ai_content add column if not exists analytics_generated_by text default null;
+alter table ai_content add column if not exists analytics_generated_at timestamptz default null;
