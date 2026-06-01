@@ -4656,6 +4656,17 @@ export default function App(){
 
               {groupAnalytics&&!Array.isArray(groupAnalytics)&&(()=>{
                 const a = groupAnalytics;
+                // Debug: show raw if no expected fields
+                const hasExpectedFields = a.headline || a.player_profiles?.length;
+                if(!hasExpectedFields) return(
+                  <div style={{padding:"10px",borderRadius:8,background:"rgba(255,255,255,0.03)",
+                    border:"1px solid rgba(255,255,255,0.06)",fontSize:10,color:"#555"}}>
+                    <div style={{color:"#fb923c",marginBottom:6}}>⚠️ Unexpected analytics shape — raw data:</div>
+                    <pre style={{margin:0,whiteSpace:"pre-wrap",wordBreak:"break-all"}}>
+                      {JSON.stringify(a, null, 2)}
+                    </pre>
+                  </div>
+                );
                 return(
                   <div>
                     {/* Headline */}
