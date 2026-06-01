@@ -1674,18 +1674,17 @@ export default function App(){
       let data;
       try { data = JSON.parse(raw); }
       catch(e) { throw new Error(`Non-JSON response: ${raw.slice(0,300)}`); }
-      if(data.error) throw new Error(data.error);
-      if(!data.analysis) throw new Error(`API returned no analysis. Response keys: ${Object.keys(data).join(', ')}`);
+      if(data.error) throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+      if(!data.analysis) throw new Error(`No analysis. Keys: ${Object.keys(data).join(', ')}`);
       const a = data.analysis;
-      // Validate it's the expected object shape, not an array
-      if(Array.isArray(a)) throw new Error(`Got array instead of analysis object — unexpected response shape`);
-      if(!a.headline && !a.player_profiles) throw new Error(`Analysis missing expected fields. Got: ${Object.keys(a).join(', ')}`);
+      if(Array.isArray(a)) throw new Error(`Got array instead of object`);
+      if(!a.headline && !a.player_profiles) throw new Error(`Unexpected shape: ${Object.keys(a).join(', ')}`);
       setGroupAnalytics(data.analysis);
       setAnalyticsGeneratedBy(userName);
       setAnalyticsGeneratedAt(new Date().toISOString());
       await sbSaveAnalytics(data.analysis, userName);
     } catch(e) {
-      setAnalyticsError(e.message);
+      setAnalyticsError(typeof e.message === 'string' ? e.message : JSON.stringify(e));
     }
     setAnalyticsLoading(false);
   };
