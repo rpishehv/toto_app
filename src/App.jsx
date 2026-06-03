@@ -1316,6 +1316,7 @@ export default function App(){
   const [adminPinError,setAdminPinError]=useState("");
   const [deleteConfirmUser,setDeleteConfirmUser]=useState(null);
   const [chatReminderSent,setChatReminderSent]=useState(false);
+  const [showAdvancedTray,setShowAdvancedTray]=useState(false);
   // Agentic features — track which reminders have already fired
   const firedRemindersRef = React.useRef(new Set());
   const [adminActiveGroup,setAdminActiveGroup]=useState("A");
@@ -2980,23 +2981,24 @@ export default function App(){
     );
   }
 
-  const TABS_ROW1=[
-    {id:"groups",      label:"⚽", full:"⚽ Groups"},
-    {id:"knockout",    label:"🏆", full:"🏆 Knockout"},
-    {id:"champion",    label:"👑", full:"👑 My Pick"},
+  const TABS_MAIN=[
+    {id:"groups",   label:"⚽", full:"⚽ Groups"},
+    {id:"knockout", label:"🏆", full:"🏆 Knockout"},
+    {id:"champion", label:"👑", full:"👑 My Pick"},
+    {id:"help",     label:"❓", full:"❓ Help"},
+  ];
+  const TABS_ADVANCED=[
     {id:"leaderboard", label:"🥇", full:"🥇 Board"},
     {id:"chat",        label:"💬", full:"💬 Chat"},
+    {id:"live",        label:"🔴", full:"🔴 Live"},
+    {id:"news",        label:"📰", full:"📰 News"},
+    {id:"stats",       label:"📈", full:"📈 Stats"},
+    {id:"scoring",     label:"📊", full:"📊 Scoring"},
+    {id:"ai",          label:"🤖", full:"🤖 AI"},
+    {id:"admin",       label:"🔧", full:"🔧 Admin", restricted:true},
   ];
-  const TABS_ROW2=[
-    {id:"live",   label:"🔴", full:"🔴 Live"},
-    {id:"news",   label:"📰", full:"📰 News"},
-    {id:"stats",  label:"📈", full:"📈 Stats"},
-    {id:"scoring",label:"📊", full:"📊 Scoring"},
-    {id:"ai",     label:"🤖", full:"🤖 AI"},
-    {id:"admin",  label:"🔧", full:"🔧 Admin", restricted:true},
-    {id:"help",   label:"❓", full:"❓ Help"},
-  ];
-  const TABS=[...TABS_ROW1,...TABS_ROW2];
+  const TABS=[...TABS_MAIN,...TABS_ADVANCED];
+  const advancedTabActive = TABS_ADVANCED.some(t=>t.id===tab);
 
   return(
     <div style={{minHeight:"100vh",background:"#0a0d12",
@@ -3403,39 +3405,102 @@ export default function App(){
 
       {/* TABS */}
       <div style={{borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.22)"}}>
-        {[TABS_ROW1, TABS_ROW2].map((row, ri)=>(
-          <div key={ri} style={{display:"flex",borderTop:ri>0?"1px solid rgba(255,255,255,0.06)":"none"}}>
-            {row.map(t=>{
-              const isActive = tab===t.id;
-              const name = t.full.split(" ").slice(1).join(" ");
-              return(
-                <button key={t.id} onClick={()=>handleTabChange(t.id)}
-                  style={{
-                    flex:1,padding:"6px 4px",
-                    background:t.restricted?"rgba(251,146,60,0.04)":"transparent",
-                    border:"none",
-                    borderBottom:`2px solid ${isActive?"#fcb900":"transparent"}`,
-                    color:isActive?"#fcb900":t.restricted?"#6b5a4a":"#555",
-                    cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",
-                    whiteSpace:"nowrap",position:"relative",
-                    display:"flex",flexDirection:"column",alignItems:"center",gap:1,
-                  }}>
-                  <span style={{fontSize:18,lineHeight:1}}>{t.label}</span>
-                  <span style={{fontSize:10,fontWeight:isActive?700:400,
-                    color:isActive?"#fcb900":t.restricted?"#6b5a4a":"#444",letterSpacing:0.3}}>{name}</span>
-                  {t.id==="chat"&&chatUnread>0&&!isActive&&(
-                    <span style={{
-                      position:"absolute",top:2,right:"calc(50% - 14px)",
-                      background:"#ef4444",color:"#fff",borderRadius:"50%",
-                      width:13,height:13,fontSize:7,fontWeight:700,
-                      display:"flex",alignItems:"center",justifyContent:"center",
-                    }}>{chatUnread>9?"9+":chatUnread}</span>
-                  )}
-                </button>
-              );
-            })}
+        {/* Main row */}
+        <div style={{display:"flex"}}>
+          {TABS_MAIN.map(t=>{
+            const isActive = tab===t.id;
+            const name = t.full.split(" ").slice(1).join(" ");
+            return(
+              <button key={t.id} onClick={()=>{handleTabChange(t.id);setShowAdvancedTray(false);}}
+                style={{
+                  flex:1,padding:"6px 4px",background:"transparent",border:"none",
+                  borderBottom:`2px solid ${isActive?"#fcb900":"transparent"}`,
+                  color:isActive?"#fcb900":"#555",
+                  cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",
+                  display:"flex",flexDirection:"column",alignItems:"center",gap:1,
+                }}>
+                <span style={{fontSize:18,lineHeight:1}}>{t.label}</span>
+                <span style={{fontSize:10,fontWeight:isActive?700:400,
+                  color:isActive?"#fcb900":"#444",letterSpacing:0.3}}>{name}</span>
+              </button>
+            );
+          })}
+          {/* More button */}
+          {(()=>{
+            const trayOpen = showAdvancedTray || advancedTabActive;
+            const hasUnread = chatUnread > 0;
+            return(
+              <button onClick={()=>setShowAdvancedTray(v=>!v)}
+                style={{
+                  flex:1,padding:"6px 4px",background:"transparent",border:"none",
+                  borderBottom:`2px solid ${advancedTabActive?"#60a5fa":"transparent"}`,
+                  color:advancedTabActive?"#60a5fa":trayOpen?"#60a5fa":"#555",
+                  cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",
+                  display:"flex",flexDirection:"column",alignItems:"center",gap:1,
+                  position:"relative",
+                }}>
+                <span style={{fontSize:18,lineHeight:1}}>⚡</span>
+                <span style={{fontSize:10,fontWeight:400,
+                  color:advancedTabActive?"#60a5fa":trayOpen?"#60a5fa":"#444",letterSpacing:0.3}}>
+                  More
+                </span>
+                {hasUnread&&!advancedTabActive&&(
+                  <span style={{
+                    position:"absolute",top:2,right:"calc(50% - 14px)",
+                    background:"#ef4444",color:"#fff",borderRadius:"50%",
+                    width:13,height:13,fontSize:7,fontWeight:700,
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                  }}>{chatUnread>9?"9+":chatUnread}</span>
+                )}
+              </button>
+            );
+          })()}
+        </div>
+
+        {/* Collapsible advanced tray */}
+        {(showAdvancedTray||advancedTabActive)&&(
+          <div style={{borderTop:"1px solid rgba(255,255,255,0.06)",
+            background:"rgba(96,165,250,0.03)"}}>
+            <div style={{padding:"3px 6px 4px",
+              fontSize:8,color:"#333",textAlign:"center",
+              letterSpacing:0.8,textTransform:"uppercase",fontWeight:600}}>
+              Advanced
+            </div>
+            <div style={{display:"flex"}}>
+              {TABS_ADVANCED.map(t=>{
+                const isActive = tab===t.id;
+                const name = t.full.split(" ").slice(1).join(" ");
+                return(
+                  <button key={t.id} onClick={()=>handleTabChange(t.id)}
+                    style={{
+                      flex:1,padding:"4px 2px 5px",
+                      background:t.restricted?"rgba(251,146,60,0.04)":"transparent",
+                      border:"none",
+                      borderBottom:`2px solid ${isActive?"#60a5fa":"transparent"}`,
+                      color:isActive?"#60a5fa":t.restricted?"#6b5a4a":"#555",
+                      cursor:"pointer",fontFamily:"inherit",
+                      display:"flex",flexDirection:"column",alignItems:"center",gap:0,
+                      position:"relative",
+                    }}>
+                    <span style={{fontSize:14,lineHeight:1}}>{t.label}</span>
+                    <span style={{fontSize:8,fontWeight:isActive?700:400,
+                      color:isActive?"#60a5fa":t.restricted?"#6b5a4a":"#444",letterSpacing:0.2}}>
+                      {name}
+                    </span>
+                    {t.id==="chat"&&chatUnread>0&&!isActive&&(
+                      <span style={{
+                        position:"absolute",top:1,right:"calc(50% - 12px)",
+                        background:"#ef4444",color:"#fff",borderRadius:"50%",
+                        width:11,height:11,fontSize:6,fontWeight:700,
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                      }}>{chatUnread>9?"9+":chatUnread}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        ))}
+        )}
       </div>
 
       <div style={{maxWidth:820,margin:"0 auto",padding:"16px 12px"}}>
