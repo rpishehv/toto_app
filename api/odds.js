@@ -163,39 +163,75 @@ export default async function handler(req) {
 }
 
 function buildFromArrays(outcomes, prices, home, away, slug) {
+  // Outcomes may be Yes/No binary or team name labels
+  const isYesNo = outcomes.length <= 2 && outcomes.some(o => /^yes$/i.test(o.trim()));
   let homeProb = null, awayProb = null, drawProb = null;
-  outcomes.forEach((o, i) => {
-    const l = o.toLowerCase();
-    const p = Math.round((prices[i] || 0) * 100);
-    if (l.includes('draw') || l.includes('tie')) drawProb = p;
-    else if (teamMatch(l, home)) homeProb = p;
-    else if (teamMatch(l, away)) awayProb = p;
-  });
+  let displayOutcomes = [];
+
+  if (isYesNo) {
+    // Single Yes/No market — "Yes" = home team wins
+    const yesIdx = outcomes.findIndex(o => /^yes$/i.test(o.trim()));
+    const yesProb = yesIdx >= 0 ? Math.round((prices[yesIdx] || 0) * 100) : null;
+    const noProb  = yesProb != null ? 100 - yesProb : null;
+    homeProb = yesProb;
+    awayProb = noProb;
+    displayOutcomes = [
+      { label: home,   prob: yesProb },
+      { label: away,   prob: noProb  },
+    ].filter(o => o.prob != null);
+  } else {
+    outcomes.forEach((o, i) => {
+      const l = o.toLowerCase();
+      const p = Math.round((prices[i] || 0) * 100);
+      if (l.includes('draw') || l.includes('tie')) drawProb = p;
+      else if (teamMatch(l, home)) homeProb = p;
+      else if (teamMatch(l, away)) awayProb = p;
+    });
+    displayOutcomes = outcomes.map((o,i) => ({ label: o, prob: Math.round((prices[i]||0)*100) }));
+  }
+
   return new Response(JSON.stringify({
     found: true, title: `${home} vs ${away}`,
     url: `https://polymarket.com/sports/fifa-world-cup/${slug}`,
     homeProb, awayProb, drawProb,
-    outcomes: outcomes.map((o,i) => ({ label: o, prob: Math.round((prices[i]||0)*100) })),
+    outcomes: displayOutcomes,
   }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=60' } });
 }
 
 function buildEventResponse(event, home, away) {
   const markets = event.markets || [];
   let homeProb = null, awayProb = null, drawProb = null;
-  markets.forEach(m => {
-    const q = ((m.question || '') + ' ' + (m.groupItemTitle || '')).toLowerCase();
-    const p = Math.round(parseFloat(m.outcomePrices?.[0] ?? m.lastTradePrice ?? 0) * 100);
-    if (q.includes('draw') || q.includes('tie')) drawProb = p;
-    else if (teamMatch(q, home)) homeProb = p;
-    else if (teamMatch(q, away)) awayProb = p;
-  });
-  if (homeProb === null && markets.length === 3) {
-    homeProb = Math.round(parseFloat(markets[0]?.outcomePrices?.[0] ?? 0) * 100);
-    drawProb  = Math.round(parseFloat(markets[1]?.outcomePrices?.[0] ?? 0) * 100);
-    awayProb  = Math.round(parseFloat(markets[2]?.outcomePrices?.[0] ?? 0) * 100);
-  } else if (homeProb === null && markets.length === 2) {
-    homeProb = Math.round(parseFloat(markets[0]?.outcomePrices?.[0] ?? 0) * 100);
-    awayProb  = Math.round(parseFloat(markets[1]?.outcomePrices?.[0] ?? 0) * 100);
+
+  // Check if markets are Yes/No binary (single market about home team winning)
+  if (markets.length === 1) {
+    const m = markets[0];
+    const outcomes = m.outcomes || [];
+    const prices = m.outcomePrices || [];
+    const isYesNo = outcomes.some(o => /^yes$/i.test(String(o).trim()));
+    if (isYesNo) {
+      const yesIdx = outcomes.findIndex(o => /^yes$/i.test(String(o).trim()));
+      homeProb = yesIdx >= 0 ? Math.round(parseFloat(prices[yesIdx] ?? 0) * 100) : null;
+      awayProb = homeProb != null ? 100 - homeProb : null;
+    } else {
+      homeProb = Math.round(parseFloat(prices[0] ?? 0) * 100);
+      awayProb = Math.round(parseFloat(prices[1] ?? 0) * 100);
+    }
+  } else {
+    markets.forEach(m => {
+      const q = ((m.question || '') + ' ' + (m.groupItemTitle || '')).toLowerCase();
+      const p = Math.round(parseFloat(m.outcomePrices?.[0] ?? m.lastTradePrice ?? 0) * 100);
+      if (q.includes('draw') || q.includes('tie')) drawProb = p;
+      else if (teamMatch(q, home)) homeProb = p;
+      else if (teamMatch(q, away)) awayProb = p;
+    });
+    if (homeProb === null && markets.length === 3) {
+      homeProb = Math.round(parseFloat(markets[0]?.outcomePrices?.[0] ?? 0) * 100);
+      drawProb  = Math.round(parseFloat(markets[1]?.outcomePrices?.[0] ?? 0) * 100);
+      awayProb  = Math.round(parseFloat(markets[2]?.outcomePrices?.[0] ?? 0) * 100);
+    } else if (homeProb === null && markets.length === 2) {
+      homeProb = Math.round(parseFloat(markets[0]?.outcomePrices?.[0] ?? 0) * 100);
+      awayProb  = Math.round(parseFloat(markets[1]?.outcomePrices?.[0] ?? 0) * 100);
+    }
   }
   return new Response(JSON.stringify({
     found: true, title: event.title || `${home} vs ${away}`,

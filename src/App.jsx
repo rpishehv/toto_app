@@ -668,24 +668,35 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
                   border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,color:"#555",
                   fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
               </div>
-              {(matchOdds.outcomes?.length>0?matchOdds.outcomes:[
-                {label:match.home,prob:matchOdds.homeProb},
-                {label:"Draw",prob:matchOdds.drawProb},
-                {label:match.away,prob:matchOdds.awayProb},
-              ].filter(o=>o.prob!=null)).map((o,i)=>(
-                <div key={i} style={{marginBottom:5}}>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:2}}>
-                    <span style={{color:"#ccc",fontWeight:600}}>{o.label}</span>
-                    <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,
-                      color:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#888"}}>{o.prob}¢</span>
+              {(()=>{
+                // Normalise outcomes — replace Yes/No with team names
+                let outcomes = matchOdds.outcomes?.length>0 ? matchOdds.outcomes : [
+                  {label:match.home, prob:matchOdds.homeProb},
+                  {label:"Draw",     prob:matchOdds.drawProb},
+                  {label:match.away, prob:matchOdds.awayProb},
+                ].filter(o=>o.prob!=null);
+                // If only two outcomes and they're Yes/No, relabel them
+                if(outcomes.length===2 && /^yes$/i.test(outcomes[0]?.label)) {
+                  outcomes = [
+                    {label:match.home, prob:outcomes[0].prob},
+                    {label:match.away, prob:outcomes[1].prob},
+                  ];
+                }
+                return outcomes.map((o,i)=>(
+                  <div key={i} style={{marginBottom:5}}>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:2}}>
+                      <span style={{color:"#ccc",fontWeight:600}}>{o.label}</span>
+                      <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,
+                        color:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#888"}}>{o.prob}¢</span>
+                    </div>
+                    <div style={{height:4,background:"rgba(255,255,255,0.06)",borderRadius:2,overflow:"hidden"}}>
+                      <div style={{width:`${o.prob}%`,height:"100%",
+                        background:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#60a5fa",
+                        borderRadius:2,transition:"width 0.5s"}}/>
+                    </div>
                   </div>
-                  <div style={{height:4,background:"rgba(255,255,255,0.06)",borderRadius:2,overflow:"hidden"}}>
-                    <div style={{width:`${o.prob}%`,height:"100%",
-                      background:o.prob>=50?"#22c55e":o.prob>=30?"#fcb900":"#60a5fa",
-                      borderRadius:2,transition:"width 0.5s"}}/>
-                  </div>
-                </div>
-              ))}
+                ));
+              })()}
               <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
                 <span style={{fontSize:10,color:"#444"}}>Price in ¢ = % probability</span>
                 {matchOdds.url&&<a href={matchOdds.url} target="_blank" rel="noopener noreferrer"
