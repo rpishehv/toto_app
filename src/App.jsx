@@ -15,7 +15,7 @@ import {
   sbGetReactions, sbToggleReaction,
   saveSession, getSession, clearSession,
   generateRecoveryCode,
-  lsGet, lsSet, lsDel, stGet, stSet, detectStorage,
+  lsGet, lsSet, lsDel, detectStorage,
 } from './storage.js';
 import { fetchLiveFeed, parseFeed, applyFeedToState } from './liveFeed.js';
 import GROUP_INSIGHTS from './insights.js';
@@ -812,7 +812,7 @@ function ReactionsBar({matchId, userName, home, away}) {
       undoTimer.current = setTimeout(async()=>{
         setUndoEmoji(null);
         await sbToggleReaction(matchId, userName, emoji);
-        if(home && away) await sbSendMessage('⚡', `${emoji} ${userName} reacted to ${home} vs ${away}`);
+        if(home && away) await sbSendMessage('⚡', `${emoji} ${userName} reacted to ${home} vs ${away}`, groupCode);
       }, 2000);
     } else {
       clearTimeout(undoTimer.current);
@@ -1174,7 +1174,7 @@ export default function App(){
   useEffect(()=>{
     if(tab!=="chat") return;
     const poll = setInterval(()=>{
-      sbGetMessages(50).then(msgs=>{
+      sbGetMessages(50, groupCode).then(msgs=>{
         setChatMessages(prev=>{
           // Merge — keep optimistic ones, add any new real ones
           const realIds = new Set(msgs.map(m=>m.id));
@@ -1188,6 +1188,8 @@ export default function App(){
     return ()=>clearInterval(poll);
   },[tab]);
   const [userName,setUserName]=useState("");
+  const [groupCode,setGroupCode]=useState("default");
+  const [groupCodeInput,setGroupCodeInput]=useState("");
   const [appError,setAppError]=useState(null);
   const [appLoading,setAppLoading]=useState(true);
   const [isOnline,setIsOnline]=useState(navigator.onLine);
@@ -1342,11 +1344,13 @@ export default function App(){
     (async()=>{
       try {
         await detectStorage();
-        const session = await stGet("wc26_session");
-        if (session?.username && session?.expiry > Date.now()) {
+        const session = getSession();
+        const gc = session?.groupCode || 'default';
+        if (session?.username) {
           setUserName(session.username);
+          setGroupCode(gc);
         }
-        const lb=await sbGetLeaderboard(); if(lb) setLeaderboard(lb);
+        const lb=await sbGetLeaderboard(gc); if(lb) setLeaderboard(lb);
         const actual=await sbGetActualResults();
         if(actual?.matches?.length)       setActualMatches(actual.matches);
         if(actual?.knockout?.length)       setActualKO(actual.knockout);
@@ -1356,19 +1360,19 @@ export default function App(){
         if(actual)                   setAdminHasSaved(true);
         const hist = await sbGetSaveHistory();
         if(hist) setSaveHistory(hist);
-        // Load shared AI content
-        const aiContent = await sbGetAIContent();
+        // Load shared AI content scoped to group
+        const aiContent = await sbGetAIContent(gc);
         if(aiContent?.bracket)   { setBracketPred(aiContent.bracket); setBracketGeneratedBy(aiContent.bracket_generated_by); }
         if(aiContent?.commentary){ setCommentary(aiContent.commentary); setCommentaryGeneratedBy(aiContent.commentary_generated_by); }
         // Load news
-        const newsData = await sbGetNews();
+        const newsData = await sbGetNews(gc);
         if(newsData?.news){ setNewsStories(newsData.news); setNewsUpdatedBy(newsData.news_updated_by); setNewsUpdatedAt(newsData.news_updated_at); }
         // Load analytics
-        const analyticsData = await sbGetAnalytics();
+        const analyticsData = await sbGetAnalytics(gc);
         if(analyticsData?.analytics){ setGroupAnalytics(analyticsData.analytics); setAnalyticsGeneratedBy(analyticsData.analytics_generated_by); setAnalyticsGeneratedAt(analyticsData.analytics_generated_at); }
         // Load rank history
         if(session?.username) {
-          const rh = await sbGetRankHistory(session.username);
+          const rh = await sbGetRankHistory(session.username, gc);
           if(rh?.length) setRankHistory(rh);
         }
       } catch(e) {
@@ -1392,7 +1396,7 @@ export default function App(){
 
   // ── Real-time subscriptions ─────────────────────────────────────────────────
   useEffect(()=>{
-    // Subscribe to actual_results changes (admin saves scores)
+    // Subscribe to actual_results changes (admin saves scores) — global
     const resultsSub = supabase
       .channel('actual_results_changes')
       .on('postgres_changes', { event:'UPDATE', schema:'public', table:'actual_results' }, payload=>{
@@ -1406,10 +1410,11 @@ export default function App(){
       })
       .subscribe();
 
-    // Subscribe to ai_content changes (bracket, commentary, news)
+    // Subscribe to ai_content changes — filter by group_code
     const aiSub = supabase
-      .channel('ai_content_changes')
-      .on('postgres_changes', { event:'*', schema:'public', table:'ai_content' }, payload=>{
+      .channel(`ai_content_${groupCode}`)
+      .on('postgres_changes', { event:'*', schema:'public', table:'ai_content',
+        filter:`group_code=eq.${groupCode}` }, payload=>{
         const d = payload.new;
         if(d.bracket)    { setBracketPred(d.bracket);   setBracketGeneratedBy(d.bracket_generated_by); }
         if(d.commentary) { setCommentary(d.commentary); setCommentaryGeneratedBy(d.commentary_generated_by); }
@@ -1418,11 +1423,13 @@ export default function App(){
       })
       .subscribe();
 
-    // Load chat + subscribe to new messages
-    sbGetMessages(50).then(msgs => setChatMessages(msgs));
+    // Load chat + subscribe to new messages — filter by group_code
+    sbGetMessages(50, groupCode).then(msgs => setChatMessages(msgs));
     const chatSub = supabase
-      .channel('chat_realtime')
-      .on('postgres_changes', { event:'INSERT', schema:'public', table:'chat_messages' }, payload=>{
+      .channel(`chat_${groupCode}`)
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'chat_messages',
+        filter:`group_code=eq.${groupCode}` }, payload=>{
+        if(payload.new.group_code !== groupCode) return;
         setChatMessages(prev => {
           const filtered = prev.filter(m =>
             !(m.id?.startsWith('optimistic_') &&
@@ -1435,13 +1442,14 @@ export default function App(){
         setChatUnread(u => u + 1);
         setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
       })
-      .subscribe(status => console.log('Chat sub:', status));
+      .subscribe();
 
-    // Subscribe to leaderboard changes
+    // Subscribe to leaderboard changes — filter by group_code
     const lbSub = supabase
-      .channel('leaderboard_changes')
-      .on('postgres_changes', { event:'*', schema:'public', table:'leaderboard' }, async ()=>{
-        const lb = await sbGetLeaderboard();
+      .channel(`leaderboard_${groupCode}`)
+      .on('postgres_changes', { event:'*', schema:'public', table:'leaderboard',
+        filter:`group_code=eq.${groupCode}` }, async ()=>{
+        const lb = await sbGetLeaderboard(groupCode);
         if(lb) setLeaderboard(lb);
       })
       .subscribe();
@@ -1452,7 +1460,7 @@ export default function App(){
       supabase.removeChannel(aiSub);
       supabase.removeChannel(chatSub);
     };
-  },[]);
+  },[groupCode]);
 
   // ── Prediction completion counter ───────────────────────────────────────────
   useEffect(()=>{
@@ -1468,7 +1476,7 @@ export default function App(){
     if(!userName)return;
     (async()=>{
       try {
-        const p=await sbGetPrediction(userName);
+        const p=await sbGetPrediction(userName, groupCode);
         if(p){
           if(p.matches) setMatches(p.matches);
           if(p.knockout) {
@@ -1511,8 +1519,8 @@ export default function App(){
   const saveBackup = async (m, k, p) => {
     const at = Date.now();
     const data = { matches:m, knockout:k, podium:p, exportedAt:new Date(at).toISOString() };
-    await stSet(`wc26_backup_${userName}`, data);
-    await stSet(`wc26_backup_meta_${userName}`, { at });
+    lsSet(`wc26_backup_${userName}`, data);
+    lsSet(`wc26_backup_meta_${userName}`, { at });
     setLastBackupAt(at);
     setImportText(JSON.stringify(data)); // Option 1: always ready to copy
     return data;
@@ -1579,9 +1587,9 @@ export default function App(){
     setActualKO(blankKO);
     setActualPodium(blankPodium);
     await sbSaveActualResults(blankMatches, blankKO, blankPodium, koKickoffs);
-    const lb=await sbGetLeaderboard();
+    const lb=await sbGetLeaderboard(groupCode);
     for(const e of lb){
-      const p=await sbGetPrediction(e.username);
+      const p=await sbGetPrediction(e.username, groupCode);
       if(p){ e.points=calcTotal(p.matches||[],blankMatches,p.knockout||[],blankKO,p.podium,blankPodium); e.champion=p.podium?.first||"?"; }
     }
     lb.sort((a,b)=>b.points-a.points);
@@ -1666,7 +1674,7 @@ export default function App(){
     try {
       // Build players payload with predictions
       const players = await Promise.all(leaderboard.map(async(e, i) => {
-        const pred = await sbGetPrediction(e.username);
+        const pred = await sbGetPrediction(e.username, groupCode);
         return {
           username: e.username,
           rank: i + 1,
@@ -1695,7 +1703,7 @@ export default function App(){
       setAnalyticsGeneratedBy(userName);
       setAnalyticsGeneratedAt(new Date().toISOString());
       console.log('Analytics set:', JSON.stringify(data.analysis).slice(0, 200));
-      await sbSaveAnalytics(data.analysis, userName);
+      await sbSaveAnalytics(data.analysis, userName, groupCode);
     } catch(e) {
       setAnalyticsError(typeof e.message === 'string' ? e.message : JSON.stringify(e));
     }
@@ -1720,7 +1728,7 @@ export default function App(){
         setNewsStories(data.stories);
         setNewsUpdatedBy(userName);
         setNewsUpdatedAt(new Date().toISOString());
-        await sbSaveNews(data.stories, userName);
+        await sbSaveNews(data.stories, userName, groupCode);
         // Persist cooldown expiry in localStorage
         const expiresAt = Date.now() + NEWS_COOLDOWN_SECS * 1000;
         localStorage.setItem('news_cooldown_expires', String(expiresAt));
@@ -1977,7 +1985,7 @@ export default function App(){
       setBracketPred(data);
       setBracketGeneratedBy(userName);
       // Save to Supabase with who generated it — real-time pushes to all users
-      await sbSaveAIContent(data, commentary, userName, commentaryGeneratedBy);
+      await sbSaveAIContent(data, commentary, userName, commentaryGeneratedBy, groupCode);
     } catch(e) { console.error('Bracket error:', e); }
     setBracketLoading(false);
   };
@@ -1999,7 +2007,7 @@ export default function App(){
       setCommentary(data.commentary);
       setCommentaryGeneratedBy(userName);
       // Save to Supabase — real-time pushes to all users
-      await sbSaveAIContent(bracketPred, data.commentary, bracketGeneratedBy, userName);
+      await sbSaveAIContent(bracketPred, data.commentary, bracketGeneratedBy, userName, groupCode);
     } catch(e) { console.error('Commentary error:', e); }
     setCommentaryLoading(false);
   };
@@ -2011,7 +2019,7 @@ export default function App(){
     try {
       const lbWithPodium = await Promise.all(
         leaderboard.map(async e => {
-          const p = await sbGetPrediction(e.username);
+          const p = await sbGetPrediction(e.username, groupCode);
           return { ...e, podium: p?.podium || {} };
         })
       );
@@ -2453,9 +2461,9 @@ export default function App(){
       await sbSaveActualResults(actualMatches, actualKO, newPodium, koKickoffs, livePredictions);
       // livePredictions saved with actual results
 
-      const lb=await sbGetLeaderboard();
+      const lb=await sbGetLeaderboard(groupCode);
       for(const e of lb){
-        const p=await sbGetPrediction(e.username);
+        const p=await sbGetPrediction(e.username, groupCode);
         if(p){
           e.points=calcTotal(p.matches||[],actualMatches,p.knockout||[],actualKO,p.podium,newPodium);
           e.champion=p.podium?.first||"?";
@@ -2484,9 +2492,9 @@ export default function App(){
     setActualPodium(snapshot.actual_podium || snapshot.actualPodium || {});
     if(snapshot.ko_kickoffs || snapshot.koKickoffs) setKoKickoffs(snapshot.ko_kickoffs || snapshot.koKickoffs);
     await sbSaveActualResults(snapshot.matches, snapshot.knockout, snapshot.actual_podium || snapshot.actualPodium || {}, snapshot.ko_kickoffs || snapshot.koKickoffs || {}, livePredictions);
-    const lb=await sbGetLeaderboard();
+    const lb=await sbGetLeaderboard(groupCode);
     for(const e of lb){
-      const p=await sbGetPrediction(e.username);
+      const p=await sbGetPrediction(e.username, groupCode);
       if(p){
         e.points=calcTotal(p.matches||[],snapshot.matches,p.knockout||[],snapshot.knockout,p.podium,snapshot.actual_podium||snapshot.actualPodium||{});
         e.champion=p.podium?.first||"?";
@@ -2518,8 +2526,11 @@ export default function App(){
   // Step 1: check if name exists in storage
   const submitName=async()=>{
     const n=nameInput.trim();if(!n)return;
+    // Set group code — default to 'default' if blank
+    const gc = groupCodeInput.trim() || 'default';
+    setGroupCode(gc);
     setPinError("Checking…");
-    const user=await sbGetUser(n);
+    const user=await sbGetUser(n, gc);
     if(user){ setPinStep("pin-existing"); setPinError(""); }
     else    { setPinStep("pin-new");      setPinError(""); }
   };
@@ -2527,7 +2538,7 @@ export default function App(){
   // Step 2a: new user — create account in storage
   const SESSION_DAYS = 30;
   const _saveSession = async (username) => {
-    await stSet("wc26_session", {
+    lsSet("wc26_session", {
       username,
       expiry: Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000,
     });
@@ -2553,7 +2564,7 @@ export default function App(){
   const confirmRecoverySeen=async()=>{
     const n=nameInput.trim();
     try {
-      if (rememberMe) await saveSession(n);
+      if (rememberMe) await saveSession(n, groupCode);
       setUserName(n);
       setRecoveryCode("");
     } catch(e) {
@@ -2568,7 +2579,7 @@ export default function App(){
     try {
       const user=await sbGetUser(n);
       if(user && pinInput===user.pin){
-        if (rememberMe) await saveSession(n);
+        if (rememberMe) await saveSession(n, groupCode);
         setUserName(n);
         setRecoveryCode("");
       } else {
@@ -2602,8 +2613,8 @@ export default function App(){
     const n=nameInput.trim();
     if(newPinInput.length<4){setPinError("PIN must be at least 4 characters.");return;}
     if(newPinInput!==newPinConfirm){setPinError("PINs don't match.");return;}
-    await sbResetPin(n, newPinInput);
-    if(rememberMe) await saveSession(n);
+    await sbResetPin(n, newPinInput, groupCode);
+    if(rememberMe) await saveSession(n, groupCode);
     setUserName(n);
     setPinError("");
     setNewPinInput("");
@@ -2621,7 +2632,7 @@ export default function App(){
     setKnockout(blankKO);
     setPodium(blankPodium);
     setPodiumSearch({first:"",second:"",third:""});
-    await sbSavePrediction(userName, blankMatches, blankKO, blankPodium);
+    await sbSavePrediction(userName, blankMatches, blankKO, blankPodium, groupCode);
     const lb = await sbUpsertLeaderboard(userName, blankPodium, 0);
     setLeaderboard(lb);
     setSaved(true);
@@ -2629,7 +2640,7 @@ export default function App(){
 
   const savePreds=async()=>{
     if(!userName)return;
-    await sbSavePrediction(userName, matches, knockout, podium);
+    await sbSavePrediction(userName, matches, knockout, podium, groupCode);
     const lb = await sbUpsertLeaderboard(userName, podium, myPts);
     setLeaderboard(lb);
     await saveBackup(matches, knockout, podium);
@@ -2641,7 +2652,7 @@ export default function App(){
   useEffect(()=>{
     if(!userName || saved) return;
     const timer = setTimeout(async()=>{
-      await sbSavePrediction(userName, matches, knockout, podium);
+      await sbSavePrediction(userName, matches, knockout, podium, groupCode);
       const lb = await sbUpsertLeaderboard(userName, podium, myPts);
       setLeaderboard(lb);
       setSaved(true);
@@ -2678,7 +2689,7 @@ export default function App(){
               ? `⚠️ Still needs predictions: ${unpredictedUsers.join(', ')}`
               : `✅ All players have predicted this match!`,
           ].join('\n');
-          await sbSendMessage('⚡', msg);
+          await sbSendMessage('⚡', msg, groupCode);
         }
       }
     };
@@ -2689,10 +2700,10 @@ export default function App(){
 
   const saveActualResults=async(newMatches, newKO)=>{
     await sbSaveActualResults(newMatches||actualMatches, newKO||actualKO, actualPodium);
-    const lb=await sbGetLeaderboard();
+    const lb=await sbGetLeaderboard(groupCode);
     const prevTop3 = leaderboard.slice(0,3).map(e=>e.username);
     for(const e of lb){
-      const p=await sbGetPrediction(e.username);
+      const p=await sbGetPrediction(e.username, groupCode);
       if(p){
         e.points=calcTotal(p.matches||[],newMatches||actualMatches,p.knockout||[],newKO||actualKO,p.podium,actualPodium);
         e.champion=p.podium?.first||"?";
@@ -2702,10 +2713,10 @@ export default function App(){
     setLeaderboard(lb);
     // Update rank history for each user
     for(const [i,e] of lb.entries()){
-      await sbUpdateRankHistory(e.username, i+1, e.points);
+      await sbUpdateRankHistory(e.username, i+1, e.points, groupCode);
     }
     // Refresh own rank history
-    const rh = await sbGetRankHistory(userName);
+    const rh = await sbGetRankHistory(userName, groupCode);
     if(rh?.length) setRankHistory(rh);
 
     // ── AGENT #3: Leaderboard shake-up alert ─────────────────────────────────
@@ -2724,7 +2735,7 @@ export default function App(){
         ``,
         `Check the 🥇 Board for full standings.`,
       ].join('\n');
-      await sbSendMessage('⚡', msg);
+      await sbSendMessage('⚡', msg, groupCode);
     }
 
     // ── AGENT #2: Post-match analysis ────────────────────────────────────────
@@ -2746,7 +2757,7 @@ export default function App(){
           : `No exact scores this time.`,
         `Check your points on 🥇 Board.`,
       ].join('\n');
-      await sbSendMessage('⚡', msg);
+      await sbSendMessage('⚡', msg, groupCode);
     }
   };
 
@@ -2827,8 +2838,21 @@ export default function App(){
               <label style={{fontSize:12,color:"#666",display:"block",marginBottom:6}}>Your name</label>
               <input placeholder="e.g. Ramin" value={nameInput}
                 onChange={e=>setNameInput(e.target.value)}
-                onKeyDown={e=>e.key==="Enter"&&submitName()}
+                onKeyDown={e=>e.key==="Enter"&&document.getElementById('groupCodeInput')?.focus()}
                 style={inputStyle}/>
+              <label style={{fontSize:12,color:"#666",display:"block",marginBottom:6,marginTop:12}}>
+                League code
+                <span style={{fontSize:10,color:"#444",marginLeft:6}}>— shared with your group</span>
+              </label>
+              <input id="groupCodeInput"
+                placeholder="e.g. WC2026-FRIENDS (leave blank for default)"
+                value={groupCodeInput}
+                onChange={e=>setGroupCodeInput(e.target.value.toUpperCase())}
+                onKeyDown={e=>e.key==="Enter"&&submitName()}
+                style={{...inputStyle,fontFamily:"monospace",fontSize:13,letterSpacing:1}}/>
+              <div style={{fontSize:10,color:"#333",marginBottom:12,marginTop:4}}>
+                All friends must use the same code to share a leaderboard
+              </div>
               <button onClick={submitName} style={btnStyle}>CONTINUE →</button>
             </div>
           )}
@@ -3113,7 +3137,9 @@ export default function App(){
           <span style={{fontSize:18}}>⚽</span>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:2,color:"#fcb900",lineHeight:1}}>FIFA 2026</div>
-            <div style={{fontSize:10,color:"#444"}}>Prediction Challenge</div>
+            <div style={{fontSize:10,color:"#444"}}>
+              {groupCode&&groupCode!=='default'?groupCode:'Prediction Challenge'}
+            </div>
           </div>
           {myPts>0&&<div style={{background:"rgba(252,185,0,0.12)",border:"1px solid rgba(252,185,0,0.28)",
             borderRadius:6,padding:"3px 9px",fontSize:11,fontWeight:700,color:"#fcb900",flexShrink:0}}>🏅 {myPts}pts</div>}
@@ -3143,7 +3169,7 @@ export default function App(){
             padding:"4px 9px",background:"transparent",border:"1px solid rgba(34,197,94,0.3)",
             borderRadius:6,color:"#22c55e",fontSize:10,cursor:"pointer",fontFamily:"inherit",
           }}>📤 Share</button>
-          <button onClick={()=>{clearSession();setUserName("");setNameInput("");setPinInput("");setPinConfirm("");setPinStep("name");setPinError("");}} style={{
+          <button onClick={()=>{clearSession();setUserName("");setGroupCode("default");setGroupCodeInput("");setNameInput("");setPinInput("");setPinConfirm("");setPinStep("name");setPinError("");}} style={{
             padding:"4px 9px",background:"transparent",border:"1px solid rgba(255,255,255,0.10)",
             borderRadius:6,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit",marginLeft:"auto",
           }}>↩ Logout</button>
@@ -3246,7 +3272,7 @@ export default function App(){
                 color:"#000",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",
               }}>Import</button>
               <button onClick={async()=>{
-                const backup=await stGet(`wc26_backup_${userName}`);
+                const backup=lsGet(`wc26_backup_${userName}`);
                 if(backup){setImportText(JSON.stringify(backup));}
                 else{setImportText("No backup found in storage yet.");}
               }} style={{
@@ -4909,7 +4935,7 @@ export default function App(){
                         homeFlag={FLAGS[home?.name]||"🏳️"} awayFlag={FLAGS[away?.name]||"🏳️"}/>;
                     })()}
 
-                      <div style={{marginBottom:14}}>
+                    {fixtureEvents.length>0&&<div style={{marginBottom:14}}>
                         <div style={{fontSize:11,fontWeight:700,color:"#fcb900",marginBottom:8}}>📋 Match Events</div>
                         {fixtureEvents.map((ev,i)=>{
                           const isHome=ev.team?.id===home?.id;
@@ -4928,8 +4954,7 @@ export default function App(){
                             </div>
                           );
                         })}
-                      </div>
-                    )}
+                      </div>}
                     {fixtureStats?.length>=2&&(()=>{
                       const hs=fixtureStats[0]?.statistics||[], as_=fixtureStats[1]?.statistics||[];
                       const keys=["Ball Possession","Total Shots","Shots on Goal","Corner Kicks","Fouls","Yellow Cards"];
@@ -5470,7 +5495,7 @@ export default function App(){
             };
             setChatMessages(prev => [...prev, optimistic]);
             setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 50);
-            await sbSendMessage(userName, msg);
+            await sbSendMessage(userName, msg, groupCode);
             setChatSending(false);
           };
           const handleKey = e => { if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendMsg(); } };
@@ -5497,7 +5522,7 @@ export default function App(){
                   {leaderboard.length} players
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
-                  <button onClick={()=>sbGetMessages(50).then(msgs=>setChatMessages(msgs))} style={{
+                  <button onClick={()=>sbGetMessages(50, groupCode).then(msgs=>setChatMessages(msgs))} style={{
                     padding:"3px 8px",background:"rgba(255,255,255,0.06)",
                     border:"1px solid rgba(255,255,255,0.10)",borderRadius:6,
                     color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit",
@@ -6382,7 +6407,7 @@ export default function App(){
                               missing.length>0 ? `Still waiting on: ${missing.join(', ')}` : `Everyone has predicted — let's go! ⚽`,
                               daysToKickoff>0 ? `Tournament kicks off in ${daysToKickoff} day${daysToKickoff!==1?'s':''}!` : `Predictions are locking — fill yours now!`,
                             ].join('\n');
-                            await sbSendMessage('⚡', chatMsg);
+                            await sbSendMessage('⚡', chatMsg, groupCode);
                             setChatReminderSent(true);
                             setTimeout(()=>setChatReminderSent(false), 3000);
                           }} style={{
@@ -6428,7 +6453,7 @@ export default function App(){
                       {/* Paid toggle */}
                       <button onClick={async()=>{
                         const newPaid = !e.paid;
-                        await sbTogglePaid(e.username, newPaid);
+                        await sbTogglePaid(e.username, newPaid, groupCode);
                         setLeaderboard(prev=>prev.map(x=>x.username===e.username?{...x,paid:newPaid}:x));
                       }} style={{
                         padding:"3px 8px",
@@ -6441,9 +6466,9 @@ export default function App(){
                         {e.paid?"✓ Paid":"Unpaid"}
                       </button>
                       <button onClick={async()=>{
-                        const user = await sbGetUser(e.username);
+                        const user = await sbGetUser(e.username, groupCode);
                         if(!user){ setAdminPinError(`User "${e.username}" not found.`); return; }
-                        await sbClearUser(e.username);
+                        await sbClearUser(e.username, groupCode);
                         setAdminPinError(`✅ PIN reset for "${e.username}".`);
                         setTimeout(()=>setAdminPinError(""),3000);
                       }} style={{
@@ -6474,8 +6499,8 @@ export default function App(){
                     </div>
                     <div style={{display:"flex",gap:8}}>
                       <button onClick={async()=>{
-                        await sbDeleteUser(deleteConfirmUser);
-                        const lb = await sbGetLeaderboard();
+                        await sbDeleteUser(deleteConfirmUser, groupCode);
+                        const lb = await sbGetLeaderboard(groupCode);
                         if(lb) setLeaderboard(lb);
                         setAdminPinError(`✅ "${deleteConfirmUser}" deleted.`);
                         setDeleteConfirmUser(null);

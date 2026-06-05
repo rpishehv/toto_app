@@ -119,3 +119,38 @@ alter table leaderboard add column if not exists paid boolean default false;
 alter table ai_content add column if not exists analytics jsonb default null;
 alter table ai_content add column if not exists analytics_generated_by text default null;
 alter table ai_content add column if not exists analytics_generated_at timestamptz default null;
+
+-- ─── MULTI-GROUP SUPPORT ──────────────────────────────────────────────────────
+-- Add group_code to all relevant tables with backward-compatible defaults
+
+alter table users         add column if not exists group_code text not null default 'default';
+alter table predictions   add column if not exists group_code text not null default 'default';
+alter table leaderboard   add column if not exists group_code text not null default 'default';
+alter table chat_messages add column if not exists group_code text not null default 'default';
+
+-- ai_content: switch from id=1 singleton to group_code as key
+alter table ai_content    add column if not exists group_code text not null default 'default';
+
+-- Backfill existing rows
+update users         set group_code = 'default' where group_code is null or group_code = '';
+update predictions   set group_code = 'default' where group_code is null or group_code = '';
+update leaderboard   set group_code = 'default' where group_code is null or group_code = '';
+update chat_messages set group_code = 'default' where group_code is null or group_code = '';
+update ai_content    set group_code = 'default' where group_code is null or group_code = '';
+
+-- Update unique constraints to be composite with group_code
+alter table users       drop constraint if exists users_pkey;
+alter table users       add primary key (username, group_code);
+
+alter table predictions drop constraint if exists predictions_pkey;
+alter table predictions add primary key (username, group_code);
+
+alter table leaderboard drop constraint if exists leaderboard_pkey;
+alter table leaderboard add primary key (username, group_code);
+
+alter table ai_content  drop constraint if exists ai_content_pkey;
+alter table ai_content  add primary key (group_code);
+
+-- Enable realtime filters on group_code columns
+alter publication supabase_realtime add table ai_content;
+alter publication supabase_realtime add table leaderboard;

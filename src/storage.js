@@ -2,66 +2,79 @@ import { supabase } from './supabase.js'
 
 // ─── USER / PIN ───────────────────────────────────────────────────────────────
 
-export async function sbGetUser(username) {
+export async function sbGetUser(username, groupCode='default') {
   const { data, error } = await supabase
-    .from('users').select('username,pin').eq('username', username).maybeSingle()
+    .from('users').select('username,pin,group_code')
+    .eq('username', username).eq('group_code', groupCode).maybeSingle()
   if (error) console.error('sbGetUser error:', error.message)
   return data || null
 }
 
-export async function sbCreateUser(username, pin, recoveryCode) {
-  const { error } = await supabase.from('users').upsert(
-    { username, pin, recovery_code: recoveryCode },
-    { onConflict: 'username' }
-  )
-  if (error) console.error('sbCreateUser error:', error.message)
+export async function sbCreateUser(username, pin, recoveryCode, groupCode='default') {
+  // Try insert first, update if exists
+  const { error: insErr } = await supabase.from('users')
+    .insert({ username, pin, recovery_code: recoveryCode, group_code: groupCode });
+  if (insErr) {
+    // Row exists — update it
+    const { error: updErr } = await supabase.from('users')
+      .update({ pin, recovery_code: recoveryCode })
+      .eq('username', username).eq('group_code', groupCode);
+    if (updErr) console.error('sbCreateUser error:', updErr.message);
+  }
 }
 
-export async function sbResetPin(username, newPin) {
-  const { error } = await supabase.from('users').update({ pin: newPin }).eq('username', username)
+export async function sbResetPin(username, newPin, groupCode='default') {
+  const { error } = await supabase.from('users').update({ pin: newPin })
+    .eq('username', username).eq('group_code', groupCode)
   if (error) console.error('sbResetPin error:', error.message)
 }
 
-export async function sbVerifyRecovery(username, code) {
+export async function sbVerifyRecovery(username, code, groupCode='default') {
   const { data, error } = await supabase
-    .from('users').select('recovery_code').eq('username', username).maybeSingle()
+    .from('users').select('recovery_code')
+    .eq('username', username).eq('group_code', groupCode).maybeSingle()
   if (error || !data) return false
   return data.recovery_code?.toUpperCase() === code.toUpperCase()
 }
 
-export async function sbClearUser(username) {
+export async function sbClearUser(username, groupCode='default') {
   const { error } = await supabase.from('users')
-    .update({ pin: null, recovery_code: null }).eq('username', username)
+    .update({ pin: null, recovery_code: null })
+    .eq('username', username).eq('group_code', groupCode)
   if (error) console.error('sbClearUser error:', error.message)
 }
 
-export async function sbDeleteUser(username) {
-  // Delete all user data across all tables
-  await supabase.from('predictions').delete().eq('username', username);
-  await supabase.from('leaderboard').delete().eq('username', username);
-  await supabase.from('reactions').delete().eq('username', username);
-  await supabase.from('chat_messages').delete().eq('username', username);
-  await supabase.from('users').delete().eq('username', username);
+export async function sbDeleteUser(username, groupCode='default') {
+  await supabase.from('predictions').delete().eq('username', username).eq('group_code', groupCode)
+  await supabase.from('leaderboard').delete().eq('username', username).eq('group_code', groupCode)
+  await supabase.from('reactions').delete().eq('username', username)
+  await supabase.from('chat_messages').delete().eq('username', username).eq('group_code', groupCode)
+  await supabase.from('users').delete().eq('username', username).eq('group_code', groupCode)
 }
 
 // ─── PREDICTIONS ──────────────────────────────────────────────────────────────
 
-export async function sbGetPrediction(username) {
+export async function sbGetPrediction(username, groupCode='default') {
   const { data, error } = await supabase
-    .from('predictions').select('*').eq('username', username).maybeSingle()
+    .from('predictions').select('*')
+    .eq('username', username).eq('group_code', groupCode).maybeSingle()
   if (error) console.error('sbGetPrediction error:', error.message)
   return data || null
 }
 
-export async function sbSavePrediction(username, matches, knockout, podium) {
-  const { error } = await supabase.from('predictions').upsert(
-    { username, matches, knockout, podium, updated_at: new Date().toISOString() },
-    { onConflict: 'username' }
-  )
-  if (error) console.error('sbSavePrediction error:', error.message)
+export async function sbSavePrediction(username, matches, knockout, podium, groupCode='default') {
+  const { error: insErr } = await supabase.from('predictions')
+    .insert({ username, matches, knockout, podium, group_code: groupCode, updated_at: new Date().toISOString() });
+  if (insErr) {
+    const { error: updErr } = await supabase.from('predictions')
+      .update({ matches, knockout, podium, updated_at: new Date().toISOString() })
+      .eq('username', username).eq('group_code', groupCode);
+    if (updErr) console.error('sbSavePrediction error:', updErr.message);
+  }
 }
 
 // ─── ACTUAL RESULTS ───────────────────────────────────────────────────────────
+// Results are shared across all groups (same tournament)
 
 export async function sbGetActualResults() {
   const { data, error } = await supabase
@@ -72,42 +85,66 @@ export async function sbGetActualResults() {
 
 export async function sbSaveActualResults(matches, knockout, actualPodium, koKickoffs, livePredictions) {
   const { error } = await supabase.from('actual_results').upsert({
-    id: 1,
-    matches,
-    knockout,
+    id: 1, matches, knockout,
     actual_podium: actualPodium,
     ko_kickoffs: koKickoffs,
     live_predictions: livePredictions || {},
     updated_at: new Date().toISOString()
-  }, { onConflict: 'id' })
+  }, { onConflict: 'group_code' })
   if (error) console.error('sbSaveActualResults error:', error.message)
 }
 
 // ─── LEADERBOARD ─────────────────────────────────────────────────────────────
 
-export async function sbGetLeaderboard() {
+export async function sbGetLeaderboard(groupCode='default') {
   const { data, error } = await supabase
-    .from('leaderboard').select('*').order('points', { ascending: false })
+    .from('leaderboard').select('*')
+    .eq('group_code', groupCode)
+    .order('points', { ascending: false })
   if (error) console.error('sbGetLeaderboard error:', error.message)
   return data || []
 }
 
-export async function sbUpsertLeaderboard(username, podium, points) {
-  const { error } = await supabase.from('leaderboard').upsert(
-    {
-      username,
-      champion: podium?.first || '?',
-      podium,
-      points,
-      updated_at: new Date().toISOString()
-    },
-    { onConflict: 'username' }
-  )
-  if (error) console.error('sbUpsertLeaderboard error:', error.message)
-  return sbGetLeaderboard()
+export async function sbUpsertLeaderboard(username, podium, points, groupCode='default') {
+  const { error: insErr } = await supabase.from('leaderboard')
+    .insert({ username, group_code: groupCode, champion: podium?.first || '?', podium, points, updated_at: new Date().toISOString() });
+  if (insErr) {
+    await supabase.from('leaderboard')
+      .update({ champion: podium?.first || '?', podium, points, updated_at: new Date().toISOString() })
+      .eq('username', username).eq('group_code', groupCode);
+  }
+  return sbGetLeaderboard(groupCode)
+}
+
+export async function sbTogglePaid(username, paid, groupCode='default') {
+  const { error } = await supabase.from('leaderboard')
+    .update({ paid }).eq('username', username).eq('group_code', groupCode)
+  if (error) console.error('sbTogglePaid error:', error.message)
+}
+
+// ─── RANK HISTORY ─────────────────────────────────────────────────────────────
+
+export async function sbUpdateRankHistory(username, rank, points, groupCode='default') {
+  const { data } = await supabase
+    .from('leaderboard').select('rank_history')
+    .eq('username', username).eq('group_code', groupCode).maybeSingle()
+  const history = data?.rank_history || []
+  const entry = { rank, points, savedAt: new Date().toISOString() }
+  const updated = [...history.slice(-19), entry]
+  await supabase.from('leaderboard')
+    .update({ rank_history: updated })
+    .eq('username', username).eq('group_code', groupCode)
+}
+
+export async function sbGetRankHistory(username, groupCode='default') {
+  const { data } = await supabase
+    .from('leaderboard').select('rank_history')
+    .eq('username', username).eq('group_code', groupCode).maybeSingle()
+  return data?.rank_history || []
 }
 
 // ─── SAVE HISTORY ─────────────────────────────────────────────────────────────
+// Save history is global (same tournament results)
 
 export async function sbGetSaveHistory() {
   const { data, error } = await supabase
@@ -124,7 +161,6 @@ export async function sbAddSaveHistory(label, matches, knockout, actualPodium, k
     saved_at: new Date().toISOString()
   })
   if (error) console.error('sbAddSaveHistory error:', error.message)
-  // Keep only last 5
   const { data } = await supabase
     .from('save_history').select('id').order('saved_at', { ascending: false })
   if (data && data.length > 5) {
@@ -134,14 +170,115 @@ export async function sbAddSaveHistory(label, matches, knockout, actualPodium, k
   return sbGetSaveHistory()
 }
 
-// ─── SESSION (localStorage) ───────────────────────────────────────────────────
+// ─── CHAT ─────────────────────────────────────────────────────────────────────
+
+export async function sbGetMessages(limit=50, groupCode='default') {
+  const { data, error } = await supabase
+    .from('chat_messages').select('*')
+    .eq('group_code', groupCode)
+    .order('created_at', { ascending: true }).limit(limit)
+  if (error) console.error('sbGetMessages error:', error.message)
+  return data || []
+}
+
+export async function sbSendMessage(username, message, groupCode='default') {
+  const { error } = await supabase
+    .from('chat_messages')
+    .insert({ username, message: message.trim(), group_code: groupCode })
+  if (error) console.error('sbSendMessage error:', error.message)
+  return !error
+}
+
+export async function sbDeleteMessage(id) {
+  const { error } = await supabase.from('chat_messages').delete().eq('id', id)
+  if (error) console.error('sbDeleteMessage error:', error.message)
+}
+
+// ─── REACTIONS ────────────────────────────────────────────────────────────────
+
+export async function sbGetReactions(matchId) {
+  const { data } = await supabase.from('reactions').select('*').eq('match_id', matchId)
+  return data || []
+}
+
+export async function sbToggleReaction(matchId, username, emoji) {
+  const id = `${matchId}_${username}_${emoji}`
+  const { data } = await supabase.from('reactions').select('id').eq('id', id).maybeSingle()
+  if (data) {
+    await supabase.from('reactions').delete().eq('id', id)
+    return false
+  } else {
+    await supabase.from('reactions').insert({ id, match_id: matchId, username, emoji })
+    return true
+  }
+}
+
+// ─── AI CONTENT ───────────────────────────────────────────────────────────────
+// Scoped per group
+
+export async function sbGetAIContent(groupCode='default') {
+  const { data, error } = await supabase
+    .from('ai_content').select('*').eq('group_code', groupCode).maybeSingle()
+  if (error) console.error('sbGetAIContent error:', error.message)
+  return data || null
+}
+
+export async function sbSaveAIContent(bracket, commentary, bracketGeneratedBy, commentaryGeneratedBy, groupCode='default') {
+  const { error } = await supabase.from('ai_content').upsert({
+    group_code: groupCode,
+    bracket: bracket || null,
+    commentary: commentary || null,
+    bracket_generated_by: bracketGeneratedBy || null,
+    commentary_generated_by: commentaryGeneratedBy || null,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'group_code' })
+  if (error) console.error('sbSaveAIContent error:', error.message)
+}
+
+// ─── ANALYTICS ───────────────────────────────────────────────────────────────
+
+export async function sbGetAnalytics(groupCode='default') {
+  const { data } = await supabase
+    .from('ai_content').select('analytics, analytics_generated_by, analytics_generated_at')
+    .eq('group_code', groupCode).maybeSingle()
+  return data || null
+}
+
+export async function sbSaveAnalytics(analysis, username, groupCode='default') {
+  await supabase.from('ai_content').upsert({
+    group_code: groupCode,
+    analytics: analysis,
+    analytics_generated_by: username,
+    analytics_generated_at: new Date().toISOString(),
+  }, { onConflict: 'group_code' })
+}
+
+// ─── NEWS ─────────────────────────────────────────────────────────────────────
+
+export async function sbGetNews(groupCode='default') {
+  const { data } = await supabase
+    .from('ai_content').select('news, news_updated_by, news_updated_at')
+    .eq('group_code', groupCode).maybeSingle()
+  return data || null
+}
+
+export async function sbSaveNews(stories, username, groupCode='default') {
+  await supabase.from('ai_content').upsert({
+    group_code: groupCode,
+    news: stories,
+    news_updated_by: username,
+    news_updated_at: new Date().toISOString(),
+  }, { onConflict: 'group_code' })
+}
+
+// ─── SESSION ─────────────────────────────────────────────────────────────────
 
 const SESSION_DAYS = 30
 
-export function saveSession(username) {
+export function saveSession(username, groupCode='default') {
   try {
     localStorage.setItem('wc26_session', JSON.stringify({
-      username,
+      username, groupCode,
       expiry: Date.now() + SESSION_DAYS * 86400000
     }))
   } catch {}
@@ -150,7 +287,11 @@ export function saveSession(username) {
 export function getSession() {
   try {
     const s = JSON.parse(localStorage.getItem('wc26_session') || 'null')
-    return (s && s.username && s.expiry > Date.now()) ? s : null
+    if (s && s.username && s.expiry > Date.now()) {
+      // Backward compat — old sessions have no groupCode
+      return { username: s.username, groupCode: s.groupCode || 'default' }
+    }
+    return null
   } catch { return null }
 }
 
@@ -169,137 +310,7 @@ export function lsSet(key, val) {
 export function lsDel(key) {
   try { localStorage.removeItem(key); } catch {}
 }
-export async function stGet(key, shared=false) {
-  if (!shared) return lsGet(key);
-  return null;
-}
-export async function stSet(key, val, shared=false) {
-  if (!shared) { lsSet(key, val); }
-}
 export async function detectStorage() { return 'supabase'; }
-
-// ─── AI CONTENT ───────────────────────────────────────────────────────────────
-// Stores shared AI-generated content (bracket prediction, commentary)
-// Single row table — id=1 always
-
-// ─── CHAT ─────────────────────────────────────────────────────────────────────
-export async function sbGetMessages(limit=50) {
-  const { data, error } = await supabase
-    .from('chat_messages')
-    .select('*')
-    .order('created_at', { ascending: true })
-    .limit(limit);
-  if (error) console.error('sbGetMessages error:', error.message);
-  return data || [];
-}
-
-export async function sbSendMessage(username, message) {
-  const { error } = await supabase
-    .from('chat_messages')
-    .insert({ username, message: message.trim() });
-  if (error) console.error('sbSendMessage error:', error.message);
-  return !error;
-}
-
-export async function sbDeleteMessage(id) {
-  const { error } = await supabase
-    .from('chat_messages').delete().eq('id', id);
-  if (error) console.error('sbDeleteMessage error:', error.message);
-}
-
-export async function sbTogglePaid(username, paid) {
-  const { error } = await supabase.from('leaderboard')
-    .update({ paid }).eq('username', username);
-  if (error) console.error('sbTogglePaid error:', error.message);
-}
-
-// ─── ANALYTICS ───────────────────────────────────────────────────────────────────
-export async function sbGetAnalytics() {
-  const { data } = await supabase
-    .from('ai_content').select('analytics, analytics_generated_by, analytics_generated_at').eq('id', 1).maybeSingle();
-  return data || null;
-}
-
-export async function sbSaveAnalytics(analysis, username) {
-  await supabase.from('ai_content').upsert({
-    id: 1,
-    analytics: analysis,
-    analytics_generated_by: username,
-    analytics_generated_at: new Date().toISOString(),
-  }, { onConflict: 'id' });
-}
-
-// ─── NEWS ─────────────────────────────────────────────────────────────────────
-export async function sbGetNews() {
-  const { data } = await supabase
-    .from('ai_content').select('news, news_updated_by, news_updated_at').eq('id', 1).maybeSingle();
-  return data || null;
-}
-
-export async function sbSaveNews(stories, username) {
-  await supabase.from('ai_content').upsert({
-    id: 1,
-    news: stories,
-    news_updated_by: username,
-    news_updated_at: new Date().toISOString(),
-  }, { onConflict: 'id' });
-}
-
-// ─── RANK HISTORY ─────────────────────────────────────────────────────────────
-export async function sbUpdateRankHistory(username, rank, points) {
-  const { data } = await supabase
-    .from('leaderboard').select('rank_history').eq('username', username).maybeSingle();
-  const history = data?.rank_history || [];
-  const entry = { rank, points, savedAt: new Date().toISOString() };
-  const updated = [...history.slice(-19), entry]; // keep last 20
-  await supabase.from('leaderboard')
-    .update({ rank_history: updated }).eq('username', username);
-}
-
-export async function sbGetRankHistory(username) {
-  const { data } = await supabase
-    .from('leaderboard').select('rank_history').eq('username', username).maybeSingle();
-  return data?.rank_history || [];
-}
-
-// ─── REACTIONS ────────────────────────────────────────────────────────────────
-export async function sbGetReactions(matchId) {
-  const { data } = await supabase
-    .from('reactions').select('*').eq('match_id', matchId);
-  return data || [];
-}
-
-export async function sbToggleReaction(matchId, username, emoji) {
-  const id = `${matchId}_${username}_${emoji}`;
-  const { data } = await supabase
-    .from('reactions').select('id').eq('id', id).maybeSingle();
-  if (data) {
-    await supabase.from('reactions').delete().eq('id', id);
-    return false; // removed
-  } else {
-    await supabase.from('reactions').insert({ id, match_id: matchId, username, emoji });
-    return true; // added
-  }
-}
-
-export async function sbGetAIContent() {
-  const { data, error } = await supabase
-    .from('ai_content').select('*').eq('id', 1).maybeSingle()
-  if (error) console.error('sbGetAIContent error:', error.message)
-  return data || null
-}
-
-export async function sbSaveAIContent(bracket, commentary, bracketGeneratedBy, commentaryGeneratedBy) {
-  const { error } = await supabase.from('ai_content').upsert({
-    id: 1,
-    bracket: bracket || null,
-    commentary: commentary || null,
-    bracket_generated_by: bracketGeneratedBy || null,
-    commentary_generated_by: commentaryGeneratedBy || null,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'id' })
-  if (error) console.error('sbSaveAIContent error:', error.message)
-}
 
 // ─── RECOVERY CODE GENERATION ──────────────────────────────────────────────────
 
@@ -311,4 +322,3 @@ export function generateRecoveryCode() {
   for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)]
   return code
 }
-
