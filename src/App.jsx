@@ -1350,7 +1350,10 @@ export default function App(){
           setUserName(session.username);
           setGroupCode(gc);
         }
-        const lb=await sbGetLeaderboard(gc); if(lb) setLeaderboard(lb);
+        // Only load group-scoped data if we have a session
+        if (session?.username) {
+          const lb=await sbGetLeaderboard(gc); if(lb) setLeaderboard(lb);
+        }
         const actual=await sbGetActualResults();
         if(actual?.matches?.length)       setActualMatches(actual.matches);
         if(actual?.knockout?.length)       setActualKO(actual.knockout);
@@ -2517,7 +2520,7 @@ export default function App(){
       setRecentPoints(newPts - prevPts);
       setTimeout(()=>setRecentPoints(null), 5000);
     }
-    sbUpsertLeaderboard(userName,podium,newPts)
+    sbUpsertLeaderboard(userName,podium,newPts,groupCode)
       .then(lb=>{ if(lb) setLeaderboard(lb); })
       .catch(e=>console.error('Leaderboard update error:', e));
   },[actualMatches,actualKO,actualPodium]);
@@ -2633,7 +2636,7 @@ export default function App(){
     setPodium(blankPodium);
     setPodiumSearch({first:"",second:"",third:""});
     await sbSavePrediction(userName, blankMatches, blankKO, blankPodium, groupCode);
-    const lb = await sbUpsertLeaderboard(userName, blankPodium, 0);
+    const lb = await sbUpsertLeaderboard(userName, blankPodium, 0, groupCode);
     setLeaderboard(lb);
     setSaved(true);
   };
@@ -2641,7 +2644,7 @@ export default function App(){
   const savePreds=async()=>{
     if(!userName)return;
     await sbSavePrediction(userName, matches, knockout, podium, groupCode);
-    const lb = await sbUpsertLeaderboard(userName, podium, myPts);
+    const lb = await sbUpsertLeaderboard(userName, podium, myPts, groupCode);
     setLeaderboard(lb);
     await saveBackup(matches, knockout, podium);
     setSaved(true);
@@ -2653,7 +2656,7 @@ export default function App(){
     if(!userName || saved) return;
     const timer = setTimeout(async()=>{
       await sbSavePrediction(userName, matches, knockout, podium, groupCode);
-      const lb = await sbUpsertLeaderboard(userName, podium, myPts);
+      const lb = await sbUpsertLeaderboard(userName, podium, myPts, groupCode);
       setLeaderboard(lb);
       setSaved(true);
       // Brief toast
