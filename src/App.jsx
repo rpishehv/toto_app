@@ -2555,7 +2555,10 @@ export default function App(){
     setPinError("Creating account…");
     try {
       const code = generateRecoveryCode();
-      await sbCreateUser(n, pinInput, code);
+      await sbCreateUser(n, pinInput, code, groupCode);
+      // Add to leaderboard immediately with 0 pts so they appear in standings
+      const lb = await sbUpsertLeaderboard(n, {first:'?',second:'?',third:'?'}, 0, groupCode);
+      if(lb) setLeaderboard(lb);
       setRecoveryCode(code);
       setPinStep("show-recovery");
     } catch(e) {
@@ -2569,6 +2572,9 @@ export default function App(){
     try {
       if (rememberMe) await saveSession(n, groupCode);
       setUserName(n);
+      // Load this group's leaderboard
+      const lb = await sbGetLeaderboard(groupCode);
+      if(lb) setLeaderboard(lb);
       setRecoveryCode("");
     } catch(e) {
       setAppError(`Login error: ${e.message}`);
@@ -2580,10 +2586,13 @@ export default function App(){
     const n=nameInput.trim();
     setPinError("Verifying…");
     try {
-      const user=await sbGetUser(n);
+      const user=await sbGetUser(n, groupCode);
       if(user && pinInput===user.pin){
         if (rememberMe) await saveSession(n, groupCode);
         setUserName(n);
+        // Load this group's leaderboard on login
+        const lb = await sbGetLeaderboard(groupCode);
+        if(lb) setLeaderboard(lb);
         setRecoveryCode("");
       } else {
         setPinError("Incorrect PIN. Try again.");
