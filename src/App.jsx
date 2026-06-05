@@ -5,7 +5,7 @@ import {
   sbGetUser, sbCreateUser, sbResetPin, sbVerifyRecovery, sbClearUser, sbDeleteUser, sbTogglePaid,
   sbGetPrediction, sbSavePrediction,
   sbGetActualResults, sbSaveActualResults,
-  sbGetLeaderboard, sbUpsertLeaderboard,
+  sbGetLeaderboard, sbUpsertLeaderboard, sbGetAllGroupCodes,
   sbGetSaveHistory, sbAddSaveHistory,
   sbGetAIContent, sbSaveAIContent,
   sbGetAnalytics, sbSaveAnalytics,
@@ -2462,19 +2462,25 @@ export default function App(){
       setSaveHistory(newHistory);
       await sbAddSaveHistory(snapshot.label, snapshot.matches, snapshot.knockout, snapshot.actualPodium||snapshot.actual_podium, snapshot.koKickoffs||snapshot.ko_kickoffs);
       await sbSaveActualResults(actualMatches, actualKO, newPodium, koKickoffs, livePredictions);
-      // livePredictions saved with actual results
 
-      const lb=await sbGetLeaderboard(groupCode);
-      for(const e of lb){
-        const p=await sbGetPrediction(e.username, groupCode);
-        if(p){
-          e.points=calcTotal(p.matches||[],actualMatches,p.knockout||[],actualKO,p.podium,newPodium);
-          e.champion=p.podium?.first||"?";
+      // Recalculate leaderboard for ALL groups
+      const allGroupCodes = await sbGetAllGroupCodes();
+      for (const gc of allGroupCodes) {
+        const lb = await sbGetLeaderboard(gc);
+        for (const e of lb) {
+          const p = await sbGetPrediction(e.username, gc);
+          if (p) {
+            e.points = calcTotal(p.matches||[], actualMatches, p.knockout||[], actualKO, p.podium, newPodium);
+            e.champion = p.podium?.first || '?';
+            await sbUpsertLeaderboard(e.username, p.podium || {}, e.points, gc);
+          }
+        }
+        // Update UI leaderboard for the admin's own group
+        if (gc === groupCode) {
+          lb.sort((a,b) => b.points - a.points);
+          setLeaderboard(lb);
         }
       }
-      lb.sort((a,b)=>b.points-a.points);
-      // leaderboard updated via sbUpsertLeaderboard
-      setLeaderboard(lb);
       setAdminHasSaved(true); setAdminSaved(true); setTimeout(()=>setAdminSaved(false),2500);
     } catch(e) {
       setAdminPinError(`Save failed: ${e.message}`);
@@ -2495,17 +2501,22 @@ export default function App(){
     setActualPodium(snapshot.actual_podium || snapshot.actualPodium || {});
     if(snapshot.ko_kickoffs || snapshot.koKickoffs) setKoKickoffs(snapshot.ko_kickoffs || snapshot.koKickoffs);
     await sbSaveActualResults(snapshot.matches, snapshot.knockout, snapshot.actual_podium || snapshot.actualPodium || {}, snapshot.ko_kickoffs || snapshot.koKickoffs || {}, livePredictions);
-    const lb=await sbGetLeaderboard(groupCode);
-    for(const e of lb){
-      const p=await sbGetPrediction(e.username, groupCode);
-      if(p){
-        e.points=calcTotal(p.matches||[],snapshot.matches,p.knockout||[],snapshot.knockout,p.podium,snapshot.actual_podium||snapshot.actualPodium||{});
-        e.champion=p.podium?.first||"?";
+    const allGroupCodes = await sbGetAllGroupCodes();
+    for (const gc of allGroupCodes) {
+      const lb = await sbGetLeaderboard(gc);
+      for (const e of lb) {
+        const p = await sbGetPrediction(e.username, gc);
+        if (p) {
+          e.points = calcTotal(p.matches||[], snapshot.matches, p.knockout||[], snapshot.knockout, p.podium, snapshot.actual_podium||snapshot.actualPodium||{});
+          e.champion = p.podium?.first || '?';
+          await sbUpsertLeaderboard(e.username, p.podium || {}, e.points, gc);
+        }
+      }
+      if (gc === groupCode) {
+        lb.sort((a,b) => b.points - a.points);
+        setLeaderboard(lb);
       }
     }
-    lb.sort((a,b)=>b.points-a.points);
-    // leaderboard updated via sbUpsertLeaderboard
-    setLeaderboard(lb);
     setAdminHasSaved(true); setAdminSaved(true); setTimeout(()=>setAdminSaved(false),2500);
   };
 

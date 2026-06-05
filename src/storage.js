@@ -99,6 +99,13 @@ export async function sbSaveActualResults(matches, knockout, actualPodium, koKic
 
 // ─── LEADERBOARD ─────────────────────────────────────────────────────────────
 
+export async function sbGetAllGroupCodes() {
+  const { data, error } = await supabase.from('leaderboard').select('group_code');
+  if (error) { console.error('sbGetAllGroupCodes error:', error.message); return ['default']; }
+  const codes = [...new Set((data || []).map(r => r.group_code).filter(Boolean))];
+  return codes.length > 0 ? codes : ['default'];
+}
+
 export async function sbGetLeaderboard(groupCode='default') {
   const { data, error } = await supabase
     .from('leaderboard').select('*')
