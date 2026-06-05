@@ -109,18 +109,28 @@ export async function sbGetLeaderboard(groupCode='default') {
 }
 
 export async function sbUpsertLeaderboard(username, podium, points, groupCode='default') {
-  // Use upsert with the composite unique index
-  const { error } = await supabase.from('leaderboard').upsert(
-    { username, group_code: groupCode, champion: podium?.first || '?', podium, points, updated_at: new Date().toISOString() },
-    { onConflict: 'username,group_code', ignoreDuplicates: false }
-  );
-  if (error) {
-    console.error('sbUpsertLeaderboard error:', error.message);
-    // Fallback: try update
-    await supabase.from('leaderboard')
-      .update({ champion: podium?.first || '?', podium, points, updated_at: new Date().toISOString() })
+  const row = {
+    username, group_code: groupCode,
+    champion: podium?.first || '?', podium, points,
+    updated_at: new Date().toISOString()
+  };
+
+  // Check if row exists first
+  const { data: existing } = await supabase.from('leaderboard')
+    .select('username').eq('username', username).eq('group_code', groupCode).maybeSingle();
+
+  if (existing) {
+    // Update existing row
+    const { error } = await supabase.from('leaderboard')
+      .update({ champion: row.champion, podium, points, updated_at: row.updated_at })
       .eq('username', username).eq('group_code', groupCode);
+    if (error) console.error('sbUpsertLeaderboard update error:', error.message);
+  } else {
+    // Insert new row
+    const { error } = await supabase.from('leaderboard').insert(row);
+    if (error) console.error('sbUpsertLeaderboard insert error:', error.message);
   }
+
   return sbGetLeaderboard(groupCode);
 }
 
