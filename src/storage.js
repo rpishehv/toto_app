@@ -116,19 +116,21 @@ export async function sbUpsertLeaderboard(username, podium, points, groupCode='d
   };
 
   // Check if row exists first
-  const { data: existing } = await supabase.from('leaderboard')
+  const { data: existing, error: selectErr } = await supabase.from('leaderboard')
     .select('username').eq('username', username).eq('group_code', groupCode).maybeSingle();
 
+  if (selectErr) console.error('sbUpsertLeaderboard select error:', selectErr.message);
+
   if (existing) {
-    // Update existing row
     const { error } = await supabase.from('leaderboard')
       .update({ champion: row.champion, podium, points, updated_at: row.updated_at })
       .eq('username', username).eq('group_code', groupCode);
     if (error) console.error('sbUpsertLeaderboard update error:', error.message);
+    else console.log('sbUpsertLeaderboard: updated', username, 'in group', groupCode);
   } else {
-    // Insert new row
     const { error } = await supabase.from('leaderboard').insert(row);
-    if (error) console.error('sbUpsertLeaderboard insert error:', error.message);
+    if (error) console.error('sbUpsertLeaderboard insert error:', error.message, 'row:', JSON.stringify(row));
+    else console.log('sbUpsertLeaderboard: inserted', username, 'in group', groupCode);
   }
 
   return sbGetLeaderboard(groupCode);

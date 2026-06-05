@@ -2558,10 +2558,12 @@ export default function App(){
       await sbCreateUser(n, pinInput, code, groupCode);
       // Add to leaderboard immediately with 0 pts so they appear in standings
       const lb = await sbUpsertLeaderboard(n, {first:'?',second:'?',third:'?'}, 0, groupCode);
+      console.log('New user leaderboard result:', lb?.length, 'entries for group', groupCode);
       if(lb) setLeaderboard(lb);
       setRecoveryCode(code);
       setPinStep("show-recovery");
     } catch(e) {
+      console.error('submitNewPin error:', e);
       setPinError(`Error creating account: ${e.message}`);
     }
   };
