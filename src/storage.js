@@ -11,15 +11,16 @@ export async function sbGetUser(username, groupCode='default') {
 }
 
 export async function sbCreateUser(username, pin, recoveryCode, groupCode='default') {
-  // Try insert first, update if exists
-  const { error: insErr } = await supabase.from('users')
-    .insert({ username, pin, recovery_code: recoveryCode, group_code: groupCode });
-  if (insErr) {
-    // Row exists — update it
-    const { error: updErr } = await supabase.from('users')
+  const { error } = await supabase.from('users').upsert(
+    { username, pin, recovery_code: recoveryCode, group_code: groupCode },
+    { onConflict: 'username,group_code', ignoreDuplicates: false }
+  );
+  if (error) {
+    console.error('sbCreateUser error:', error.message);
+    // Fallback: update
+    await supabase.from('users')
       .update({ pin, recovery_code: recoveryCode })
       .eq('username', username).eq('group_code', groupCode);
-    if (updErr) console.error('sbCreateUser error:', updErr.message);
   }
 }
 
@@ -63,13 +64,15 @@ export async function sbGetPrediction(username, groupCode='default') {
 }
 
 export async function sbSavePrediction(username, matches, knockout, podium, groupCode='default') {
-  const { error: insErr } = await supabase.from('predictions')
-    .insert({ username, matches, knockout, podium, group_code: groupCode, updated_at: new Date().toISOString() });
-  if (insErr) {
-    const { error: updErr } = await supabase.from('predictions')
+  const { error } = await supabase.from('predictions').upsert(
+    { username, matches, knockout, podium, group_code: groupCode, updated_at: new Date().toISOString() },
+    { onConflict: 'username,group_code', ignoreDuplicates: false }
+  );
+  if (error) {
+    console.error('sbSavePrediction error:', error.message);
+    await supabase.from('predictions')
       .update({ matches, knockout, podium, updated_at: new Date().toISOString() })
       .eq('username', username).eq('group_code', groupCode);
-    if (updErr) console.error('sbSavePrediction error:', updErr.message);
   }
 }
 
@@ -106,14 +109,19 @@ export async function sbGetLeaderboard(groupCode='default') {
 }
 
 export async function sbUpsertLeaderboard(username, podium, points, groupCode='default') {
-  const { error: insErr } = await supabase.from('leaderboard')
-    .insert({ username, group_code: groupCode, champion: podium?.first || '?', podium, points, updated_at: new Date().toISOString() });
-  if (insErr) {
+  // Use upsert with the composite unique index
+  const { error } = await supabase.from('leaderboard').upsert(
+    { username, group_code: groupCode, champion: podium?.first || '?', podium, points, updated_at: new Date().toISOString() },
+    { onConflict: 'username,group_code', ignoreDuplicates: false }
+  );
+  if (error) {
+    console.error('sbUpsertLeaderboard error:', error.message);
+    // Fallback: try update
     await supabase.from('leaderboard')
       .update({ champion: podium?.first || '?', podium, points, updated_at: new Date().toISOString() })
       .eq('username', username).eq('group_code', groupCode);
   }
-  return sbGetLeaderboard(groupCode)
+  return sbGetLeaderboard(groupCode);
 }
 
 export async function sbTogglePaid(username, paid, groupCode='default') {
