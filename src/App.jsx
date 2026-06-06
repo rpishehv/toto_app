@@ -2868,15 +2868,59 @@ export default function App(){
                 League code
                 <span style={{fontSize:10,color:"#444",marginLeft:6}}>— shared with your group</span>
               </label>
-              <input id="groupCodeInput"
-                placeholder="e.g. WC2026-FRIENDS (leave blank for default)"
-                value={groupCodeInput}
-                onChange={e=>setGroupCodeInput(e.target.value.toUpperCase())}
-                onKeyDown={e=>e.key==="Enter"&&submitName()}
-                style={{...inputStyle,fontFamily:"monospace",fontSize:13,letterSpacing:1}}/>
-              <div style={{fontSize:10,color:"#333",marginBottom:12,marginTop:4}}>
-                All friends must use the same code to share a leaderboard
-              </div>
+              {(()=>{
+                const [leagues,setLeagues]=React.useState([]);
+                const [showCustom,setShowCustom]=React.useState(false);
+                React.useEffect(()=>{
+                  sbGetAllGroupCodes().then(codes=>{
+                    setLeagues(codes.filter(c=>c&&c!=='default'));
+                  });
+                },[]);
+                return(
+                  <div>
+                    {!showCustom?(
+                      <div>
+                        <select
+                          value={groupCodeInput||'default'}
+                          onChange={e=>{
+                            if(e.target.value==='__new__'){ setShowCustom(true); setGroupCodeInput(''); }
+                            else setGroupCodeInput(e.target.value==='default'?'':e.target.value);
+                          }}
+                          style={{...inputStyle,fontFamily:"monospace",fontSize:13,
+                            appearance:"none",backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E\")",
+                            backgroundRepeat:"no-repeat",backgroundPosition:"right 12px center",
+                            paddingRight:32,cursor:"pointer",
+                          }}>
+                          <option value="default">default (main league)</option>
+                          {leagues.map(l=>(
+                            <option key={l} value={l}>{l}</option>
+                          ))}
+                          <option value="__new__">+ Create new league…</option>
+                        </select>
+                      </div>
+                    ):(
+                      <div style={{display:"flex",gap:8}}>
+                        <input id="groupCodeInput"
+                          placeholder="e.g. WC2026-FRIENDS"
+                          value={groupCodeInput}
+                          onChange={e=>setGroupCodeInput(e.target.value.toUpperCase())}
+                          onKeyDown={e=>e.key==="Enter"&&submitName()}
+                          autoFocus
+                          style={{...inputStyle,flex:1,fontFamily:"monospace",fontSize:13,letterSpacing:1}}/>
+                        <button onClick={()=>{setShowCustom(false);setGroupCodeInput('');}}
+                          style={{padding:"8px 12px",background:"rgba(255,255,255,0.06)",
+                            border:"1px solid rgba(255,255,255,0.10)",borderRadius:6,
+                            color:"#555",fontSize:12,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+                          ← Back
+                        </button>
+                      </div>
+                    )}
+                    <div style={{fontSize:10,color:"#333",marginTop:4,marginBottom:12}}>
+                      {showCustom?"Enter a new league code — share it with your friends":"Pick your league or create a new one"}
+                    </div>
+                  </div>
+                );
+              })()}
               <button onClick={submitName} style={btnStyle}>CONTINUE →</button>
             </div>
           )}
