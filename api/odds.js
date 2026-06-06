@@ -74,6 +74,34 @@ export default async function handler(req) {
     return new Response(JSON.stringify({ error: 'Missing teams' }), { status: 400 });
   }
 
+  // If group_slug provided, fetch group winner market directly
+  const groupSlug = url.searchParams.get('group_slug');
+  if (groupSlug) {
+    try {
+      const BASE = 'https://gamma-api.polymarket.com';
+      const headers = { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' };
+      const r = await fetch(`${BASE}/events/slug/${groupSlug}`, { headers });
+      if (r.ok) {
+        const event = await r.json();
+        if (event?.markets?.length > 0) {
+          const outcomes = event.markets.map(m => ({
+            label: m.groupItemTitle || m.question || '?',
+            prob: Math.round(parseFloat(m.outcomePrices?.[0] ?? 0) * 100),
+          })).filter(o => o.prob > 0).sort((a,b) => b.prob - a.prob);
+          return new Response(JSON.stringify({
+            found: true, type: 'group_winner',
+            title: event.title,
+            url: `https://polymarket.com/event/${groupSlug}`,
+            outcomes,
+          }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=300' } });
+        }
+      }
+      return new Response(JSON.stringify({ found: false, message: 'Group market not found' }), { status: 200 });
+    } catch(e) {
+      return new Response(JSON.stringify({ found: false, message: e.message }), { status: 200 });
+    }
+  }
+
   const headers = { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' };
   const BASE = 'https://gamma-api.polymarket.com';
 

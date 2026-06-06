@@ -996,39 +996,26 @@ function GroupWinnerOdds({ groupLetter, teams, slug, highlight }) {
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(()=>{
-    fetch(`/api/odds?home=${encodeURIComponent(teams[0]||'')}&away=${encodeURIComponent(teams[1]||'')}&group_slug=${encodeURIComponent(slug)}`)
+    fetch(`/api/odds?home=${encodeURIComponent(teams[0]||'X')}&away=${encodeURIComponent(teams[1]||'X')}&group_slug=${encodeURIComponent(slug)}`)
       .then(r=>r.json())
       .then(data=>{
-        // Try fetching group winner market directly
-        fetch(`https://gamma-api.polymarket.com/events/slug/${slug}`)
-          .then(r=>r.ok?r.json():null)
-          .then(event=>{
-            if(event?.markets?.length>0){
-              const markets = event.markets;
-              const parsed = markets.map(m=>({
-                label: m.groupItemTitle||m.question||'?',
-                prob: Math.round(parseFloat(m.outcomePrices?.[0]??0)*100),
-              })).filter(o=>o.prob>0).sort((a,b)=>b.prob-a.prob);
-              setOdds(parsed);
-            }
-            setLoading(false);
-          }).catch(()=>setLoading(false));
+        if(data.found && data.outcomes?.length>0) setOdds(data.outcomes);
+        setLoading(false);
       }).catch(()=>setLoading(false));
   },[slug]);
 
-  if(loading) return <div style={{fontSize:10,color:"#444"}}>Loading group odds…</div>;
-  if(!odds) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Group {groupLetter} winner odds unavailable</div>;
+  if(loading) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Loading group odds…</div>;
+  if(!odds?.length) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Group {groupLetter} winner odds unavailable</div>;
 
   return(
-    <div style={{fontSize:10,color:"#444"}}>
-      <span style={{color:"#555",marginRight:6}}>Group {groupLetter} winner odds:</span>
+    <div style={{fontSize:10,color:"#555",lineHeight:1.8}}>
+      <span style={{color:"#444",marginRight:4}}>Group {groupLetter} to win:</span>
       {odds.map((o,i)=>{
-        const isHighlight = highlight?.some(h=>o.label?.toLowerCase().includes(h?.toLowerCase().split(' ')[0]?.toLowerCase()));
+        const hl = highlight?.some(h => o.label?.toLowerCase().includes((h||'').toLowerCase().split(' ')[0]));
         return(
           <span key={i} style={{
-            marginRight:8,
-            color:isHighlight?"#60a5fa":"#444",
-            fontWeight:isHighlight?600:400,
+            marginRight:8, fontWeight:hl?600:400,
+            color:hl?"#60a5fa":"#555",
           }}>
             {o.label} {o.prob}%{i<odds.length-1?' ·':''}
           </span>
