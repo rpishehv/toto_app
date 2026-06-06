@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import React from "react";
 import { supabase } from './supabase.js';
 import {
@@ -2602,8 +2602,8 @@ export default function App(){
     setGroupCode(gc);
     setPinError("Checking…");
     const user=await sbGetUser(n, gc);
-    if(user){ setPinStep("pin-existing"); setPinError(""); }
-    else    { setPinStep("pin-new");      setPinError(""); }
+    if(user && user.pin){ setPinStep("pin-existing"); setPinError(""); }
+    else                { setPinStep("pin-new");      setPinError(""); }
   };
 
   // Step 2a: new user — create account in storage
