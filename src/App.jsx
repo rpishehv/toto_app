@@ -719,7 +719,16 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
                 const grp = match.group;
                 if(!grp) return null;
                 const grpTeams = GROUPS[grp] || [];
-                const grpSlug = `world-cup-group-${grp.toLowerCase()}-winner`;
+                // Polymarket uses slightly different slugs for some groups
+                const slugMap = {
+                  A:'world-cup-group-a-winner', B:'world-cup-group-b-winner',
+                  C:'world-cup-group-c-winner', D:'world-cup-group-d-winner',
+                  E:'world-cup-group-e-winner', F:'world-cup-group-f-winner',
+                  G:'world-cup-group-g-winner', H:'world-cup-group-h-winner',
+                  I:'world-cup-group-i-winner', J:'world-cup-group-j-winner',
+                  K:'world-cup-group-k-winner', L:'fifa-world-cup-group-l-winner',
+                };
+                const grpSlug = slugMap[grp] || `world-cup-group-${grp.toLowerCase()}-winner`;
                 return(
                   <GroupWinnerOdds
                     groupLetter={grp}
