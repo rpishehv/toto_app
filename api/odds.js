@@ -86,17 +86,31 @@ export default async function handler(req) {
         const r = await fetch(`${BASE}/events/slug/${slug}`, { headers });
         if (r.ok) {
           const event = await r.json();
-          if (event?.markets?.length > 0) {
-            const outcomes = event.markets.map(m => ({
-              label: m.groupItemTitle || m.question || '?',
-              prob: Math.round(parseFloat(m.outcomePrices?.[0] ?? 0) * 100),
-            })).filter(o => o.prob > 0).sort((a,b) => b.prob - a.prob);
-            return new Response(JSON.stringify({
-              found: true, type: 'group_winner',
-              title: event.title,
-              url: `https://polymarket.com/event/${slug}`,
-              outcomes,
-            }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=300' } });
+          const markets = event?.markets || [];
+          if (markets.length > 0) {
+            // Each market in a group winner event = one team (YES/NO)
+            // outcomePrices[0] = YES price = probability for that team
+            const outcomes = markets.map(m => {
+              const yesPrice = parseFloat(
+                m.outcomePrices?.[0] ??
+                m.lastTradePrice ??
+                m.bestAsk ?? 0
+              );
+              return {
+                label: m.groupItemTitle || m.question?.replace(/Will\s+/i,'').replace(/\s+win.*/i,'') || '?',
+                prob: Math.round(yesPrice * 100),
+              };
+            }).filter(o => o.prob > 0 && o.label !== '?')
+              .sort((a,b) => b.prob - a.prob);
+
+            if (outcomes.length > 0) {
+              return new Response(JSON.stringify({
+                found: true, type: 'group_winner',
+                title: event.title,
+                url: `https://polymarket.com/event/${slug}`,
+                outcomes,
+              }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=300' } });
+            }
           }
         }
       }
