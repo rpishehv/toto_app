@@ -1023,22 +1023,20 @@ function ScoringBar(){
 
 function GroupWinnerOdds({ groupLetter, teams, slug, highlight }) {
   const [odds, setOdds] = React.useState(null);
+  const [source, setSource] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
-  const [err, setErr] = React.useState(null);
 
   React.useEffect(()=>{
     fetch(`/api/group-odds?group=${encodeURIComponent(groupLetter)}`)
       .then(r=>r.json())
       .then(data=>{
-        console.log('Group odds for', groupLetter, ':', JSON.stringify(data).slice(0,200));
-        if(data.found && data.outcomes?.length>0) setOdds(data.outcomes);
-        else setErr('not yet available');
+        if(data.found && data.outcomes?.length>0){ setOdds(data.outcomes); setSource(data.source); }
         setLoading(false);
-      }).catch(e=>{ setErr(e.message); setLoading(false); });
+      }).catch(()=>setLoading(false));
   },[groupLetter]);
 
   if(loading) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Loading group odds…</div>;
-  if(!odds?.length) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Group {groupLetter} winner odds {err||'not yet available'}</div>;
+  if(!odds?.length) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Group {groupLetter} winner odds not yet available</div>;
 
   return(
     <div style={{fontSize:10,color:"#555",lineHeight:1.8}}>
@@ -1046,14 +1044,12 @@ function GroupWinnerOdds({ groupLetter, teams, slug, highlight }) {
       {odds.map((o,i)=>{
         const hl = highlight?.some(h => o.label?.toLowerCase().includes((h||'').toLowerCase().split(' ')[0]));
         return(
-          <span key={i} style={{
-            marginRight:8, fontWeight:hl?600:400,
-            color:hl?"#60a5fa":"#555",
-          }}>
+          <span key={i} style={{marginRight:8,fontWeight:hl?600:400,color:hl?"#60a5fa":"#555"}}>
             {o.label} {o.prob}%{i<odds.length-1?' ·':''}
           </span>
         );
       })}
+      {source==='cached'&&<span style={{color:"#333",marginLeft:4}}>(Jun 6)</span>}
     </div>
   );
 }
