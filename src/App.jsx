@@ -1027,18 +1027,18 @@ function GroupWinnerOdds({ groupLetter, teams, slug, highlight }) {
   const [err, setErr] = React.useState(null);
 
   React.useEffect(()=>{
-    fetch(`/api/odds?home=${encodeURIComponent(teams[0]||'X')}&away=${encodeURIComponent(teams[1]||'X')}&group_slug=${encodeURIComponent(slug)}`)
+    fetch(`/api/group-odds?group=${encodeURIComponent(groupLetter)}`)
       .then(r=>r.json())
       .then(data=>{
-        console.log('GroupWinnerOdds response for', slug, ':', JSON.stringify(data).slice(0,300));
+        console.log('Group odds for', groupLetter, ':', JSON.stringify(data).slice(0,200));
         if(data.found && data.outcomes?.length>0) setOdds(data.outcomes);
-        else setErr(data.message||'no outcomes');
+        else setErr('not yet available');
         setLoading(false);
-      }).catch(e=>{ console.error('GroupWinnerOdds error:', e); setErr(e.message); setLoading(false); });
-  },[slug]);
+      }).catch(e=>{ setErr(e.message); setLoading(false); });
+  },[groupLetter]);
 
   if(loading) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Loading group odds…</div>;
-  if(!odds?.length) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Group {groupLetter} odds: {err||'not yet available'}</div>;
+  if(!odds?.length) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Group {groupLetter} winner odds {err||'not yet available'}</div>;
 
   return(
     <div style={{fontSize:10,color:"#555",lineHeight:1.8}}>
