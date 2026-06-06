@@ -973,6 +973,63 @@ function ScoringBar(){
   );
 }
 
+function LeagueSelector({ value, onChange, onEnter, inputStyle }) {
+  const [leagues, setLeagues] = React.useState([]);
+  const [showCustom, setShowCustom] = React.useState(false);
+
+  React.useEffect(()=>{
+    sbGetAllGroupCodes().then(codes => {
+      setLeagues((codes||[]).filter(c => c && c !== 'default'));
+    }).catch(()=>{});
+  }, []);
+
+  const selectStyle = {
+    ...inputStyle,
+    fontFamily:"monospace", fontSize:13,
+    appearance:"none",
+    backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E\")",
+    backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center",
+    paddingRight:32, cursor:"pointer",
+  };
+
+  if (!showCustom) return(
+    <div>
+      <select value={value||'default'} onChange={e=>{
+        if(e.target.value==='__new__'){ setShowCustom(true); onChange(''); }
+        else onChange(e.target.value==='default'?'':e.target.value);
+      }} style={selectStyle}>
+        <option value="default">default (main league)</option>
+        {leagues.map(l=><option key={l} value={l}>{l}</option>)}
+        <option value="__new__">+ Create new league…</option>
+      </select>
+      <div style={{fontSize:10,color:"#333",marginTop:4,marginBottom:12}}>
+        Pick your league or create a new one
+      </div>
+    </div>
+  );
+
+  return(
+    <div>
+      <div style={{display:"flex",gap:8}}>
+        <input placeholder="e.g. WC2026-FRIENDS"
+          value={value} autoFocus
+          onChange={e=>onChange(e.target.value.toUpperCase())}
+          onKeyDown={e=>e.key==="Enter"&&onEnter()}
+          style={{...inputStyle,flex:1,fontFamily:"monospace",fontSize:13,letterSpacing:1}}/>
+        <button onClick={()=>{setShowCustom(false);onChange('');}}
+          style={{padding:"8px 12px",background:"rgba(255,255,255,0.06)",
+            border:"1px solid rgba(255,255,255,0.10)",borderRadius:6,
+            color:"#555",fontSize:12,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+          ← Back
+        </button>
+      </div>
+      <div style={{fontSize:10,color:"#333",marginTop:4,marginBottom:12}}>
+        Enter a new league code — share it with your friends
+      </div>
+    </div>
+  );
+}
+
 function ExpertPanel({ home, away, data, loading, onClose }) {
   if (loading) return (
     <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,
@@ -2868,59 +2925,12 @@ export default function App(){
                 League code
                 <span style={{fontSize:10,color:"#444",marginLeft:6}}>— shared with your group</span>
               </label>
-              {(()=>{
-                const [leagues,setLeagues]=React.useState([]);
-                const [showCustom,setShowCustom]=React.useState(false);
-                React.useEffect(()=>{
-                  sbGetAllGroupCodes().then(codes=>{
-                    setLeagues(codes.filter(c=>c&&c!=='default'));
-                  });
-                },[]);
-                return(
-                  <div>
-                    {!showCustom?(
-                      <div>
-                        <select
-                          value={groupCodeInput||'default'}
-                          onChange={e=>{
-                            if(e.target.value==='__new__'){ setShowCustom(true); setGroupCodeInput(''); }
-                            else setGroupCodeInput(e.target.value==='default'?'':e.target.value);
-                          }}
-                          style={{...inputStyle,fontFamily:"monospace",fontSize:13,
-                            appearance:"none",backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E\")",
-                            backgroundRepeat:"no-repeat",backgroundPosition:"right 12px center",
-                            paddingRight:32,cursor:"pointer",
-                          }}>
-                          <option value="default">default (main league)</option>
-                          {leagues.map(l=>(
-                            <option key={l} value={l}>{l}</option>
-                          ))}
-                          <option value="__new__">+ Create new league…</option>
-                        </select>
-                      </div>
-                    ):(
-                      <div style={{display:"flex",gap:8}}>
-                        <input id="groupCodeInput"
-                          placeholder="e.g. WC2026-FRIENDS"
-                          value={groupCodeInput}
-                          onChange={e=>setGroupCodeInput(e.target.value.toUpperCase())}
-                          onKeyDown={e=>e.key==="Enter"&&submitName()}
-                          autoFocus
-                          style={{...inputStyle,flex:1,fontFamily:"monospace",fontSize:13,letterSpacing:1}}/>
-                        <button onClick={()=>{setShowCustom(false);setGroupCodeInput('');}}
-                          style={{padding:"8px 12px",background:"rgba(255,255,255,0.06)",
-                            border:"1px solid rgba(255,255,255,0.10)",borderRadius:6,
-                            color:"#555",fontSize:12,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
-                          ← Back
-                        </button>
-                      </div>
-                    )}
-                    <div style={{fontSize:10,color:"#333",marginTop:4,marginBottom:12}}>
-                      {showCustom?"Enter a new league code — share it with your friends":"Pick your league or create a new one"}
-                    </div>
-                  </div>
-                );
-              })()}
+              <LeagueSelector
+                value={groupCodeInput}
+                onChange={setGroupCodeInput}
+                onEnter={submitName}
+                inputStyle={inputStyle}
+              />
               <button onClick={submitName} style={btnStyle}>CONTINUE →</button>
             </div>
           )}
