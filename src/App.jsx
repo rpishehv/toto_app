@@ -1452,6 +1452,7 @@ export default function App(){
   const [actualPodium,setActualPodium]=useState({first:null,second:null,third:null});
   const [now,setNow]=useState(Date.now());
   const [adminMode,setAdminMode]=useState(false);
+  const [predCounts,setPredCounts]=useState({}); // {username: filledCount}
   const [adminPinInput,setAdminPinInput]=useState("");
   const [adminPinError,setAdminPinError]=useState("");
   const [deleteConfirmUser,setDeleteConfirmUser]=useState(null);
@@ -2889,7 +2890,7 @@ export default function App(){
     const check = async () => {
       const now = Date.now();
       const TWO_HOURS = 2 * 60 * 60 * 1000;
-      const unpredictedUsers = leaderboard.filter(e=>e.points===0).map(e=>e.username);
+      const unpredictedUsers = leaderboard.filter(e=>(predCounts[e.username]||0)===0).map(e=>e.username);
 
       for(const m of matches){
         const kickoff = KICKOFFS[m.id];
@@ -6263,6 +6264,19 @@ export default function App(){
           <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,color:"#fcb900",marginTop:0}}>
             Admin Panel
           </h2>
+          {/* Load prediction counts for all users */}
+          {adminMode&&(()=>{
+            if(Object.keys(predCounts).length===0 && leaderboard.length>0){
+              sbGetAllPredictions(groupCode).then(allPreds=>{
+                const counts={};
+                allPreds.forEach(p=>{
+                  counts[p.username]=(p.matches||[]).filter(m=>m.homeScore!==null&&m.awayScore!==null).length;
+                });
+                setPredCounts(counts);
+              });
+            }
+            return null;
+          })()}
 
           {/* PIN gate */}
           {!adminMode?(
@@ -6559,25 +6573,38 @@ export default function App(){
                   </div>
                   <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"10px",textAlign:"center"}}>
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#22c55e"}}>
-                      {leaderboard.filter(e=>e.points>0).length}
+                      {leaderboard.filter(e=>(predCounts[e.username]||0)>0).length}
                     </div>
                     <div style={{fontSize:10,color:"#555"}}>With predictions</div>
                   </div>
                   <div style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"10px",textAlign:"center"}}>
                     <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#ef4444"}}>
-                      {leaderboard.filter(e=>e.points===0).length}
+                      {leaderboard.filter(e=>(predCounts[e.username]||0)===0).length}
                     </div>
                     <div style={{fontSize:10,color:"#555"}}>Not predicted</div>
                   </div>
                 </div>
-                {leaderboard.filter(e=>e.points===0).length>0&&(
+                {leaderboard.filter(e=>(predCounts[e.username]||0)===0).length>0&&(
                   <div style={{background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.15)",borderRadius:8,padding:"10px 12px"}}>
                     <div style={{fontSize:11,color:"#ef4444",fontWeight:700,marginBottom:6}}>⚠️ Haven't predicted yet:</div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                      {leaderboard.filter(e=>e.points===0).map(e=>(
+                      {leaderboard.filter(e=>(predCounts[e.username]||0)===0).map(e=>(
                         <span key={e.username} style={{fontSize:11,color:"#888",background:"rgba(255,255,255,0.06)",
                           border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,padding:"3px 8px"}}>
                           {e.username}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {leaderboard.filter(e=>(predCounts[e.username]||0)>0 && (predCounts[e.username]||0)<72).length>0&&(
+                  <div style={{background:"rgba(252,185,0,0.06)",border:"1px solid rgba(252,185,0,0.15)",borderRadius:8,padding:"10px 12px",marginTop:8}}>
+                    <div style={{fontSize:11,color:"#fcb900",fontWeight:700,marginBottom:6}}>⏳ Partially predicted:</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      {leaderboard.filter(e=>(predCounts[e.username]||0)>0 && (predCounts[e.username]||0)<72).map(e=>(
+                        <span key={e.username} style={{fontSize:11,color:"#888",background:"rgba(255,255,255,0.06)",
+                          border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,padding:"3px 8px"}}>
+                          {e.username} {predCounts[e.username]}/72
                         </span>
                       ))}
                     </div>
