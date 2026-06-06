@@ -1404,10 +1404,10 @@ export default function App(){
         const session = getSession();
         const gc = session?.groupCode || 'default';
         if (session?.username) {
-          // Check if PIN was reset — if so, force re-login
           const userRecord = await sbGetUser(session.username, gc);
+          console.log('Session restore check:', session.username, gc, 'pin:', userRecord?.pin, 'record:', !!userRecord);
           if (!userRecord || !userRecord.pin) {
-            // PIN was reset or user deleted — force logout
+            console.log('PIN is null/missing — clearing session');
             clearSession();
           } else {
             setUserName(session.username);
