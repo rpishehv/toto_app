@@ -1404,11 +1404,19 @@ export default function App(){
         const session = getSession();
         const gc = session?.groupCode || 'default';
         if (session?.username) {
-          setUserName(session.username);
-          setGroupCode(gc);
+          // Check if PIN was reset — if so, force re-login
+          const userRecord = await sbGetUser(session.username, gc);
+          if (!userRecord || !userRecord.pin) {
+            // PIN was reset or user deleted — force logout
+            clearSession();
+          } else {
+            setUserName(session.username);
+            setGroupCode(gc);
+          }
         }
-        // Only load group-scoped data if we have a session
-        if (session?.username) {
+        // Only load group-scoped data if session is still valid
+        const validSession = getSession();
+        if (validSession?.username) {
           const lb=await sbGetLeaderboard(gc); if(lb) setLeaderboard(lb);
         }
         const actual=await sbGetActualResults();
@@ -6547,8 +6555,15 @@ export default function App(){
                         const user = await sbGetUser(e.username, groupCode);
                         if(!user){ setAdminPinError(`User "${e.username}" not found.`); return; }
                         await sbClearUser(e.username, groupCode);
-                        setAdminPinError(`✅ PIN reset for "${e.username}".`);
-                        setTimeout(()=>setAdminPinError(""),3000);
+                        // Clear their saved session so they're forced to re-login
+                        try {
+                          const saved = JSON.parse(localStorage.getItem('wc26_session')||'null');
+                          if(saved?.username===e.username && saved?.groupCode===groupCode) {
+                            localStorage.removeItem('wc26_session');
+                          }
+                        } catch {}
+                        setAdminPinError(`✅ PIN reset for "${e.username}". They must set a new PIN on next login.`);
+                        setTimeout(()=>setAdminPinError(""),4000);
                       }} style={{
                         padding:"3px 8px",background:"rgba(96,165,250,0.08)",
                         border:"1px solid rgba(96,165,250,0.2)",borderRadius:4,

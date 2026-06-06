@@ -40,7 +40,7 @@ export async function sbVerifyRecovery(username, code, groupCode='default') {
 
 export async function sbClearUser(username, groupCode='default') {
   const { error } = await supabase.from('users')
-    .update({ pin: null, recovery_code: null })
+    .update({ pin: null, recovery_code: null, session_invalidated_at: new Date().toISOString() })
     .eq('username', username).eq('group_code', groupCode)
   if (error) console.error('sbClearUser error:', error.message)
 }
@@ -306,6 +306,7 @@ export function saveSession(username, groupCode='default') {
   try {
     localStorage.setItem('wc26_session', JSON.stringify({
       username, groupCode,
+      savedAt: new Date().toISOString(),
       expiry: Date.now() + SESSION_DAYS * 86400000
     }))
   } catch {}
