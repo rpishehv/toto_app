@@ -627,7 +627,7 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontWeight:600,fontSize:11,color:winner===match.home?"#fcb900":locked?"#888":"#ddd",
             overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{match.home}</div>
-          {FIFA_RANKINGS[match.home]&&<div style={{fontSize:9,color:"#444"}}>#{FIFA_RANKINGS[match.home]} FIFA</div>}
+          {FIFA_RANKINGS[match.home]&&<div style={{fontSize:11,color:"#555"}}>#{FIFA_RANKINGS[match.home]} FIFA</div>}
         </div>
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:3}}>
@@ -641,7 +641,7 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
         <div style={{flex:1,minWidth:0,textAlign:"right"}}>
           <div style={{fontWeight:600,fontSize:11,color:winner===match.away?"#fcb900":locked?"#888":"#ddd",
             overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{match.away}</div>
-          {FIFA_RANKINGS[match.away]&&<div style={{fontSize:9,color:"#444"}}>#{FIFA_RANKINGS[match.away]} FIFA</div>}
+          {FIFA_RANKINGS[match.away]&&<div style={{fontSize:11,color:"#555"}}>#{FIFA_RANKINGS[match.away]} FIFA</div>}
         </div>
         <span style={{fontSize:16,flexShrink:0}}>{FLAGS[match.away]||"🏳️"}</span>
         {locked&&!result&&<span style={{fontSize:11,flexShrink:0}}>🔒</span>}
@@ -1030,14 +1030,15 @@ function GroupWinnerOdds({ groupLetter, teams, slug, highlight }) {
     fetch(`/api/odds?home=${encodeURIComponent(teams[0]||'X')}&away=${encodeURIComponent(teams[1]||'X')}&group_slug=${encodeURIComponent(slug)}`)
       .then(r=>r.json())
       .then(data=>{
+        console.log('GroupWinnerOdds response for', slug, ':', JSON.stringify(data).slice(0,300));
         if(data.found && data.outcomes?.length>0) setOdds(data.outcomes);
-        else setErr(data.message||'unavailable');
+        else setErr(data.message||'no outcomes');
         setLoading(false);
-      }).catch(e=>{ setErr(e.message); setLoading(false); });
+      }).catch(e=>{ console.error('GroupWinnerOdds error:', e); setErr(e.message); setLoading(false); });
   },[slug]);
 
   if(loading) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Loading group odds…</div>;
-  if(!odds?.length) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Group {groupLetter} winner odds not yet available</div>;
+  if(!odds?.length) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Group {groupLetter} odds: {err||'not yet available'}</div>;
 
   return(
     <div style={{fontSize:10,color:"#555",lineHeight:1.8}}>
