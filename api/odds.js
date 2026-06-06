@@ -80,40 +80,71 @@ export default async function handler(req) {
     try {
       const BASE = 'https://gamma-api.polymarket.com';
       const headers = { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' };
-      // Try the provided slug and a fifa- prefixed variant
-      const slugsToTry = [groupSlug, `fifa-${groupSlug}`, groupSlug.replace('fifa-','')];
-      for (const slug of slugsToTry) {
-        const r = await fetch(`${BASE}/events/slug/${slug}`, { headers });
-        if (r.ok) {
-          const event = await r.json();
-          const markets = event?.markets || [];
-          if (markets.length > 0) {
-            // Each market in a group winner event = one team (YES/NO)
-            // outcomePrices[0] = YES price = probability for that team
-            const outcomes = markets.map(m => {
-              const yesPrice = parseFloat(
-                m.outcomePrices?.[0] ??
-                m.lastTradePrice ??
-                m.bestAsk ?? 0
-              );
-              return {
-                label: m.groupItemTitle || m.question?.replace(/Will\s+/i,'').replace(/\s+win.*/i,'') || '?',
-                prob: Math.round(yesPrice * 100),
-              };
-            }).filter(o => o.prob > 0 && o.label !== '?')
-              .sort((a,b) => b.prob - a.prob);
 
-            if (outcomes.length > 0) {
-              return new Response(JSON.stringify({
-                found: true, type: 'group_winner',
-                title: event.title,
-                url: `https://polymarket.com/event/${slug}`,
-                outcomes,
-              }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=300' } });
-            }
+      // Extract group letter from slug (e.g. 'world-cup-group-a-winner' -> 'A')
+      const grpMatch = groupSlug.match(/group-([a-l])-winner/i);
+      const grpLetter = grpMatch?.[1]?.toUpperCase();
+
+      // Search markets for this group winner event
+      const searchTerms = grpLetter
+        ? [`World Cup Group ${grpLetter} Winner`, `Group ${grpLetter} Winner 2026`]
+        : [groupSlug];
+
+      for (const term of searchTerms) {
+        const r = await fetch(
+          `${BASE}/markets?search=${encodeURIComponent(term)}&active=true&closed=false&limit=20`,
+          { headers }
+        );
+        if (!r.ok) continue;
+        const markets = await r.json();
+        const arr = Array.isArray(markets) ? markets : (markets.markets || []);
+
+        // Group winner markets are multi-outcome — find the parent event
+        const matching = arr.filter(m => {
+          const q = (m.question || m.groupItemTitle || '').toLowerCase();
+          return q.includes('group') && grpLetter && q.includes(grpLetter.toLowerCase());
+        });
+
+        if (matching.length >= 2) {
+          const outcomes = matching.map(m => ({
+            label: m.groupItemTitle || m.question?.replace(/Will\s+/i,'').replace(/\s+win.*/i,'') || '?',
+            prob: Math.round(parseFloat(m.outcomePrices?.[0] ?? m.lastTradePrice ?? 0) * 100),
+          })).filter(o => o.prob > 0 && o.label.length < 30)
+            .sort((a,b) => b.prob - a.prob);
+
+          if (outcomes.length > 0) {
+            return new Response(JSON.stringify({
+              found: true, type: 'group_winner',
+              url: `https://polymarket.com/event/${groupSlug}`,
+              outcomes,
+            }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=300' } });
           }
         }
       }
+
+      // Last resort: try event slug directly
+      const slugsToTry = [groupSlug, `fifa-${groupSlug}`, groupSlug.replace('fifa-','')];
+      for (const slug of slugsToTry) {
+        const r = await fetch(`${BASE}/events/slug/${slug}`, { headers });
+        if (!r.ok) continue;
+        const event = await r.json();
+        const eventMarkets = event?.markets || [];
+        if (eventMarkets.length >= 2) {
+          const outcomes = eventMarkets.map(m => ({
+            label: m.groupItemTitle || m.question?.replace(/Will\s+/i,'').replace(/\s+win.*/i,'') || '?',
+            prob: Math.round(parseFloat(m.outcomePrices?.[0] ?? m.lastTradePrice ?? 0) * 100),
+          })).filter(o => o.prob > 0).sort((a,b) => b.prob - a.prob);
+          if (outcomes.length > 0) {
+            return new Response(JSON.stringify({
+              found: true, type: 'group_winner',
+              title: event.title,
+              url: `https://polymarket.com/event/${slug}`,
+              outcomes,
+            }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=300' } });
+          }
+        }
+      }
+
       return new Response(JSON.stringify({ found: false, message: 'Group market not found' }), { status: 200 });
     } catch(e) {
       return new Response(JSON.stringify({ found: false, message: e.message }), { status: 200 });

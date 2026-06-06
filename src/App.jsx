@@ -1615,14 +1615,36 @@ export default function App(){
     };
   },[groupCode]);
 
-  // ── Prediction completion counter ───────────────────────────────────────────
+  // ── Prediction completion counter — stage-dependent ───────────────────────
   useEffect(()=>{
-    const total = ALL_MATCHES.length + KNOCKOUT_TEMPLATE.length;
-    const donePreds = [
-      ...matches.filter(m=>m.homeScore!==null&&m.awayScore!==null),
-      ...knockout.filter(m=>m.homeScore!==null&&m.awayScore!==null&&m.home!=="TBD"),
-    ].length;
-    setPredictionCount({done:donePreds, total});
+    // Determine which stages are currently "open" for predictions
+    // A KO match is open once both teams are known (not TBD)
+    const groupDone = matches.filter(m=>m.homeScore!==null&&m.awayScore!==null).length;
+
+    const r32Open    = knockout.filter(m=>m.round==='R32'&&m.home!=='TBD'&&m.away!=='TBD');
+    const r16Open    = knockout.filter(m=>m.round==='R16'&&m.home!=='TBD'&&m.away!=='TBD');
+    const qfOpen     = knockout.filter(m=>m.round==='QF'&&m.home!=='TBD'&&m.away!=='TBD');
+    const sfOpen     = knockout.filter(m=>m.round==='SF'&&m.home!=='TBD'&&m.away!=='TBD');
+    const finalOpen  = knockout.filter(m=>m.round==='Final'&&m.home!=='TBD'&&m.away!=='TBD');
+
+    const koDone = knockout.filter(m=>
+      m.homeScore!==null&&m.awayScore!==null&&m.home!=='TBD'
+    ).length;
+
+    // Total = group matches + all open KO matches
+    const koOpen = r32Open.length + r16Open.length + qfOpen.length + sfOpen.length + finalOpen.length;
+    const total  = ALL_MATCHES.length + koOpen;
+    const done   = groupDone + koDone;
+
+    // Stage label for display
+    let stage = 'Group Stage';
+    if (finalOpen.length > 0)   stage = 'Final';
+    else if (sfOpen.length > 0) stage = 'Semi-Finals';
+    else if (qfOpen.length > 0) stage = 'Quarter-Finals';
+    else if (r16Open.length > 0) stage = 'Round of 16';
+    else if (r32Open.length > 0) stage = 'Round of 32';
+
+    setPredictionCount({done, total, stage});
   },[matches,knockout]);
 
   useEffect(()=>{
@@ -1647,10 +1669,14 @@ export default function App(){
           }
           if(p.podium) setPodium(p.podium);
 
-          // Check completion — show reminder if less than 50% predicted
-          const totalPreds = ALL_MATCHES.length;
-          const donePreds = (p.matches||[]).filter(m=>m.homeScore!==null&&m.awayScore!==null).length;
-          if(donePreds < totalPreds * 0.5) setShowPredReminder(true);
+          // Check completion — show reminder if less than 50% of current stage predicted
+          const koOpenCount = (p.knockout||[]).filter(m=>m.home!=='TBD'&&m.away!=='TBD').length;
+          const stageTotalPreds = ALL_MATCHES.length + koOpenCount;
+          const donePreds = [
+            ...(p.matches||[]).filter(m=>m.homeScore!==null&&m.awayScore!==null),
+            ...(p.knockout||[]).filter(m=>m.homeScore!==null&&m.awayScore!==null&&m.home!=='TBD'),
+          ].length;
+          if(donePreds < stageTotalPreds * 0.5) setShowPredReminder(true);
         } else {
           // New user with no predictions — always show reminder
           setShowPredReminder(true);
@@ -3284,9 +3310,11 @@ export default function App(){
             <div style={{fontSize:13,color:"#c0c0c0",lineHeight:1.7,marginBottom:8,textAlign:"center"}}>
               You've predicted{" "}
               <strong style={{color:"#fff"}}>
-                {matches.filter(m=>m.homeScore!==null).length}/{ALL_MATCHES.length}
+                {predictionCount.done}/{predictionCount.total}
               </strong>{" "}
-              group matches.
+              {predictionCount.stage&&predictionCount.stage!=='Group Stage'
+                ? `${predictionCount.stage} matches.`
+                : "group matches."}
             </div>
             <div style={{
               background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",
@@ -3300,12 +3328,12 @@ export default function App(){
             <div style={{marginBottom:18}}>
               <div style={{height:6,background:"rgba(255,255,255,0.06)",borderRadius:4,overflow:"hidden",marginBottom:4}}>
                 <div style={{
-                  width:`${Math.round(matches.filter(m=>m.homeScore!==null).length/ALL_MATCHES.length*100)}%`,
+                  width:`${predictionCount.total>0?Math.round(predictionCount.done/predictionCount.total*100):0}%`,
                   height:"100%",background:"#fcb900",borderRadius:4,transition:"width 0.5s",
                 }}/>
               </div>
               <div style={{fontSize:10,color:"#555",textAlign:"right"}}>
-                {Math.round(matches.filter(m=>m.homeScore!==null).length/ALL_MATCHES.length*100)}% complete
+                {predictionCount.total>0?Math.round(predictionCount.done/predictionCount.total*100):0}% complete
               </div>
             </div>
             <div style={{display:"flex",gap:10}}>
@@ -3380,6 +3408,9 @@ export default function App(){
             </div>
             <div style={{fontSize:10,color:predictionCount.done===predictionCount.total?"#22c55e":"#555",flexShrink:0}}>
               {predictionCount.done}/{predictionCount.total}
+              {predictionCount.stage&&predictionCount.stage!=='Group Stage'&&(
+                <span style={{color:"#444",marginLeft:4}}>· {predictionCount.stage}</span>
+              )}
               {predictionCount.done<predictionCount.total&&" ⚠️"}
             </div>
           </div>
