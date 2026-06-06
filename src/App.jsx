@@ -6614,17 +6614,25 @@ export default function App(){
                 {/* WhatsApp Reminder Button */}
                 {(()=>{
                   const total = leaderboard.length;
-                  const withPreds = leaderboard.filter(e=>e.points>0).length;
-                  const missing = leaderboard.filter(e=>e.points===0).map(e=>e.username);
                   const daysToKickoff = Math.max(0, Math.ceil((new Date('2026-06-11T17:00:00Z') - new Date()) / 86400000));
-                  const missingStr = missing.length > 0
-                    ? `\n⚠️ Still waiting on: ${missing.join(', ')}`
-                    : '\n✅ Everyone has predicted!';
+
+                  const noPreds   = leaderboard.filter(e=>(predCounts[e.username]||0)===0).map(e=>e.username);
+                  const partial   = leaderboard.filter(e=>(predCounts[e.username]||0)>0&&(predCounts[e.username]||0)<72);
+                  const complete  = leaderboard.filter(e=>(predCounts[e.username]||0)>=72).length;
+
+                  const partialStr = partial.map(e=>`${e.username} ${predCounts[e.username]}/72`).join(', ');
+
+                  const statusLines = [];
+                  if(noPreds.length>0)   statusLines.push(`⚠️ Haven't predicted yet: ${noPreds.join(', ')}`);
+                  if(partial.length>0)   statusLines.push(`⏳ Partially predicted: ${partialStr}`);
+                  if(complete>0)         statusLines.push(`✅ Fully predicted (72/72): ${leaderboard.filter(e=>(predCounts[e.username]||0)>=72).map(e=>e.username).join(', ')}`);
+
                   const msg = [
                     `⚽ FIFA 2026 Predictions Reminder!`,
                     ``,
-                    `📊 ${withPreds}/${total} players have saved predictions`,
-                    missingStr,
+                    `📊 ${complete}/${total} players have completed all predictions`,
+                    ``,
+                    ...statusLines,
                     ``,
                     daysToKickoff > 0
                       ? `⏱ Tournament kicks off in ${daysToKickoff} day${daysToKickoff!==1?'s':''}!`
@@ -6632,6 +6640,14 @@ export default function App(){
                     ``,
                     `👉 Fill yours now: https://toto-app-oqdi.vercel.app`,
                   ].join('\n');
+
+                  const chatMsg = [
+                    `📣 Admin Reminder`,
+                    `${complete}/${total} players fully predicted.`,
+                    noPreds.length>0 ? `⚠️ Haven't predicted yet: ${noPreds.join(', ')}` : '',
+                    partial.length>0 ? `⏳ Partially: ${partialStr}` : '',
+                    daysToKickoff>0 ? `⏱ ${daysToKickoff} day${daysToKickoff!==1?'s':''} to kickoff — fill yours now!` : `🔴 Predictions are locking — fill yours now!`,
+                  ].filter(Boolean).join('\n');
 
                   const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
                   return(
@@ -6647,38 +6663,27 @@ export default function App(){
                         <span style={{fontSize:16}}>📱</span>
                         Send WhatsApp Reminder
                         <span style={{fontSize:11,color:"#166534",fontWeight:400}}>
-                          ({withPreds}/{total} predicted)
+                          ({complete}/{total} complete)
                         </span>
                       </a>
-                      {(()=>{
-                        return(
-                          <button onClick={async()=>{
-                            const chatMsg = [
-                              `📣 Admin Reminder`,
-                              `${withPreds}/${total} players have saved predictions.`,
-                              missing.length>0 ? `Still waiting on: ${missing.join(', ')}` : `Everyone has predicted — let's go! ⚽`,
-                              daysToKickoff>0 ? `Tournament kicks off in ${daysToKickoff} day${daysToKickoff!==1?'s':''}!` : `Predictions are locking — fill yours now!`,
-                            ].join('\n');
-                            await sbSendMessage('⚡', chatMsg, groupCode);
-                            setChatReminderSent(true);
-                            setTimeout(()=>setChatReminderSent(false), 3000);
-                          }} style={{
-                            display:"flex",alignItems:"center",justifyContent:"center",gap:8,
-                            padding:"11px",borderRadius:8,
-                            background:chatReminderSent?"rgba(34,197,94,0.15)":"rgba(252,185,0,0.08)",
-                            border:`1px solid ${chatReminderSent?"rgba(34,197,94,0.4)":"rgba(252,185,0,0.25)"}`,
-                            color:chatReminderSent?"#22c55e":"#fcb900",fontSize:13,fontWeight:700,
-                            cursor:"pointer",fontFamily:"inherit",
-                            transition:"all 0.3s",
-                          }}>
-                            <span style={{fontSize:16}}>{chatReminderSent?"✓":"💬"}</span>
-                            {chatReminderSent?"Reminder sent to chat!":"Send to Group Chat"}
-                            {!chatReminderSent&&<span style={{fontSize:11,color:"#92400e",fontWeight:400}}>
-                              (visible to all players)
-                            </span>}
-                          </button>
-                        );
-                      })()}
+                      <button onClick={async()=>{
+                        await sbSendMessage('⚡', chatMsg, groupCode);
+                        setChatReminderSent(true);
+                        setTimeout(()=>setChatReminderSent(false), 3000);
+                      }} style={{
+                        display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                        padding:"11px",borderRadius:8,
+                        background:chatReminderSent?"rgba(34,197,94,0.15)":"rgba(252,185,0,0.08)",
+                        border:`1px solid ${chatReminderSent?"rgba(34,197,94,0.4)":"rgba(252,185,0,0.25)"}`,
+                        color:chatReminderSent?"#22c55e":"#fcb900",fontSize:13,fontWeight:700,
+                        cursor:"pointer",fontFamily:"inherit",transition:"all 0.3s",
+                      }}>
+                        <span style={{fontSize:16}}>{chatReminderSent?"✓":"💬"}</span>
+                        {chatReminderSent?"Reminder sent to chat!":"Send to Group Chat"}
+                        {!chatReminderSent&&<span style={{fontSize:11,color:"#92400e",fontWeight:400}}>
+                          (visible to all players)
+                        </span>}
+                      </button>
                     </div>
                   );
                 })()}
