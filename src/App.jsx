@@ -6625,8 +6625,9 @@ export default function App(){
                   // Matches kicking off in the next 5 days
                   const upcomingMatchIds = (matches||[]).filter(m => {
                     const key = `${m.home}||${m.away}`;
-                    const ko = KICKOFFS[key];
-                    return ko && ko > now && ko <= fiveDays && m.homeScore === null;
+                    const keyRev = `${m.away}||${m.home}`;
+                    const ko = KICKOFFS[key] || KICKOFFS[keyRev];
+                    return ko && ko > now && ko <= fiveDays;
                   }).map(m => m.id);
 
                   const noPreds   = leaderboard.filter(e=>(predCounts[e.username]||0)===0).map(e=>e.username);
@@ -6635,15 +6636,21 @@ export default function App(){
                   const partialStr = partial.map(e=>`${e.username} ${predCounts[e.username]}/72`).join(', ');
 
                   // Per-user upcoming unpredicted count
-                  const userUpcoming = leaderboard.map(e => {
-                    const userMatches = allPredData[e.username] || [];
+                  const userUpcoming = upcomingMatchIds.length > 0 ? leaderboard.map(e => {
+                    const userMatches = allPredData[e.username];
+                    if (!userMatches) {
+                      // Data not loaded yet — flag anyone not fully predicted
+                      return (predCounts[e.username]||0) < 72
+                        ? `${e.username} (${upcomingMatchIds.length}/${upcomingMatchIds.length} games)`
+                        : null;
+                    }
                     const predMap = Object.fromEntries(userMatches.map(m=>[m.id, m]));
                     const unpredicted = upcomingMatchIds.filter(id => {
                       const m = predMap[id];
                       return !m || m.homeScore === null || m.awayScore === null;
                     });
-                    return unpredicted.length > 0 ? `${e.username} (${unpredicted.length}/${upcomingMatchIds.length} games)` : null;
-                  }).filter(Boolean);
+                    return unpredicted.length > 0 ? `${e.username} (${unpredicted.length}/${upcomingMatchIds.length} game${unpredicted.length!==1?'s':''})` : null;
+                  }).filter(Boolean) : [];
 
                   const statusLines = [];
                   if(noPreds.length>0)   statusLines.push(`⚠️ Haven't predicted yet: ${noPreds.join(', ')}`);
