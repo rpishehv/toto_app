@@ -41,6 +41,21 @@ const GROUPS = {
   L: ["England", "Croatia", "Panama", "Ghana"],
 };
 
+// FIFA Rankings — April 2026 official update
+const FIFA_RANKINGS = {
+  'France':1,'Spain':2,'Argentina':3,'England':4,'Portugal':5,
+  'Brazil':6,'Belgium':7,'Netherlands':8,'Germany':9,'Morocco':10,
+  'Colombia':11,'Uruguay':12,'USA':13,'Croatia':14,'Mexico':15,
+  'Japan':16,'Turkey':17,'Senegal':18,'Switzerland':19,'Ecuador':20,
+  'Norway':21,'Austria':22,'Denmark':23,'South Korea':24,'Australia':25,
+  'Canada':26,'Scotland':27,'Sweden':28,'Ivory Coast':29,'Ghana':30,
+  'Serbia':31,'Algeria':32,'Iran':33,'Egypt':34,'Poland':35,
+  'DR Congo':36,'Bosnia-Herzegovina':37,'Tunisia':38,'Paraguay':39,'Saudi Arabia':40,
+  'Czechia':41,'Panama':42,'Iraq':43,'Qatar':44,'New Zealand':45,
+  'South Africa':46,'Uzbekistan':47,'Cape Verde':48,'Jordan':49,'Haiti':50,
+  'Curacao':51,'Croatia':14,'Belgium':7,
+};
+
 const FLAGS = {
   // Group A
   Mexico:"🇲🇽","South Korea":"🇰🇷","South Africa":"🇿🇦",Czechia:"🇨🇿",
@@ -609,8 +624,11 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
       {/* Main match row — no buttons, full width for teams */}
       <div style={{display:"flex",alignItems:"center",gap:5}}>
         <span style={{fontSize:16,flexShrink:0}}>{FLAGS[match.home]||"🏳️"}</span>
-        <span style={{flex:1,fontWeight:600,fontSize:11,color:winner===match.home?"#fcb900":locked?"#888":"#ddd",
-          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>{match.home}</span>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:600,fontSize:11,color:winner===match.home?"#fcb900":locked?"#888":"#ddd",
+            overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{match.home}</div>
+          {FIFA_RANKINGS[match.home]&&<div style={{fontSize:9,color:"#444"}}>#{FIFA_RANKINGS[match.home]} FIFA</div>}
+        </div>
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:3}}>
             <ScoreInput value={match.homeScore} onChange={v=>onUpdate({...match,homeScore:v})} readOnly={locked}/>
@@ -620,8 +638,11 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
           {actDone&&<div style={{fontSize:10,color:"#555",fontFamily:"monospace"}}>{actual.homeScore}–{actual.awayScore}</div>}
           {!locked&&countdown&&<div style={{fontSize:10,color:"#60a5fa"}}>⏱ {countdown}</div>}
         </div>
-        <span style={{flex:1,textAlign:"right",fontWeight:600,fontSize:11,color:winner===match.away?"#fcb900":locked?"#888":"#ddd",
-          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>{match.away}</span>
+        <div style={{flex:1,minWidth:0,textAlign:"right"}}>
+          <div style={{fontWeight:600,fontSize:11,color:winner===match.away?"#fcb900":locked?"#888":"#ddd",
+            overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{match.away}</div>
+          {FIFA_RANKINGS[match.away]&&<div style={{fontSize:9,color:"#444"}}>#{FIFA_RANKINGS[match.away]} FIFA</div>}
+        </div>
         <span style={{fontSize:16,flexShrink:0}}>{FLAGS[match.away]||"🏳️"}</span>
         {locked&&!result&&<span style={{fontSize:11,flexShrink:0}}>🔒</span>}
         {result&&<PointsBadge result={result}/>}
@@ -1003,18 +1024,20 @@ function ScoringBar(){
 function GroupWinnerOdds({ groupLetter, teams, slug, highlight }) {
   const [odds, setOdds] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
+  const [err, setErr] = React.useState(null);
 
   React.useEffect(()=>{
     fetch(`/api/odds?home=${encodeURIComponent(teams[0]||'X')}&away=${encodeURIComponent(teams[1]||'X')}&group_slug=${encodeURIComponent(slug)}`)
       .then(r=>r.json())
       .then(data=>{
         if(data.found && data.outcomes?.length>0) setOdds(data.outcomes);
+        else setErr(data.message||'unavailable');
         setLoading(false);
-      }).catch(()=>setLoading(false));
+      }).catch(e=>{ setErr(e.message); setLoading(false); });
   },[slug]);
 
   if(loading) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Loading group odds…</div>;
-  if(!odds?.length) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Group {groupLetter} winner odds unavailable</div>;
+  if(!odds?.length) return <div style={{fontSize:10,color:"#444",fontStyle:"italic"}}>Group {groupLetter} winner odds not yet available</div>;
 
   return(
     <div style={{fontSize:10,color:"#555",lineHeight:1.8}}>
