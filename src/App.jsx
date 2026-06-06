@@ -1453,6 +1453,7 @@ export default function App(){
   const [now,setNow]=useState(Date.now());
   const [adminMode,setAdminMode]=useState(false);
   const [predCounts,setPredCounts]=useState({}); // {username: filledCount}
+  const [allPredData,setAllPredData]=useState({}); // {username: matches[]}
   const [adminPinInput,setAdminPinInput]=useState("");
   const [adminPinError,setAdminPinError]=useState("");
   const [deleteConfirmUser,setDeleteConfirmUser]=useState(null);
@@ -6269,10 +6270,13 @@ export default function App(){
             if(Object.keys(predCounts).length===0 && leaderboard.length>0){
               sbGetAllPredictions(groupCode).then(allPreds=>{
                 const counts={};
+                const data={};
                 allPreds.forEach(p=>{
                   counts[p.username]=(p.matches||[]).filter(m=>m.homeScore!==null&&m.awayScore!==null).length;
+                  data[p.username]=p.matches||[];
                 });
                 setPredCounts(counts);
+                setAllPredData(data);
               });
             }
             return null;
@@ -6615,17 +6619,38 @@ export default function App(){
                 {(()=>{
                   const total = leaderboard.length;
                   const daysToKickoff = Math.max(0, Math.ceil((new Date('2026-06-11T17:00:00Z') - new Date()) / 86400000));
+                  const now = Date.now();
+                  const fiveDays = now + 5 * 86400000;
+
+                  // Matches kicking off in the next 5 days
+                  const upcomingMatchIds = (matches||[]).filter(m => {
+                    const key = `${m.home}||${m.away}`;
+                    const ko = KICKOFFS[key];
+                    return ko && ko > now && ko <= fiveDays && m.homeScore === null;
+                  }).map(m => m.id);
 
                   const noPreds   = leaderboard.filter(e=>(predCounts[e.username]||0)===0).map(e=>e.username);
                   const partial   = leaderboard.filter(e=>(predCounts[e.username]||0)>0&&(predCounts[e.username]||0)<72);
                   const complete  = leaderboard.filter(e=>(predCounts[e.username]||0)>=72).length;
-
                   const partialStr = partial.map(e=>`${e.username} ${predCounts[e.username]}/72`).join(', ');
+
+                  // Per-user upcoming unpredicted count
+                  const userUpcoming = leaderboard.map(e => {
+                    const userMatches = allPredData[e.username] || [];
+                    const predMap = Object.fromEntries(userMatches.map(m=>[m.id, m]));
+                    const unpredicted = upcomingMatchIds.filter(id => {
+                      const m = predMap[id];
+                      return !m || m.homeScore === null || m.awayScore === null;
+                    });
+                    return unpredicted.length > 0 ? `${e.username} (${unpredicted.length}/${upcomingMatchIds.length} games)` : null;
+                  }).filter(Boolean);
 
                   const statusLines = [];
                   if(noPreds.length>0)   statusLines.push(`⚠️ Haven't predicted yet: ${noPreds.join(', ')}`);
                   if(partial.length>0)   statusLines.push(`⏳ Partially predicted: ${partialStr}`);
                   if(complete>0)         statusLines.push(`✅ Fully predicted (72/72): ${leaderboard.filter(e=>(predCounts[e.username]||0)>=72).map(e=>e.username).join(', ')}`);
+                  if(userUpcoming.length>0)
+                    statusLines.push(`🔜 Unpredicted games in next 5 days:\n   ${userUpcoming.join('\n   ')}`);
 
                   const msg = [
                     `⚽ FIFA 2026 Predictions Reminder!`,
@@ -6646,12 +6671,19 @@ export default function App(){
                     `${complete}/${total} players fully predicted.`,
                     noPreds.length>0 ? `⚠️ Haven't predicted yet: ${noPreds.join(', ')}` : '',
                     partial.length>0 ? `⏳ Partially: ${partialStr}` : '',
+                    userUpcoming.length>0 ? `🔜 Unpredicted in next 5 days: ${userUpcoming.join(', ')}` : '',
                     daysToKickoff>0 ? `⏱ ${daysToKickoff} day${daysToKickoff!==1?'s':''} to kickoff — fill yours now!` : `🔴 Predictions are locking — fill yours now!`,
                   ].filter(Boolean).join('\n');
 
                   const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
                   return(
                     <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
+                      {upcomingMatchIds.length>0&&(
+                        <div style={{fontSize:10,color:"#60a5fa",background:"rgba(96,165,250,0.08)",border:"1px solid rgba(96,165,250,0.2)",borderRadius:6,padding:"6px 10px"}}>
+                          🔜 {upcomingMatchIds.length} match{upcomingMatchIds.length!==1?'es':''} kick off in the next 5 days
+                          {userUpcoming.length>0&&<span style={{color:"#555",marginLeft:4}}>· {userUpcoming.length} player{userUpcoming.length!==1?'s':''} have unpredicted games</span>}
+                        </div>
+                      )}
                       <a href={waUrl} target="_blank" rel="noopener noreferrer" style={{
                         display:"flex",alignItems:"center",justifyContent:"center",gap:8,
                         padding:"11px",borderRadius:8,
