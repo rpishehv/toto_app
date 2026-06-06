@@ -2583,9 +2583,8 @@ export default function App(){
   const confirmRecoverySeen=async()=>{
     const n=nameInput.trim();
     try {
-      if (rememberMe) await saveSession(n, groupCode);
+      saveSession(n, groupCode); // always save — user just registered
       setUserName(n);
-      // Load this group's leaderboard
       const lb = await sbGetLeaderboard(groupCode);
       if(lb) setLeaderboard(lb);
       setRecoveryCode("");
@@ -2601,7 +2600,7 @@ export default function App(){
     try {
       const user=await sbGetUser(n, groupCode);
       if(user && pinInput===user.pin){
-        if (rememberMe) await saveSession(n, groupCode);
+        saveSession(n, groupCode); // always save session
         setUserName(n);
         // Load this group's leaderboard on login
         const lb = await sbGetLeaderboard(groupCode);
