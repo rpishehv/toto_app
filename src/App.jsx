@@ -3952,7 +3952,11 @@ export default function App(){
           // AI podium suggestion — default or admin-updated
           const DEFAULT_AI_PODIUM = { first:"Brazil", second:"France", third:"Argentina",
             reason:"Brazil's squad depth and form make them favourites. France runners-up from their European base. Argentina defending champions but aging squad." };
-          const aiPodium = livePredictions["__podium__"] || DEFAULT_AI_PODIUM;
+          // Use AI bracket prediction if available, otherwise fall back to admin-set or default
+          const aiPodium = bracketPred?.champion
+            ? { first: bracketPred.champion, second: bracketPred.runnerUp, third: bracketPred.thirdPlace,
+                reason: bracketPred.reasoning || `AI bracket prediction by ${bracketGeneratedBy||'AI'}` }
+            : (livePredictions["__podium__"] || DEFAULT_AI_PODIUM);
 
           return(
             <div style={{paddingTop:14}}>
