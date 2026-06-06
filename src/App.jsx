@@ -6,6 +6,7 @@ import {
   sbGetPrediction, sbSavePrediction,
   sbGetActualResults, sbSaveActualResults,
   sbGetLeaderboard, sbUpsertLeaderboard, sbGetAllGroupCodes,
+  sbGetAllPredictions, sbBatchUpdateLeaderboard,
   sbGetSaveHistory, sbAddSaveHistory,
   sbGetAIContent, sbSaveAIContent,
   sbGetAnalytics, sbSaveAnalytics,
@@ -2528,22 +2529,35 @@ export default function App(){
       await sbAddSaveHistory(snapshot.label, snapshot.matches, snapshot.knockout, snapshot.actualPodium||snapshot.actual_podium, snapshot.koKickoffs||snapshot.ko_kickoffs);
       await sbSaveActualResults(actualMatches, actualKO, newPodium, koKickoffs, livePredictions);
 
-      // Recalculate leaderboard for ALL groups
+      // Recalculate leaderboard for ALL groups — batched for performance
       const allGroupCodes = await sbGetAllGroupCodes();
       for (const gc of allGroupCodes) {
-        const lb = await sbGetLeaderboard(gc);
-        for (const e of lb) {
-          const p = await sbGetPrediction(e.username, gc);
-          if (p) {
-            e.points = calcTotal(p.matches||[], actualMatches, p.knockout||[], actualKO, p.podium, newPodium);
-            e.champion = p.podium?.first || '?';
-            await sbUpsertLeaderboard(e.username, p.podium || {}, e.points, gc);
-          }
-        }
-        // Update UI leaderboard for the admin's own group
+        // Fetch ALL predictions for this group in one query
+        const [lb, allPreds] = await Promise.all([
+          sbGetLeaderboard(gc),
+          sbGetAllPredictions(gc),
+        ]);
+
+        // Calculate points for each user using in-memory predictions
+        const predMap = Object.fromEntries(allPreds.map(p => [p.username, p]));
+        const updatedEntries = lb.map(e => {
+          const p = predMap[e.username];
+          if (!p) return e;
+          return {
+            ...e,
+            points: calcTotal(p.matches||[], actualMatches, p.knockout||[], actualKO, p.podium, newPodium),
+            podium: p.podium || {},
+            champion: p.podium?.first || '?',
+          };
+        });
+
+        // Batch update all leaderboard rows in one upsert
+        await sbBatchUpdateLeaderboard(updatedEntries, gc);
+
+        // Update UI for admin's own group
         if (gc === groupCode) {
-          lb.sort((a,b) => b.points - a.points);
-          setLeaderboard(lb);
+          updatedEntries.sort((a,b) => b.points - a.points);
+          setLeaderboard(updatedEntries);
         }
       }
       setAdminHasSaved(true); setAdminSaved(true); setTimeout(()=>setAdminSaved(false),2500);
@@ -2566,20 +2580,30 @@ export default function App(){
     setActualPodium(snapshot.actual_podium || snapshot.actualPodium || {});
     if(snapshot.ko_kickoffs || snapshot.koKickoffs) setKoKickoffs(snapshot.ko_kickoffs || snapshot.koKickoffs);
     await sbSaveActualResults(snapshot.matches, snapshot.knockout, snapshot.actual_podium || snapshot.actualPodium || {}, snapshot.ko_kickoffs || snapshot.koKickoffs || {}, livePredictions);
+    const snapMatches = snapshot.matches;
+    const snapKO = snapshot.knockout;
+    const snapPodium = snapshot.actual_podium || snapshot.actualPodium || {};
     const allGroupCodes = await sbGetAllGroupCodes();
     for (const gc of allGroupCodes) {
-      const lb = await sbGetLeaderboard(gc);
-      for (const e of lb) {
-        const p = await sbGetPrediction(e.username, gc);
-        if (p) {
-          e.points = calcTotal(p.matches||[], snapshot.matches, p.knockout||[], snapshot.knockout, p.podium, snapshot.actual_podium||snapshot.actualPodium||{});
-          e.champion = p.podium?.first || '?';
-          await sbUpsertLeaderboard(e.username, p.podium || {}, e.points, gc);
-        }
-      }
+      const [lb, allPreds] = await Promise.all([
+        sbGetLeaderboard(gc),
+        sbGetAllPredictions(gc),
+      ]);
+      const predMap = Object.fromEntries(allPreds.map(p => [p.username, p]));
+      const updatedEntries = lb.map(e => {
+        const p = predMap[e.username];
+        if (!p) return e;
+        return {
+          ...e,
+          points: calcTotal(p.matches||[], snapMatches, p.knockout||[], snapKO, p.podium, snapPodium),
+          podium: p.podium || {},
+          champion: p.podium?.first || '?',
+        };
+      });
+      await sbBatchUpdateLeaderboard(updatedEntries, gc);
       if (gc === groupCode) {
-        lb.sort((a,b) => b.points - a.points);
-        setLeaderboard(lb);
+        updatedEntries.sort((a,b) => b.points - a.points);
+        setLeaderboard(updatedEntries);
       }
     }
     setAdminHasSaved(true); setAdminSaved(true); setTimeout(()=>setAdminSaved(false),2500);

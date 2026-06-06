@@ -109,6 +109,42 @@ export async function sbGetAllGroupCodes() {
   return codes.length > 0 ? codes : ['default'];
 }
 
+// Fetch all predictions for a group in one query
+export async function sbGetAllPredictions(groupCode='default') {
+  const { data, error } = await supabase
+    .from('predictions').select('*').eq('group_code', groupCode);
+  if (error) { console.error('sbGetAllPredictions error:', error.message); return []; }
+  return data || [];
+}
+
+// Batch update entire leaderboard in one upsert
+export async function sbBatchUpdateLeaderboard(entries, groupCode='default') {
+  if (!entries.length) return;
+  const rows = entries.map(e => ({
+    username: e.username,
+    group_code: groupCode,
+    champion: e.podium?.first || '?',
+    podium: e.podium || {},
+    points: e.points,
+    updated_at: new Date().toISOString(),
+  }));
+  // Batch in chunks of 50 to avoid request size limits
+  for (let i = 0; i < rows.length; i += 50) {
+    const chunk = rows.slice(i, i + 50);
+    const { error } = await supabase.from('leaderboard')
+      .upsert(chunk, { onConflict: 'username,group_code', ignoreDuplicates: false });
+    if (error) {
+      console.error('sbBatchUpdateLeaderboard error:', error.message);
+      // Fallback: update one by one
+      for (const row of chunk) {
+        await supabase.from('leaderboard')
+          .update({ champion: row.champion, podium: row.podium, points: row.points, updated_at: row.updated_at })
+          .eq('username', row.username).eq('group_code', groupCode);
+      }
+    }
+  }
+}
+
 export async function sbGetLeaderboard(groupCode='default') {
   const { data, error } = await supabase
     .from('leaderboard').select('*')
