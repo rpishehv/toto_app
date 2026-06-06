@@ -40,7 +40,7 @@ export async function sbVerifyRecovery(username, code, groupCode='default') {
 
 export async function sbClearUser(username, groupCode='default') {
   const { error } = await supabase.from('users')
-    .update({ pin: null, recovery_code: null, session_invalidated_at: new Date().toISOString() })
+    .update({ pin: null, recovery_code: null })
     .eq('username', username).eq('group_code', groupCode)
   if (error) console.error('sbClearUser error:', error.message)
 }
