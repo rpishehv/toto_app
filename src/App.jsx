@@ -627,7 +627,7 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontWeight:600,fontSize:11,color:winner===match.home?"#fcb900":locked?"#888":"#ddd",
             overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{match.home}</div>
-          {FIFA_RANKINGS[match.home]&&<div style={{fontSize:11,color:"#555"}}>#{FIFA_RANKINGS[match.home]} FIFA</div>}
+          {FIFA_RANKINGS[match.home]&&<div style={{fontSize:11,color:"#888"}}>#{FIFA_RANKINGS[match.home]} FIFA</div>}
         </div>
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:3}}>
@@ -641,7 +641,7 @@ function MatchCard({match,actual,onUpdate,kickoffs,livePreds={},userName=""}){
         <div style={{flex:1,minWidth:0,textAlign:"right"}}>
           <div style={{fontWeight:600,fontSize:11,color:winner===match.away?"#fcb900":locked?"#888":"#ddd",
             overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{match.away}</div>
-          {FIFA_RANKINGS[match.away]&&<div style={{fontSize:11,color:"#555"}}>#{FIFA_RANKINGS[match.away]} FIFA</div>}
+          {FIFA_RANKINGS[match.away]&&<div style={{fontSize:11,color:"#888"}}>#{FIFA_RANKINGS[match.away]} FIFA</div>}
         </div>
         <span style={{fontSize:16,flexShrink:0}}>{FLAGS[match.away]||"🏳️"}</span>
         {locked&&!result&&<span style={{fontSize:11,flexShrink:0}}>🔒</span>}
