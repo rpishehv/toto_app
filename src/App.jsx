@@ -6273,7 +6273,7 @@ export default function App(){
                 const data={};
                 allPreds.forEach(p=>{
                   counts[p.username]=(p.matches||[]).filter(m=>m.homeScore!==null&&m.awayScore!==null).length;
-                  data[p.username]=p.matches||[];
+                  data[p.username]={ matches: p.matches||[], podium: p.podium||null };
                 });
                 setPredCounts(counts);
                 setAllPredData(data);
@@ -6637,9 +6637,9 @@ export default function App(){
 
                   // Per-user upcoming unpredicted count
                   const userUpcoming = upcomingMatchIds.length > 0 ? leaderboard.map(e => {
-                    const userMatches = allPredData[e.username];
+                    const ud = allPredData[e.username];
+                    const userMatches = ud?.matches;
                     if (!userMatches) {
-                      // Data not loaded yet — flag anyone not fully predicted
                       return (predCounts[e.username]||0) < 72
                         ? `${e.username} (${upcomingMatchIds.length}/${upcomingMatchIds.length} games)`
                         : null;
@@ -6652,12 +6652,21 @@ export default function App(){
                     return unpredicted.length > 0 ? `${e.username} (${unpredicted.length}/${upcomingMatchIds.length} game${unpredicted.length!==1?'s':''})` : null;
                   }).filter(Boolean) : [];
 
+                  // Users missing podium pick
+                  const noPodium = leaderboard
+                    .filter(e => {
+                      const p = allPredData[e.username]?.podium;
+                      return !p?.first;
+                    }).map(e=>e.username);
+
                   const statusLines = [];
                   if(noPreds.length>0)   statusLines.push(`⚠️ Haven't predicted yet: ${noPreds.join(', ')}`);
                   if(partial.length>0)   statusLines.push(`⏳ Partially predicted: ${partialStr}`);
                   if(complete>0)         statusLines.push(`✅ Fully predicted (72/72): ${leaderboard.filter(e=>(predCounts[e.username]||0)>=72).map(e=>e.username).join(', ')}`);
                   if(userUpcoming.length>0)
                     statusLines.push(`🔜 Unpredicted games in next 5 days:\n   ${userUpcoming.join('\n   ')}`);
+                  if(noPodium.length>0)
+                    statusLines.push(`👑 Haven't picked a winner yet: ${noPodium.join(', ')}`);
 
                   const msg = [
                     `⚽ FIFA 2026 Predictions Reminder!`,
@@ -6679,6 +6688,7 @@ export default function App(){
                     noPreds.length>0 ? `⚠️ Haven't predicted yet: ${noPreds.join(', ')}` : '',
                     partial.length>0 ? `⏳ Partially: ${partialStr}` : '',
                     userUpcoming.length>0 ? `🔜 Unpredicted in next 5 days: ${userUpcoming.join(', ')}` : '',
+                    noPodium.length>0 ? `👑 No winner pick yet: ${noPodium.join(', ')}` : '',
                     daysToKickoff>0 ? `⏱ ${daysToKickoff} day${daysToKickoff!==1?'s':''} to kickoff — fill yours now!` : `🔴 Predictions are locking — fill yours now!`,
                   ].filter(Boolean).join('\n');
 
