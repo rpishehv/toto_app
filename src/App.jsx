@@ -4151,16 +4151,27 @@ export default function App(){
                         style={{
                           flex:1,padding:"9px 12px",
                           background:"rgba(255,255,255,0.06)",
-                          border:`1px solid ${place.color}40`,
+                          border:`1px solid ${(podium[place.key]||'').trim().length>=3?'rgba(34,197,94,0.5)':place.color+'40'}`,
                           borderRadius:8,color:"#fff",fontSize:13,
                           fontFamily:"inherit",outline:"none",
+                          transition:"border-color 0.2s",
                         }}
                       />
+                      {(podium[place.key]||'').trim().length>=3 && (
+                        <div style={{
+                          flexShrink:0,width:32,height:32,borderRadius:"50%",
+                          background:"rgba(34,197,94,0.15)",border:"1px solid rgba(34,197,94,0.4)",
+                          display:"flex",alignItems:"center",justifyContent:"center",
+                          fontSize:16,
+                        }}>✓</div>
+                      )}
                     </div>
                   )}
                   {place.freeText && !champLocked && (
-                    <div style={{fontSize:10,color:"#444",marginTop:4}}>
-                      Fuzzy matching — "mbappe" will match "Kylian Mbappé"
+                    <div style={{fontSize:10,color:(podium[place.key]||'').trim().length>=3?"#22c55e":"#444",marginTop:4,transition:"color 0.2s"}}>
+                      {(podium[place.key]||'').trim().length>=3
+                        ? `✓ "${podium[place.key]}" saved — fuzzy matching will handle spelling`
+                        : `Fuzzy matching — "mbappe" will match "Kylian Mbappé"`}
                     </div>
                   )}
 
