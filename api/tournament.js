@@ -57,6 +57,7 @@ Respond ONLY with a JSON object in this exact format:
   "thirdPlace": "team",
   "runnerUp": "team",
   "champion": "team",
+  "topScorer": "Full player name (e.g. Kylian Mbappe)",
   "reasoning": "2-3 sentence summary of why this team wins"
 }
 
