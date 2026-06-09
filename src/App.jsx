@@ -1347,6 +1347,8 @@ export default function App(){
   const [recentPoints,setRecentPoints]=useState(null); // points earned notification
   const [predictionCount,setPredictionCount]=useState({done:0,total:0}); // completion indicator
   const [showPredReminder,setShowPredReminder]=useState(false);
+  const [showPodiumReminder,setShowPodiumReminder]=useState(false);
+  const [podiumReminderItems,setPodiumReminderItems]=useState([]);
   const [liveMatches,setLiveMatches]=useState([]);
   const [liveLoading,setLiveLoading]=useState(false);
   const [liveError,setLiveError]=useState(null);
@@ -1688,9 +1690,25 @@ export default function App(){
             ...(p.knockout||[]).filter(m=>m.homeScore!==null&&m.awayScore!==null&&m.home!=='TBD'),
           ].length;
           if(donePreds < stageTotalPreds * 0.5) setShowPredReminder(true);
+
+          // Check podium + top scorer completeness
+          const missing = [];
+          if(!p.podium?.first)     missing.push({icon:'🥇', label:'Champion pick',  tab:'champion'});
+          if(!p.podium?.second)    missing.push({icon:'🥈', label:'Runner-up pick', tab:'champion'});
+          if(!p.podium?.third)     missing.push({icon:'🥉', label:'3rd place pick', tab:'champion'});
+          if(!p.podium?.topScorer || (p.podium?.topScorer||'').trim().length < 3)
+                                   missing.push({icon:'⚽', label:'Top scorer pick', tab:'champion'});
+          if(missing.length > 0) { setPodiumReminderItems(missing); setShowPodiumReminder(true); }
         } else {
           // New user with no predictions — always show reminder
           setShowPredReminder(true);
+          setShowPodiumReminder(true);
+          setPodiumReminderItems([
+            {icon:'🥇', label:'Champion pick',   tab:'champion'},
+            {icon:'🥈', label:'Runner-up pick',  tab:'champion'},
+            {icon:'🥉', label:'3rd place pick',  tab:'champion'},
+            {icon:'⚽', label:'Top scorer pick', tab:'champion'},
+          ]);
         }
       } catch(e) {
         console.error('Load predictions error:', e);
@@ -3353,6 +3371,57 @@ export default function App(){
                 color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",
               }}>⚽ Go to Predictions</button>
               <button onClick={()=>setShowPredReminder(false)} style={{
+                flex:1,padding:"12px",background:"rgba(255,255,255,0.06)",
+                border:"1px solid rgba(255,255,255,0.10)",borderRadius:10,
+                color:"#666",fontSize:13,cursor:"pointer",fontFamily:"inherit",
+              }}>Later</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPodiumReminder&&!showPredReminder&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",
+          display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}}>
+          <div style={{background:"#141922",border:"1px solid rgba(139,92,246,0.3)",
+            borderRadius:16,padding:"24px 22px",maxWidth:360,width:"100%"}}>
+            <div style={{fontSize:32,textAlign:"center",marginBottom:8}}>👑</div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:"#a78bfa",
+              textAlign:"center",letterSpacing:1,marginBottom:10}}>
+              Complete Your Picks!
+            </div>
+            <div style={{fontSize:13,color:"#c0c0c0",lineHeight:1.7,marginBottom:14,textAlign:"center"}}>
+              You haven't filled in all your bonus picks — these are worth up to{" "}
+              <strong style={{color:"#a78bfa"}}>200 extra points!</strong>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:18}}>
+              {podiumReminderItems.map((item,i)=>(
+                <div key={i} style={{
+                  display:"flex",alignItems:"center",gap:12,
+                  padding:"10px 14px",borderRadius:10,
+                  background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.2)",
+                }}>
+                  <span style={{fontSize:20,flexShrink:0}}>{item.icon}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"#c4b5fd"}}>{item.label}</div>
+                    <div style={{fontSize:10,color:"#555"}}>Missing — tap to fill in</div>
+                  </div>
+                  <span style={{fontSize:11,color:"#ef4444",fontWeight:700}}>!</span>
+                </div>
+              ))}
+            </div>
+            <div style={{
+              background:"rgba(252,185,0,0.06)",border:"1px solid rgba(252,185,0,0.15)",
+              borderRadius:8,padding:"8px 12px",marginBottom:16,fontSize:11,color:"#888",textAlign:"center",
+            }}>
+              🔒 Picks lock <strong style={{color:"#fcb900"}}>June 11 at kickoff</strong>
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>{setShowPodiumReminder(false);setTab("champion");setShowAdvancedTray(false);}} style={{
+                flex:2,padding:"12px",background:"#a78bfa",border:"none",borderRadius:10,
+                color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",
+              }}>👑 Go to My Pick</button>
+              <button onClick={()=>setShowPodiumReminder(false)} style={{
                 flex:1,padding:"12px",background:"rgba(255,255,255,0.06)",
                 border:"1px solid rgba(255,255,255,0.10)",borderRadius:10,
                 color:"#666",fontSize:13,cursor:"pointer",fontFamily:"inherit",
