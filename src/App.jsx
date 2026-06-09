@@ -6217,37 +6217,62 @@ export default function App(){
                   <div style={{fontSize:11,color:"#888",marginTop:6,fontStyle:"italic",lineHeight:1.5}}>{bracketPred.reasoning}</div>
                 </div>
 
-                {/* Methodology & convergence */}
-                {(bracketPred.methodologySummary||bracketPred.convergenceSummary)&&(
-                  <div style={{marginBottom:14,padding:"10px 12px",
-                    background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8}}>
-                    <div style={{fontSize:10,color:"#a78bfa",fontWeight:700,marginBottom:6}}>🔬 How this was calculated</div>
-                    {bracketPred.methodologySummary&&(
-                      <div style={{fontSize:11,color:"#888",lineHeight:1.6,marginBottom:6}}>
-                        <strong style={{color:"#666"}}>Pipeline:</strong> {bracketPred.methodologySummary}
-                      </div>
-                    )}
-                    {bracketPred.convergenceSummary&&(
-                      <div style={{fontSize:11,color:"#888",lineHeight:1.6}}>
-                        <strong style={{color:"#666"}}>Convergence:</strong> {bracketPred.convergenceSummary}
-                      </div>
-                    )}
-                    {/* Convergence mini-chart */}
-                    {bracketPred.convergenceData&&(
-                      <div style={{marginTop:8,display:"flex",gap:6,alignItems:"flex-end"}}>
-                        {Object.entries(bracketPred.convergenceData).map(([n,top])=>(
-                          <div key={n} style={{flex:1,textAlign:"center"}}>
-                            <div style={{fontSize:10,color:"#a78bfa",fontWeight:700}}>{top[0]?.prob}%</div>
-                            <div style={{height:Math.max(4,parseFloat(top[0]?.prob||0)*1.2),
-                              background:"rgba(139,92,246,0.4)",borderRadius:"2px 2px 0 0",marginBottom:2}}/>
-                            <div style={{fontSize:9,color:"#333"}}>{parseInt(n).toLocaleString()}</div>
-                          </div>
-                        ))}
-                        <div style={{fontSize:9,color:"#333",alignSelf:"flex-end",paddingBottom:14,paddingLeft:2}}>sims</div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Methodology & convergence — collapsible */}
+                {(bracketPred.methodologySummary||bracketPred.convergenceSummary)&&(()=>{
+                  const [open,setOpen]=React.useState(false);
+                  return(
+                    <div style={{marginBottom:14}}>
+                      <button onClick={()=>setOpen(o=>!o)} style={{
+                        width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
+                        padding:"8px 12px",background:"rgba(139,92,246,0.06)",
+                        border:"1px solid rgba(139,92,246,0.2)",borderRadius:open?"8px 8px 0 0":8,
+                        cursor:"pointer",fontFamily:"inherit",color:"#a78bfa",fontSize:12,fontWeight:700,
+                      }}>
+                        <span>🔬 How was this calculated?</span>
+                        <span style={{fontSize:14,transition:"transform 0.2s",display:"inline-block",
+                          transform:open?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
+                      </button>
+                      {open&&(
+                        <div style={{padding:"12px",background:"rgba(139,92,246,0.04)",
+                          border:"1px solid rgba(139,92,246,0.2)",borderTop:"none",
+                          borderRadius:"0 0 8px 8px"}}>
+                          {bracketPred.methodologySummary&&(
+                            <div style={{fontSize:11,color:"#888",lineHeight:1.7,marginBottom:8}}>
+                              <span style={{color:"#a78bfa",fontWeight:700}}>Pipeline: </span>
+                              {bracketPred.methodologySummary}
+                            </div>
+                          )}
+                          {bracketPred.convergenceSummary&&(
+                            <div style={{fontSize:11,color:"#888",lineHeight:1.7,marginBottom:10}}>
+                              <span style={{color:"#a78bfa",fontWeight:700}}>Convergence: </span>
+                              {bracketPred.convergenceSummary}
+                            </div>
+                          )}
+                          {bracketPred.convergenceData&&(
+                            <div>
+                              <div style={{fontSize:10,color:"#555",marginBottom:6}}>
+                                {bracketPred.champion} championship % as simulations ran
+                              </div>
+                              <div style={{display:"flex",gap:6,alignItems:"flex-end",height:60}}>
+                                {Object.entries(bracketPred.convergenceData).map(([n,top])=>(
+                                  <div key={n} style={{flex:1,textAlign:"center"}}>
+                                    <div style={{fontSize:10,color:"#a78bfa",fontWeight:700}}>{top[0]?.prob}%</div>
+                                    <div style={{
+                                      height:Math.max(4,parseFloat(top[0]?.prob||0)*1.8),
+                                      background:"rgba(139,92,246,0.5)",borderRadius:"2px 2px 0 0",marginBottom:2
+                                    }}/>
+                                    <div style={{fontSize:9,color:"#444"}}>{parseInt(n).toLocaleString()}</div>
+                                  </div>
+                                ))}
+                                <div style={{fontSize:9,color:"#444",alignSelf:"flex-end",paddingBottom:14,paddingLeft:2}}>sims</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Podium */}
                 <div style={{display:"flex",gap:8,marginBottom:14}}>
