@@ -6234,6 +6234,32 @@ export default function App(){
                   ))}
                 </div>
 
+                {/* Group winners + runners-up */}
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,color:"#555",marginBottom:6,fontWeight:700}}>Group Stage Results</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+                    {Object.entries(bracketPred.groupWinners||{}).map(([g,t])=>{
+                      const ru = bracketPred.groupRunnersUp?.[g];
+                      return(
+                        <div key={g} style={{padding:"6px 8px",background:"rgba(255,255,255,0.03)",
+                          border:"1px solid rgba(255,255,255,0.06)",borderRadius:6,fontSize:11}}>
+                          <div style={{color:"#555",fontSize:10,marginBottom:3,letterSpacing:0.5}}>GROUP {g}</div>
+                          <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:2}}>
+                            <span style={{fontSize:9,color:"#fcb900",fontWeight:700}}>1st</span>
+                            <span>{FLAGS[t]||"🏳️"}</span>
+                            <span style={{fontWeight:600}}>{t}</span>
+                          </div>
+                          {ru&&<div style={{display:"flex",alignItems:"center",gap:4}}>
+                            <span style={{fontSize:9,color:"#888"}}>2nd</span>
+                            <span style={{fontSize:12}}>{FLAGS[ru]||"🏳️"}</span>
+                            <span style={{color:"#888"}}>{ru}</span>
+                          </div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Semi-finalists */}
                 <div style={{marginBottom:12}}>
                   <div style={{fontSize:11,color:"#555",marginBottom:6,fontWeight:700}}>Semi-Finalists</div>
@@ -6248,21 +6274,37 @@ export default function App(){
                   </div>
                 </div>
 
-                {/* Group winners */}
-                <div>
-                  <div style={{fontSize:11,color:"#555",marginBottom:6,fontWeight:700}}>Group Winners</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
-                    {Object.entries(bracketPred.groupWinners||{}).map(([g,t])=>(
-                      <div key={g} style={{display:"flex",alignItems:"center",gap:6,
-                        padding:"4px 8px",background:"rgba(255,255,255,0.03)",
-                        border:"1px solid rgba(255,255,255,0.06)",borderRadius:6,fontSize:11}}>
-                        <span style={{color:"#555",width:12}}>G{g}</span>
-                        <span>{FLAGS[t]||"🏳️"}</span>
-                        <span style={{fontWeight:600}}>{t}</span>
-                      </div>
-                    ))}
+                {/* Top scorer */}
+                {bracketPred.topScorer&&(
+                  <div style={{marginBottom:12,padding:"8px 12px",
+                    background:"rgba(96,165,250,0.06)",border:"1px solid rgba(96,165,250,0.2)",borderRadius:8}}>
+                    <div style={{fontSize:10,color:"#60a5fa",marginBottom:2}}>⚽ Predicted Top Scorer</div>
+                    <div style={{fontSize:13,fontWeight:700,color:"#93c5fd"}}>{bracketPred.topScorer}</div>
                   </div>
-                </div>
+                )}
+
+                {/* Simulation probabilities */}
+                {bracketPred.simulationData&&bracketPred.simulationData.length>0&&(
+                  <div style={{marginBottom:12}}>
+                    <div style={{fontSize:11,color:"#555",marginBottom:6,fontWeight:700}}>Monte Carlo Championship Odds</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                      {bracketPred.simulationData.slice(0,6).map((d,i)=>(
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:8}}>
+                          <div style={{fontSize:11,color:"#888",width:16,textAlign:"right"}}>{i+1}</div>
+                          <div style={{fontSize:12,width:16}}>{FLAGS[d.team]||"🏳️"}</div>
+                          <div style={{fontSize:11,flex:1,color:"#ddd"}}>{d.team}</div>
+                          <div style={{width:80,height:10,background:"rgba(255,255,255,0.06)",borderRadius:5,overflow:"hidden"}}>
+                            <div style={{width:`${Math.min(100,parseFloat(d.prob)*5)}%`,height:"100%",
+                              background:i===0?"#fcb900":i===1?"#c0c0c0":i===2?"#cd7f32":"rgba(139,92,246,0.6)",
+                              borderRadius:5}}/>
+                          </div>
+                          <div style={{fontSize:11,color:"#888",width:36,textAlign:"right"}}>{d.prob}%</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{fontSize:10,color:"#333",marginTop:6}}>Based on 5,000 full tournament simulations</div>
+                  </div>
+                )}
 
                 {/* How yours compares */}
                 {(podium?.first||podium?.second||podium?.third)&&(()=>{

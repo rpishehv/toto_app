@@ -1,93 +1,80 @@
 // api/group-odds.js — Polymarket group winner odds
-// Fetches from Polymarket event page which has odds in JSON-LD / meta
+// Tries gamma API, falls back to cached odds updated June 9 2026
 
 export const config = { runtime: 'edge' };
 
-const GROUP_EVENT_URLS = {
-  A: 'https://polymarket.com/event/world-cup-group-a-winner',
-  B: 'https://polymarket.com/event/world-cup-group-b-winner',
-  C: 'https://polymarket.com/event/world-cup-group-c-winner',
-  D: 'https://polymarket.com/event/world-cup-group-d-winner',
-  E: 'https://polymarket.com/event/world-cup-group-e-winner',
-  F: 'https://polymarket.com/event/world-cup-group-f-winner',
-  G: 'https://polymarket.com/event/world-cup-group-g-winner',
-  H: 'https://polymarket.com/event/world-cup-group-h-winner',
-  I: 'https://polymarket.com/event/world-cup-group-i-winner',
-  J: 'https://polymarket.com/event/world-cup-group-j-winner',
-  K: 'https://polymarket.com/event/world-cup-group-k-winner',
-  L: 'https://polymarket.com/event/fifa-world-cup-group-l-winner',
-};
-
-// Hardcoded fallback odds from Polymarket as of June 6 2026
-// These will be used if the API fetch fails
+// Confirmed from Polymarket June 9 2026 (group winner odds)
 const FALLBACK_ODDS = {
-  A: [{label:'Mexico',prob:51},{label:'Czechia',prob:24},{label:'South Korea',prob:22},{label:'South Africa',prob:3}],
+  A: [{label:'Mexico',prob:56},{label:'Czechia',prob:22},{label:'South Korea',prob:22},{label:'South Africa',prob:0}],
   B: [{label:'Switzerland',prob:55},{label:'Canada',prob:30},{label:'Bosnia-Herzegovina',prob:12},{label:'Qatar',prob:3}],
-  C: [{label:'Brazil',prob:67},{label:'Morocco',prob:23},{label:'Scotland',prob:9},{label:'Haiti',prob:1}],
-  D: [{label:'USA',prob:45},{label:'Turkey',prob:28},{label:'Paraguay',prob:17},{label:'Australia',prob:10}],
+  C: [{label:'Brazil',prob:67},{label:'Morocco',prob:23},{label:'Scotland',prob:7},{label:'Haiti',prob:3}],
+  D: [{label:'USA',prob:44},{label:'Turkey',prob:28},{label:'Paraguay',prob:17},{label:'Australia',prob:11}],
   E: [{label:'Germany',prob:67},{label:'Ecuador',prob:18},{label:'Ivory Coast',prob:13},{label:'Curacao',prob:2}],
   F: [{label:'Netherlands',prob:52},{label:'Japan',prob:26},{label:'Sweden',prob:18},{label:'Tunisia',prob:4}],
-  G: [{label:'Belgium',prob:54},{label:'Iran',prob:20},{label:'Egypt',prob:18},{label:'New Zealand',prob:8}],
+  G: [{label:'Belgium',prob:54},{label:'Iran',prob:22},{label:'Egypt',prob:18},{label:'New Zealand',prob:6}],
   H: [{label:'Spain',prob:72},{label:'Uruguay',prob:16},{label:'Saudi Arabia',prob:9},{label:'Cape Verde',prob:3}],
-  I: [{label:'France',prob:67},{label:'Norway',prob:24},{label:'Senegal',prob:8},{label:'Iraq',prob:1}],
-  J: [{label:'Argentina',prob:65},{label:'Austria',prob:18},{label:'Algeria',prob:13},{label:'Jordan',prob:4}],
+  I: [{label:'France',prob:67},{label:'Norway',prob:24},{label:'Senegal',prob:11},{label:'Iraq',prob:1}],
+  J: [{label:'Argentina',prob:66},{label:'Austria',prob:18},{label:'Algeria',prob:12},{label:'Jordan',prob:4}],
   K: [{label:'Portugal',prob:62},{label:'Colombia',prob:30},{label:'Uzbekistan',prob:5},{label:'DR Congo',prob:3}],
   L: [{label:'England',prob:68},{label:'Croatia',prob:18},{label:'Ghana',prob:10},{label:'Panama',prob:4}],
+};
+
+const GROUP_SLUGS = {
+  A:'world-cup-group-a-winner', B:'world-cup-group-b-winner',
+  C:'world-cup-group-c-winner', D:'world-cup-group-d-winner',
+  E:'world-cup-group-e-winner', F:'world-cup-group-f-winner',
+  G:'world-cup-group-g-winner', H:'world-cup-group-h-winner',
+  I:'world-cup-group-i-winner', J:'world-cup-group-j-winner',
+  K:'world-cup-group-k-winner', L:'fifa-world-cup-group-l-winner',
 };
 
 export default async function handler(req) {
   const url = new URL(req.url);
   const group = url.searchParams.get('group')?.toUpperCase();
-  if (!group || !GROUP_EVENT_URLS[group]) {
+  if (!group || !FALLBACK_ODDS[group]) {
     return new Response(JSON.stringify({ error: 'Invalid group' }), { status: 400 });
   }
 
-  const headers = {
-    'Accept': 'text/html,application/xhtml+xml',
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36',
-    'Accept-Language': 'en-US,en;q=0.9',
-  };
+  const slug = GROUP_SLUGS[group];
+  const BASE = 'https://gamma-api.polymarket.com';
+  const headers = { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' };
 
-  try {
-    const r = await fetch(GROUP_EVENT_URLS[group], { headers });
-    if (r.ok) {
-      const html = await r.text();
+  // Try gamma API — query param format (more reliable than /events/slug/)
+  const attempts = [
+    `${BASE}/events?slug=${slug}&limit=1`,
+    `${BASE}/events/slug/${slug}`,
+  ];
 
-      // Try to extract outcomes from JSON embedded in the page
-      // Polymarket embeds market data in window.__NEXT_DATA__ or similar
-      const nextDataMatch = html.match(/"outcomePrices":\s*\[([^\]]+)\]/g);
-      const outcomeMatch  = html.match(/"outcomes":\s*\["([^"]+)","([^"]+)","([^"]+)","([^"]+)"\]/);
-      const titleMatches  = html.match(/"groupItemTitle":"([^"]+)"/g);
-      const priceMatches  = html.match(/"outcomePrices":\["([\d.]+)"/g);
-
-      if (titleMatches && priceMatches && titleMatches.length >= 2 && priceMatches.length >= 2) {
-        const outcomes = titleMatches.slice(0, 4).map((t, i) => {
-          const label = t.match(/"groupItemTitle":"([^"]+)"/)?.[1] || '?';
-          const priceStr = priceMatches[i]?.match(/"outcomePrices":\["([\d.]+)"/)?.[1] || '0';
-          return { label, prob: Math.round(parseFloat(priceStr) * 100) };
-        }).filter(o => o.prob > 0 && o.label !== '?')
+  for (const apiUrl of attempts) {
+    try {
+      const r = await fetch(apiUrl, { headers });
+      if (!r.ok) continue;
+      const data = await r.json();
+      // Handle both array and single object responses
+      const event = Array.isArray(data) ? data[0] : data;
+      const markets = event?.markets || [];
+      if (markets.length >= 2) {
+        const outcomes = markets.map(m => ({
+          label: m.groupItemTitle || m.question?.replace(/Will\s+/i,'').replace(/\s+win.*/i,'').trim() || '?',
+          prob: Math.round(parseFloat(m.outcomePrices?.[0] ?? m.lastTradePrice ?? 0) * 100),
+        })).filter(o => o.prob > 0 && o.label.length < 30)
           .sort((a,b) => b.prob - a.prob);
 
         if (outcomes.length >= 2) {
           return new Response(JSON.stringify({
             found: true, group, source: 'live',
-            url: GROUP_EVENT_URLS[group],
+            url: `https://polymarket.com/event/${slug}`,
             outcomes,
           }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=300' } });
         }
       }
-    }
-  } catch(e) {}
-
-  // Return hardcoded fallback
-  const fallback = FALLBACK_ODDS[group];
-  if (fallback) {
-    return new Response(JSON.stringify({
-      found: true, group, source: 'cached',
-      url: GROUP_EVENT_URLS[group],
-      outcomes: fallback,
-    }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=300' } });
+    } catch {}
   }
 
-  return new Response(JSON.stringify({ found: false, group }), { status: 200 });
+  // Fallback to cached odds
+  return new Response(JSON.stringify({
+    found: true, group, source: 'cached',
+    url: `https://polymarket.com/event/${slug}`,
+    outcomes: FALLBACK_ODDS[group],
+  }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=300' } });
 }
