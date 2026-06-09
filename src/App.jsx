@@ -1074,11 +1074,12 @@ function BracketMethodology({ bracketPred }) {
     <div style={{marginBottom:14}}>
       <button onClick={()=>setOpen(o=>!o)} style={{
         width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
-        padding:"8px 12px",
-        background:"rgba(139,92,246,0.06)",
-        border:"1px solid rgba(139,92,246,0.2)",
+        padding:"10px 14px",
+        background:"rgba(255,255,255,0.08)",
+        border:"1px solid rgba(255,255,255,0.2)",
         borderRadius:open?"8px 8px 0 0":8,
-        cursor:"pointer",fontFamily:"inherit",color:"#a78bfa",fontSize:12,fontWeight:700,
+        cursor:"pointer",fontFamily:"inherit",
+        color:"#ddd",fontSize:12,fontWeight:700,
       }}>
         <span>🔬 How was this calculated?</span>
         <span style={{fontSize:14,display:"inline-block",transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}}>▾</span>
