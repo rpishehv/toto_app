@@ -1069,8 +1069,7 @@ function GroupWinnerOdds({ groupLetter, teams, slug, highlight }) {
 
 function BracketMethodology({ bracketPred }) {
   const [open, setOpen] = React.useState(false);
-  const hasMeta = bracketPred?.methodologySummary || bracketPred?.convergenceSummary || bracketPred?.simulationData;
-  if (!hasMeta) return null;
+  if (!bracketPred) return null;
   return (
     <div style={{marginBottom:14}}>
       <button onClick={()=>setOpen(o=>!o)} style={{
