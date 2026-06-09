@@ -6352,7 +6352,7 @@ export default function App(){
           </h2>
           {/* Load prediction counts for all users */}
           {adminMode&&(()=>{
-            if(Object.keys(predCounts).length===0 && leaderboard.length>0){
+            if(leaderboard.length>0){
               sbGetAllPredictions(groupCode).then(allPreds=>{
                 const counts={};
                 const data={};
@@ -6738,27 +6738,26 @@ export default function App(){
                   }).filter(Boolean) : [];
 
                   // Users missing podium or top scorer
-                  const noPodium = leaderboard
-                    .filter(e => {
-                      const p = allPredData[e.username]?.podium;
-                      return !p?.first;
-                    }).map(e=>e.username);
+                  const noFirst    = leaderboard.filter(e => !allPredData[e.username]?.podium?.first).map(e=>e.username);
+                  const noSecond   = leaderboard.filter(e =>  allPredData[e.username]?.podium?.first && !allPredData[e.username]?.podium?.second).map(e=>e.username);
+                  const noThird    = leaderboard.filter(e =>  allPredData[e.username]?.podium?.first && !allPredData[e.username]?.podium?.third).map(e=>e.username);
+                  const noPodium   = noFirst; // shorthand for "no picks at all"
                   const noTopScorer = leaderboard
                     .filter(e => {
                       const p = allPredData[e.username]?.podium;
-                      return p?.first && !p?.topScorer;
+                      return !p?.topScorer || p.topScorer.trim().length < 3;
                     }).map(e=>e.username);
 
                   const statusLines = [];
-                  if(noPreds.length>0)   statusLines.push(`⚠️ Haven't predicted yet: ${noPreds.join(', ')}`);
-                  if(partial.length>0)   statusLines.push(`⏳ Partially predicted: ${partialStr}`);
-                  if(complete>0)         statusLines.push(`✅ Fully predicted (72/72): ${leaderboard.filter(e=>(predCounts[e.username]||0)>=72).map(e=>e.username).join(', ')}`);
+                  if(noPreds.length>0)    statusLines.push(`⚠️ Haven't predicted yet: ${noPreds.join(', ')}`);
+                  if(partial.length>0)    statusLines.push(`⏳ Partially predicted: ${partialStr}`);
+                  if(complete>0)          statusLines.push(`✅ Fully predicted (72/72): ${leaderboard.filter(e=>(predCounts[e.username]||0)>=72).map(e=>e.username).join(', ')}`);
                   if(userUpcoming.length>0)
                     statusLines.push(`🔜 Unpredicted games in next 5 days:\n   ${userUpcoming.join('\n   ')}`);
-                  if(noPodium.length>0)
-                    statusLines.push(`👑 Haven't picked a winner yet: ${noPodium.join(', ')}`);
-                  if(noTopScorer.length>0)
-                    statusLines.push(`⚽ Haven't picked a top scorer: ${noTopScorer.join(', ')}`);
+                  if(noFirst.length>0)    statusLines.push(`👑 No champion pick (🥇): ${noFirst.join(', ')}`);
+                  if(noSecond.length>0)   statusLines.push(`🥈 No runner-up pick: ${noSecond.join(', ')}`);
+                  if(noThird.length>0)    statusLines.push(`🥉 No 3rd place pick: ${noThird.join(', ')}`);
+                  if(noTopScorer.length>0) statusLines.push(`⚽ No top scorer pick: ${noTopScorer.join(', ')}`);
 
                   const msg = [
                     `⚽ FIFA 2026 Predictions Reminder!`,
@@ -6777,11 +6776,13 @@ export default function App(){
                   const chatMsg = [
                     `📣 Admin Reminder`,
                     `${complete}/${total} players fully predicted.`,
-                    noPreds.length>0 ? `⚠️ Haven't predicted yet: ${noPreds.join(', ')}` : '',
-                    partial.length>0 ? `⏳ Partially: ${partialStr}` : '',
+                    noPreds.length>0     ? `⚠️ Haven't predicted: ${noPreds.join(', ')}` : '',
+                    partial.length>0     ? `⏳ Partially: ${partialStr}` : '',
                     userUpcoming.length>0 ? `🔜 Unpredicted in next 5 days: ${userUpcoming.join(', ')}` : '',
-                    noPodium.length>0 ? `👑 No winner pick yet: ${noPodium.join(', ')}` : '',
-                    noTopScorer.length>0 ? `⚽ No top scorer pick: ${noTopScorer.join(', ')}` : '',
+                    noFirst.length>0     ? `👑 No champion pick: ${noFirst.join(', ')}` : '',
+                    noSecond.length>0    ? `🥈 No runner-up: ${noSecond.join(', ')}` : '',
+                    noThird.length>0     ? `🥉 No 3rd place: ${noThird.join(', ')}` : '',
+                    noTopScorer.length>0 ? `⚽ No top scorer: ${noTopScorer.join(', ')}` : '',
                     daysToKickoff>0 ? `⏱ ${daysToKickoff} day${daysToKickoff!==1?'s':''} to kickoff — fill yours now!` : `🔴 Predictions are locking — fill yours now!`,
                   ].filter(Boolean).join('\n');
 
