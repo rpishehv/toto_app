@@ -1067,6 +1067,73 @@ function GroupWinnerOdds({ groupLetter, teams, slug, highlight }) {
   );
 }
 
+function BracketMethodology({ bracketPred }) {
+  const [open, setOpen] = React.useState(false);
+  const hasMeta = bracketPred?.methodologySummary || bracketPred?.convergenceSummary || bracketPred?.simulationData;
+  if (!hasMeta) return null;
+  return (
+    <div style={{marginBottom:14}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{
+        width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
+        padding:"8px 12px",
+        background:"rgba(139,92,246,0.06)",
+        border:"1px solid rgba(139,92,246,0.2)",
+        borderRadius:open?"8px 8px 0 0":8,
+        cursor:"pointer",fontFamily:"inherit",color:"#a78bfa",fontSize:12,fontWeight:700,
+      }}>
+        <span>🔬 How was this calculated?</span>
+        <span style={{fontSize:14,display:"inline-block",transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}}>▾</span>
+      </button>
+      {open&&(
+        <div style={{padding:"12px",background:"rgba(139,92,246,0.04)",
+          border:"1px solid rgba(139,92,246,0.2)",borderTop:"none",borderRadius:"0 0 8px 8px"}}>
+          {bracketPred.methodologySummary&&(
+            <div style={{fontSize:11,color:"#888",lineHeight:1.7,marginBottom:8}}>
+              <span style={{color:"#a78bfa",fontWeight:700}}>Pipeline: </span>
+              {bracketPred.methodologySummary}
+            </div>
+          )}
+          {!bracketPred.methodologySummary&&(
+            <div style={{fontSize:11,color:"#888",lineHeight:1.7,marginBottom:8}}>
+              <span style={{color:"#a78bfa",fontWeight:700}}>Pipeline: </span>
+              FIFA Elo + weighted squad ratings (0.6×Elo + 0.4×squad avg) → Dixon-Coles Poisson match probabilities → 5,000 full Monte Carlo tournament simulations including group-stage round-robin.
+            </div>
+          )}
+          {bracketPred.convergenceSummary&&(
+            <div style={{fontSize:11,color:"#888",lineHeight:1.7,marginBottom:10}}>
+              <span style={{color:"#a78bfa",fontWeight:700}}>Convergence: </span>
+              {bracketPred.convergenceSummary}
+            </div>
+          )}
+          {bracketPred.convergenceData&&(
+            <div>
+              <div style={{fontSize:10,color:"#555",marginBottom:6}}>
+                {bracketPred.champion} championship % as simulations accumulated
+              </div>
+              <div style={{display:"flex",gap:6,alignItems:"flex-end",height:60}}>
+                {Object.entries(bracketPred.convergenceData).map(([n,top])=>(
+                  <div key={n} style={{flex:1,textAlign:"center"}}>
+                    <div style={{fontSize:10,color:"#a78bfa",fontWeight:700}}>{top[0]?.prob}%</div>
+                    <div style={{height:Math.max(4,parseFloat(top[0]?.prob||0)*1.8),
+                      background:"rgba(139,92,246,0.5)",borderRadius:"2px 2px 0 0",marginBottom:2}}/>
+                    <div style={{fontSize:9,color:"#444"}}>{parseInt(n).toLocaleString()}</div>
+                  </div>
+                ))}
+                <div style={{fontSize:9,color:"#444",alignSelf:"flex-end",paddingBottom:14,paddingLeft:2}}>sims</div>
+              </div>
+            </div>
+          )}
+          {!bracketPred.convergenceData&&bracketPred.simulationData?.length>0&&(
+            <div style={{fontSize:11,color:"#555",marginTop:4}}>
+              Regenerate the bracket to see full convergence data from the latest simulation run.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LeagueSelector({ value, onChange, onEnter, inputStyle }) {
   const [leagues, setLeagues] = React.useState([]);
   const [showCustom, setShowCustom] = React.useState(false);
@@ -6218,61 +6285,7 @@ export default function App(){
                 </div>
 
                 {/* Methodology & convergence — collapsible */}
-                {(bracketPred.methodologySummary||bracketPred.convergenceSummary)&&(()=>{
-                  const [open,setOpen]=React.useState(false);
-                  return(
-                    <div style={{marginBottom:14}}>
-                      <button onClick={()=>setOpen(o=>!o)} style={{
-                        width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
-                        padding:"8px 12px",background:"rgba(139,92,246,0.06)",
-                        border:"1px solid rgba(139,92,246,0.2)",borderRadius:open?"8px 8px 0 0":8,
-                        cursor:"pointer",fontFamily:"inherit",color:"#a78bfa",fontSize:12,fontWeight:700,
-                      }}>
-                        <span>🔬 How was this calculated?</span>
-                        <span style={{fontSize:14,transition:"transform 0.2s",display:"inline-block",
-                          transform:open?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
-                      </button>
-                      {open&&(
-                        <div style={{padding:"12px",background:"rgba(139,92,246,0.04)",
-                          border:"1px solid rgba(139,92,246,0.2)",borderTop:"none",
-                          borderRadius:"0 0 8px 8px"}}>
-                          {bracketPred.methodologySummary&&(
-                            <div style={{fontSize:11,color:"#888",lineHeight:1.7,marginBottom:8}}>
-                              <span style={{color:"#a78bfa",fontWeight:700}}>Pipeline: </span>
-                              {bracketPred.methodologySummary}
-                            </div>
-                          )}
-                          {bracketPred.convergenceSummary&&(
-                            <div style={{fontSize:11,color:"#888",lineHeight:1.7,marginBottom:10}}>
-                              <span style={{color:"#a78bfa",fontWeight:700}}>Convergence: </span>
-                              {bracketPred.convergenceSummary}
-                            </div>
-                          )}
-                          {bracketPred.convergenceData&&(
-                            <div>
-                              <div style={{fontSize:10,color:"#555",marginBottom:6}}>
-                                {bracketPred.champion} championship % as simulations ran
-                              </div>
-                              <div style={{display:"flex",gap:6,alignItems:"flex-end",height:60}}>
-                                {Object.entries(bracketPred.convergenceData).map(([n,top])=>(
-                                  <div key={n} style={{flex:1,textAlign:"center"}}>
-                                    <div style={{fontSize:10,color:"#a78bfa",fontWeight:700}}>{top[0]?.prob}%</div>
-                                    <div style={{
-                                      height:Math.max(4,parseFloat(top[0]?.prob||0)*1.8),
-                                      background:"rgba(139,92,246,0.5)",borderRadius:"2px 2px 0 0",marginBottom:2
-                                    }}/>
-                                    <div style={{fontSize:9,color:"#444"}}>{parseInt(n).toLocaleString()}</div>
-                                  </div>
-                                ))}
-                                <div style={{fontSize:9,color:"#444",alignSelf:"flex-end",paddingBottom:14,paddingLeft:2}}>sims</div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                <BracketMethodology bracketPred={bracketPred} />
 
                 {/* Podium */}
                 <div style={{display:"flex",gap:8,marginBottom:14}}>
