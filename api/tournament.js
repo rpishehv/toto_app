@@ -155,30 +155,16 @@ export default async function handler(req) {
       return round[0];
     }
 
-    // ── Step 4: Monte Carlo — 5,000 simulations ────────────────────────────
-    const N = 5000;
-    const champCount  = {};
-    const finalCount  = {};
-    const sfCount     = {};
-    const allTeams    = [...new Set(Object.values(GROUPS).flat())];
-    allTeams.forEach(t => { champCount[t]=0; finalCount[t]=0; sfCount[t]=0; });
-
-    for (let i = 0; i < N; i++) {
+    function runTournamentOnce(GROUPS, matchWinProb, simMatch) {
       const { winners, runnersUp, best8thirds } = simGroupStage(GROUPS);
       const groupKeys = Object.keys(GROUPS);
-
-      // Build R32 bracket (48-team: 12 winners + 12 runners-up + 8 best 3rd)
       const r32 = [];
       groupKeys.forEach(g => r32.push(winners[g], runnersUp[g]));
       best8thirds.forEach(t => r32.push(t));
-
-      // Shuffle for realistic bracket draw
       for (let j = r32.length-1; j>0; j--) {
         const k=Math.floor(Math.random()*(j+1));
         [r32[j],r32[k]]=[r32[k],r32[j]];
       }
-
-      // Simulate through to final
       let bracket = [...r32];
       while (bracket.length > 2) {
         const next = [];
@@ -187,10 +173,51 @@ export default async function handler(req) {
         }
         bracket = next;
       }
-      const [finalistA, finalistB] = bracket;
-      finalCount[finalistA]++; finalCount[finalistB]++;
-      const champ = simMatch(finalistA, finalistB);
+      return simMatch(bracket[0], bracket[1]);
+    }
+
+    const N = 5000;
+    const champCount  = {};
+    const finalCount  = {};
+    const allTeams    = [...new Set(Object.values(GROUPS).flat())];
+    allTeams.forEach(t => { champCount[t]=0; finalCount[t]=0; });
+
+    // Track convergence snapshots
+    const convergenceChecks = new Set([500, 1000, 2000, 5000]);
+    const convergenceData = {};
+    const runningChamp = {};
+    allTeams.forEach(t => runningChamp[t]=0);
+
+    for (let i = 0; i < N; i++) {
+      const { winners, runnersUp, best8thirds } = simGroupStage(GROUPS);
+      const groupKeys = Object.keys(GROUPS);
+      const r32 = [];
+      groupKeys.forEach(g => r32.push(winners[g], runnersUp[g]));
+      best8thirds.forEach(t => r32.push(t));
+      for (let j = r32.length-1; j>0; j--) {
+        const k=Math.floor(Math.random()*(j+1));
+        [r32[j],r32[k]]=[r32[k],r32[j]];
+      }
+      let bracket = [...r32];
+      const finalists = [];
+      while (bracket.length > 2) {
+        const next = [];
+        for (let j=0; j<bracket.length; j+=2) {
+          next.push(j+1 < bracket.length ? simMatch(bracket[j],bracket[j+1]) : bracket[j]);
+        }
+        bracket = next;
+      }
+      if (bracket.length===2) { finalCount[bracket[0]]++; finalCount[bracket[1]]++; }
+      const champ = bracket.length===2 ? simMatch(bracket[0],bracket[1]) : bracket[0];
       champCount[champ]++;
+      runningChamp[champ]++;
+
+      const n = i+1;
+      if (convergenceChecks.has(n)) {
+        convergenceData[n] = Object.entries(runningChamp)
+          .sort((a,b)=>b[1]-a[1]).slice(0,3)
+          .map(([t,c])=>({ team:t, prob:(c/n*100).toFixed(1) }));
+      }
     }
 
     // ── Step 5: Championship probabilities ────────────────────────────────
@@ -206,10 +233,39 @@ export default async function handler(req) {
     // Top scorer: pick from likely champion or finalist
     const topScorerTeam = TEAM_DATA[predicted1st]?.[2] || 'Kylian Mbappe';
 
+    // Convergence analysis — track how champion probability stabilised
+    const convergenceChecks = [500, 1000, 2000, 5000];
+    const convergenceData = {};
+    const runningCounts = {};
+    allTeams.forEach(t => runningCounts[t] = 0);
+    // Re-run to capture convergence snapshots
+    let simIdx = 0;
+    for (let i = 0; i < N; i++) {
+      runningCounts[runTournamentOnce(GROUPS, matchWinProb, simMatch)]++;
+      simIdx++;
+      if (convergenceChecks.includes(simIdx)) {
+        const top3 = Object.entries(runningCounts)
+          .sort((a,b)=>b[1]-a[1]).slice(0,3)
+          .map(([t,c])=>({ team:t, prob:(c/simIdx*100).toFixed(1) }));
+        convergenceData[simIdx] = top3;
+      }
+    }
+
     // Feed simulation results + context to Claude for reasoning
     prompt = `You are a World Cup 2026 analyst. A Monte Carlo simulation of ${N} full tournament runs just produced these championship probabilities:
 
 ${champProbs.map((t,i) => `${i+1}. ${t.team}: ${t.prob}% champion probability (${t.finalProb}% reach final)`).join('\n')}
+
+Convergence snapshots (top team probability as simulations accumulated):
+- After 500 runs: ${convergenceData[500]?.[0]?.team} ${convergenceData[500]?.[0]?.prob}%
+- After 1,000 runs: ${convergenceData[1000]?.[0]?.team} ${convergenceData[1000]?.[0]?.prob}%
+- After 2,000 runs: ${convergenceData[2000]?.[0]?.team} ${convergenceData[2000]?.[0]?.prob}%
+- After 5,000 runs: ${convergenceData[5000]?.[0]?.team} ${convergenceData[5000]?.[0]?.prob}%
+
+Model inputs used:
+- Team strength = 0.6×Elo + 0.4×squadRating
+- Match probabilities: Dixon-Coles Poisson model
+- Tournament format: 48 teams, group stage + R32/R16/QF/SF/Final
 
 Based on these simulation results, output the tournament bracket prediction.
 Predicted podium: 1st=${predicted1st}, 2nd=${predicted2nd}, 3rd=${predicted3rd}
@@ -239,8 +295,11 @@ Respond ONLY with a JSON object:
   "runnerUp": "${predicted2nd}",
   "champion": "${predicted1st}",
   "topScorer": "${topScorerTeam}",
-  "reasoning": "2-3 sentence explanation referencing the simulation probabilities and team strengths",
-  "simulationData": ${JSON.stringify(champProbs.slice(0,8))}
+  "reasoning": "2-3 sentence explanation referencing the simulation probabilities and model inputs",
+  "methodologySummary": "2 sentence explanation of the pipeline: player ratings → Elo blend → Dixon-Coles Poisson → Monte Carlo",
+  "convergenceSummary": "1 sentence describing how the champion probability stabilised across simulation runs",
+  "simulationData": ${JSON.stringify(champProbs.slice(0,16))},
+  "convergenceData": ${JSON.stringify(convergenceData)}
 }`;
 
 

@@ -6217,6 +6217,38 @@ export default function App(){
                   <div style={{fontSize:11,color:"#888",marginTop:6,fontStyle:"italic",lineHeight:1.5}}>{bracketPred.reasoning}</div>
                 </div>
 
+                {/* Methodology & convergence */}
+                {(bracketPred.methodologySummary||bracketPred.convergenceSummary)&&(
+                  <div style={{marginBottom:14,padding:"10px 12px",
+                    background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8}}>
+                    <div style={{fontSize:10,color:"#a78bfa",fontWeight:700,marginBottom:6}}>🔬 How this was calculated</div>
+                    {bracketPred.methodologySummary&&(
+                      <div style={{fontSize:11,color:"#888",lineHeight:1.6,marginBottom:6}}>
+                        <strong style={{color:"#666"}}>Pipeline:</strong> {bracketPred.methodologySummary}
+                      </div>
+                    )}
+                    {bracketPred.convergenceSummary&&(
+                      <div style={{fontSize:11,color:"#888",lineHeight:1.6}}>
+                        <strong style={{color:"#666"}}>Convergence:</strong> {bracketPred.convergenceSummary}
+                      </div>
+                    )}
+                    {/* Convergence mini-chart */}
+                    {bracketPred.convergenceData&&(
+                      <div style={{marginTop:8,display:"flex",gap:6,alignItems:"flex-end"}}>
+                        {Object.entries(bracketPred.convergenceData).map(([n,top])=>(
+                          <div key={n} style={{flex:1,textAlign:"center"}}>
+                            <div style={{fontSize:10,color:"#a78bfa",fontWeight:700}}>{top[0]?.prob}%</div>
+                            <div style={{height:Math.max(4,parseFloat(top[0]?.prob||0)*1.2),
+                              background:"rgba(139,92,246,0.4)",borderRadius:"2px 2px 0 0",marginBottom:2}}/>
+                            <div style={{fontSize:9,color:"#333"}}>{parseInt(n).toLocaleString()}</div>
+                          </div>
+                        ))}
+                        <div style={{fontSize:9,color:"#333",alignSelf:"flex-end",paddingBottom:14,paddingLeft:2}}>sims</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Podium */}
                 <div style={{display:"flex",gap:8,marginBottom:14}}>
                   {[
@@ -6283,26 +6315,51 @@ export default function App(){
                   </div>
                 )}
 
-                {/* Simulation probabilities */}
+                {/* Full probability table */}
                 {bracketPred.simulationData&&bracketPred.simulationData.length>0&&(
                   <div style={{marginBottom:12}}>
-                    <div style={{fontSize:11,color:"#555",marginBottom:6,fontWeight:700}}>Monte Carlo Championship Odds</div>
-                    <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                      {bracketPred.simulationData.slice(0,6).map((d,i)=>(
-                        <div key={i} style={{display:"flex",alignItems:"center",gap:8}}>
-                          <div style={{fontSize:11,color:"#888",width:16,textAlign:"right"}}>{i+1}</div>
-                          <div style={{fontSize:12,width:16}}>{FLAGS[d.team]||"🏳️"}</div>
-                          <div style={{fontSize:11,flex:1,color:"#ddd"}}>{d.team}</div>
-                          <div style={{width:80,height:10,background:"rgba(255,255,255,0.06)",borderRadius:5,overflow:"hidden"}}>
-                            <div style={{width:`${Math.min(100,parseFloat(d.prob)*5)}%`,height:"100%",
-                              background:i===0?"#fcb900":i===1?"#c0c0c0":i===2?"#cd7f32":"rgba(139,92,246,0.6)",
-                              borderRadius:5}}/>
-                          </div>
-                          <div style={{fontSize:11,color:"#888",width:36,textAlign:"right"}}>{d.prob}%</div>
-                        </div>
-                      ))}
+                    <div style={{fontSize:11,color:"#555",marginBottom:8,fontWeight:700}}>
+                      📊 Championship Probability Table
+                      <span style={{fontWeight:400,color:"#333",marginLeft:6}}>5,000 simulations</span>
                     </div>
-                    <div style={{fontSize:10,color:"#333",marginTop:6}}>Based on 5,000 full tournament simulations</div>
+                    <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:8,overflow:"hidden"}}>
+                      {/* Header */}
+                      <div style={{display:"grid",gridTemplateColumns:"20px 1fr 52px 52px",gap:6,
+                        padding:"6px 10px",borderBottom:"1px solid rgba(255,255,255,0.06)",
+                        fontSize:10,color:"#444"}}>
+                        <span>#</span>
+                        <span>Team</span>
+                        <span style={{textAlign:"right"}}>Win %</span>
+                        <span style={{textAlign:"right"}}>Final %</span>
+                      </div>
+                      {bracketPred.simulationData.map((d,i)=>{
+                        const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":"";
+                        const isChamp = d.team===bracketPred.champion;
+                        return(
+                          <div key={i} style={{display:"grid",gridTemplateColumns:"20px 1fr 52px 52px",gap:6,
+                            padding:"5px 10px",
+                            borderBottom:i<bracketPred.simulationData.length-1?"1px solid rgba(255,255,255,0.04)":undefined,
+                            background:isChamp?"rgba(252,185,0,0.05)":undefined}}>
+                            <span style={{fontSize:11,color:"#444"}}>{medal||i+1}</span>
+                            <div style={{display:"flex",alignItems:"center",gap:5}}>
+                              <span style={{fontSize:12}}>{FLAGS[d.team]||"🏳️"}</span>
+                              <span style={{fontSize:11,color:isChamp?"#fcb900":"#ddd",fontWeight:isChamp?700:400}}>{d.team}</span>
+                            </div>
+                            <div style={{textAlign:"right"}}>
+                              <span style={{fontSize:11,color:isChamp?"#fcb900":"#888",fontWeight:isChamp?700:400}}>
+                                {d.prob}%
+                              </span>
+                            </div>
+                            <div style={{textAlign:"right"}}>
+                              <span style={{fontSize:11,color:"#555"}}>{d.finalProb}%</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{fontSize:10,color:"#333",marginTop:4}}>
+                      Win % = champion in X/5000 runs · Final % = reached final
+                    </div>
                   </div>
                 )}
 
