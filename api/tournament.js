@@ -233,24 +233,6 @@ export default async function handler(req) {
     // Top scorer: pick from likely champion or finalist
     const topScorerTeam = TEAM_DATA[predicted1st]?.[2] || 'Kylian Mbappe';
 
-    // Convergence analysis — track how champion probability stabilised
-    const convergenceChecks = [500, 1000, 2000, 5000];
-    const convergenceData = {};
-    const runningCounts = {};
-    allTeams.forEach(t => runningCounts[t] = 0);
-    // Re-run to capture convergence snapshots
-    let simIdx = 0;
-    for (let i = 0; i < N; i++) {
-      runningCounts[runTournamentOnce(GROUPS, matchWinProb, simMatch)]++;
-      simIdx++;
-      if (convergenceChecks.includes(simIdx)) {
-        const top3 = Object.entries(runningCounts)
-          .sort((a,b)=>b[1]-a[1]).slice(0,3)
-          .map(([t,c])=>({ team:t, prob:(c/simIdx*100).toFixed(1) }));
-        convergenceData[simIdx] = top3;
-      }
-    }
-
     // Feed simulation results + context to Claude for reasoning
     prompt = `You are a World Cup 2026 analyst. A Monte Carlo simulation of ${N} full tournament runs just produced these championship probabilities:
 
