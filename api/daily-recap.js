@@ -114,15 +114,17 @@ Focus on something surprising: a bold pick paying off, an upset nobody saw comin
       // Post to chat
       const chatRes = await sb('chat_messages', {
         method: 'POST',
-        headers: { 'Prefer': 'return=minimal' },
+        headers: { 'Prefer': 'return=representation' },
         body: JSON.stringify({ username: '🤖 AI', message: digest, group_code: gc }),
       });
+      const chatBody = await chatRes.text();
 
-      // Also refresh commentary in ai_content
-      const aiRes = await sb(`ai_content?group_code=eq.${gc}`, {
-        method: 'PATCH',
-        headers: { 'Prefer': 'return=minimal' },
+      // Refresh commentary in ai_content (upsert not patch — row may not exist)
+      const aiRes = await sb('ai_content', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify({
+          group_code: gc,
           commentary: recap,
           commentary_generated_by: 'daily-cron',
           commentary_generated_at: new Date().toISOString(),
@@ -132,7 +134,8 @@ Focus on something surprising: a bold pick paying off, an upset nobody saw comin
       results.push({
         group: gc,
         chatOk: chatRes.ok,
-        aiContentOk: aiRes.ok,
+        chatStatus: chatRes.status,
+        chatError: chatRes.ok ? null : chatBody.slice(0,200),
         digestLength: digest.length,
       });
     }

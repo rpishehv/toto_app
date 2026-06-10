@@ -1177,9 +1177,15 @@ function RecapButton() {
         try {
           const r = await fetch('/api/daily-recap', { method:'POST' });
           const d = await r.json();
-          setRecapStatus(d.ok
-            ? { ok:true,  msg:`✅ Recap posted to ${d.groups} league${d.groups!==1?'s':''}!` }
-            : { ok:false, msg:`❌ ${d.error||'Failed'}` });
+          if (d.ok) {
+            const allOk = d.results?.every(r=>r.chatOk);
+            const chatErrors = d.results?.filter(r=>!r.chatOk).map(r=>`${r.group}: ${r.chatError}`).join(' | ');
+            setRecapStatus(allOk
+              ? { ok:true,  msg:`✅ Digest posted to ${d.groups} league${d.groups!==1?'s':''}!` }
+              : { ok:false, msg:`⚠️ Partial: ${chatErrors}` });
+          } else {
+            setRecapStatus({ ok:false, msg:`❌ ${d.error||'Failed'}` });
+          }
         } catch(e) {
           setRecapStatus({ ok:false, msg:`❌ Network error: ${e.message}` });
         }
@@ -1191,11 +1197,11 @@ function RecapButton() {
         color:recapLoading?"#555":"#fcb900",fontSize:12,fontWeight:700,
         cursor:recapLoading?"wait":"pointer",fontFamily:"inherit",
       }}>
-        {recapLoading?"⏳ Generating recap…":"🌅 Post Recap Now"}
+        {recapLoading?"⏳ Generating digest…":"🌅 Post Daily Digest Now"}
       </button>
       {recapStatus&&(
         <div style={{marginTop:8,fontSize:11,
-          color:recapStatus.ok?"#22c55e":"#ef4444",lineHeight:1.5}}>
+          color:recapStatus.ok?"#22c55e":"#ef4444",lineHeight:1.5,wordBreak:"break-word"}}>
           {recapStatus.msg}
         </div>
       )}
