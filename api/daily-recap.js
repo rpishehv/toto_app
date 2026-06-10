@@ -59,7 +59,7 @@ Write a recap (3-4 sentences max). Be fun, specific, and a little trash-talky. R
 
     // Post to chat in all groups
     for (const gc of groupCodes) {
-      const r = await fetch(`${supabaseUrl}/rest/v1/chat`, {
+      const r = await fetch(`${supabaseUrl}/rest/v1/chat_messages`, {
         method: 'POST',
         headers: { ...sbHeaders, 'Prefer': 'return=minimal' },
         body: JSON.stringify({ username: '🤖 AI', message: recapMsg, group_code: gc })
