@@ -16,10 +16,19 @@ export default async function handler(req) {
     return new Response(JSON.stringify({ error: 'Missing env vars' }), { status: 500 });
   }
 
-  const sb = (path, opts={}) => fetch(`${supabaseUrl}/rest/v1/${path}`, {
-    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json', ...opts.headers },
-    ...opts,
-  });
+  const baseHeaders = {
+    'apikey': supabaseKey,
+    'Authorization': `Bearer ${supabaseKey}`,
+    'Content-Type': 'application/json',
+  };
+
+  const sb = (path, opts={}) => {
+    const { headers: extraHeaders, ...restOpts } = opts;
+    return fetch(`${supabaseUrl}/rest/v1/${path}`, {
+      ...restOpts,
+      headers: { ...baseHeaders, ...extraHeaders },
+    });
+  };
 
   const claude = (prompt, maxTokens=400) => fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
