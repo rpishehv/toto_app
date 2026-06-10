@@ -334,8 +334,110 @@ Respond ONLY with a JSON object:
   "biggestWinner": "username who benefits most",
   "biggestLoser": "username who falls furthest relatively"
 }`;
+  } else if (type === 'bayesian') {
+    // Bayesian update — adjust Monte Carlo priors using actual match results
+    const { priorProbs, playedMatches, remainingTeams } = body;
+
+    // Reuse the same TEAM_DATA and model functions from bracket type
+    const TEAM_DATA_B = {
+      'France':[2003,85.4],'Spain':[1975,84.1],'Argentina':[1970,83.8],'England':[1958,83.5],
+      'Brazil':[1948,82.9],'Germany':[1942,82.2],'Portugal':[1931,82.7],'Netherlands':[1921,81.4],
+      'Belgium':[1908,80.8],'Norway':[1876,79.6],'Colombia':[1855,78.3],'Morocco':[1844,77.9],
+      'Mexico':[1838,77.1],'USA':[1821,76.8],'Switzerland':[1819,76.3],'Turkey':[1812,75.9],
+      'Ecuador':[1798,75.1],'Senegal':[1791,74.8],'Japan':[1787,74.5],'South Korea':[1774,73.9],
+      'Canada':[1768,73.2],'Uruguay':[1761,72.8],'Croatia':[1924,80.3],'Sweden':[1748,72.1],
+      'Austria':[1741,71.9],'Czechia':[1734,71.4],'Australia':[1718,70.8],'Scotland':[1712,70.2],
+      'Ivory Coast':[1708,69.9],'Ghana':[1692,69.1],'Paraguay':[1685,68.7],'Algeria':[1678,68.3],
+      'Iran':[1671,67.8],'Portugal':[1931,82.7],'DR Congo':[1648,66.2],'Egypt':[1641,65.8],
+      'Panama':[1628,64.1],'Bosnia-Herzegovina':[1619,63.7],'Saudi Arabia':[1612,63.2],
+      'Uzbekistan':[1598,62.4],'Tunisia':[1591,61.9],'South Africa':[1548,59.1],
+      'Cape Verde':[1531,57.8],'New Zealand':[1498,55.2],'Haiti':[1476,53.8],
+      'Qatar':[1468,53.1],'Jordan':[1452,51.8],'Curacao':[1441,50.9],'Iraq':[1438,50.4],
+    };
+
+    // Bayesian Elo update from actual results
+    const updatedElos = { ...Object.fromEntries(Object.entries(TEAM_DATA_B).map(([t,d])=>[t,d[0]])) };
+    const K = 32; // World Cup K-factor
+
+    for (const match of (playedMatches || [])) {
+      const eloA = updatedElos[match.home] || 1600;
+      const eloB = updatedElos[match.away] || 1600;
+      const expA = 1 / (1 + Math.pow(10, (eloB - eloA) / 400));
+      const scoreA = match.homeScore > match.awayScore ? 1 : match.homeScore === match.awayScore ? 0.5 : 0;
+      const delta = K * (scoreA - expA);
+      updatedElos[match.home] = (updatedElos[match.home] || 1600) + delta;
+      updatedElos[match.away] = (updatedElos[match.away] || 1600) - delta;
+    }
+
+    // Re-run Monte Carlo with updated Elos for remaining teams
+    function updatedStrength(team) {
+      const elo = updatedElos[team] || 1600;
+      const sq = TEAM_DATA_B[team]?.[1] || 70;
+      return 0.6 * (elo - 1440) / 600 + 0.4 * (sq - 50) / 40;
+    }
+
+    function updatedMatchProb(a, b) {
+      const diff = updatedStrength(a) - updatedStrength(b);
+      const draw = Math.max(0.12, 0.26 - Math.abs(diff) * 0.22);
+      const raw = 1 / (1 + Math.pow(10, -diff * 2.2));
+      return { win: Math.max(0.04, raw*(1-draw)), draw: Math.max(0.04, draw), loss: Math.max(0.04, (1-raw)*(1-draw)) };
+    }
+
+    function simUpdatedKO(teams) {
+      let r = [...teams];
+      for (let j = r.length-1; j>0; j--) { const k=Math.floor(Math.random()*(j+1));[r[j],r[k]]=[r[k],r[j]]; }
+      while (r.length > 1) {
+        const n=[];
+        for (let i=0;i<r.length;i+=2) {
+          if (i+1>=r.length) { n.push(r[i]); continue; }
+          const p=updatedMatchProb(r[i],r[i+1]);
+          const rv=Math.random();
+          n.push(rv<p.win?r[i]:rv<p.win+p.draw?(Math.random()<0.5?r[i]:r[i+1]):r[i+1]);
+        }
+        r=n;
+      }
+      return r[0];
+    }
+
+    const N2 = 3000;
+    const bayesCount = {};
+    const teams = remainingTeams || Object.keys(TEAM_DATA_B).slice(0,32);
+    teams.forEach(t => bayesCount[t]=0);
+    for (let i=0; i<N2; i++) {
+      const w = simUpdatedKO([...teams]);
+      if (w) bayesCount[w]=(bayesCount[w]||0)+1;
+    }
+
+    const updatedProbs = teams
+      .map(t=>({ team:t, prob:(((bayesCount[t]||0)/N2)*100).toFixed(1),
+        priorProb: priorProbs?.[t]||'0.0',
+        eloChange: Math.round((updatedElos[t]||1600)-(TEAM_DATA_B[t]?.[0]||1600)) }))
+      .sort((a,b)=>parseFloat(b.prob)-parseFloat(a.prob))
+      .slice(0,12);
+
+    const top = updatedProbs[0];
+    const matchSummary = (playedMatches||[]).slice(-5).map(m=>
+      `${m.home} ${m.homeScore}-${m.awayScore} ${m.away}`).join(', ');
+
+    prompt = `You are a World Cup analyst. ${playedMatches?.length||0} matches have been played.
+
+Recent results: ${matchSummary || 'No matches yet'}
+
+Bayesian-updated championship probabilities (Elos updated from actual results, ${N2} simulations):
+${updatedProbs.map((t,i)=>`${i+1}. ${t.team}: ${t.prob}% (was ${t.priorProb}%, Elo ${t.eloChange>=0?'+':''}${t.eloChange})`).join('\n')}
+
+Respond ONLY with JSON:
+{
+  "updatedProbs": ${JSON.stringify(updatedProbs)},
+  "champion": "${top.team}",
+  "keyInsight": "2 sentence insight about how results so far have shifted the probabilities",
+  "biggestRiser": "${updatedProbs.find(t=>parseFloat(t.eloChange)===Math.max(...updatedProbs.map(u=>parseFloat(u.eloChange))))?.team||top.team}",
+  "biggestFaller": "${updatedProbs.find(t=>parseFloat(t.eloChange)===Math.min(...updatedProbs.map(u=>parseFloat(u.eloChange))))?.team||updatedProbs[updatedProbs.length-1]?.team}",
+  "matchesProcessed": ${playedMatches?.length||0}
+}`;
+
   } else {
-    return new Response(JSON.stringify({ error: 'Invalid type. Use bracket, commentary, or whatif' }), { status: 400 });
+    return new Response(JSON.stringify({ error: 'Invalid type. Use bracket, commentary, whatif or bayesian' }), { status: 400 });
   }
 
   try {

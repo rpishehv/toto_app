@@ -1437,6 +1437,8 @@ export default function App(){
   const [simAnalysisLoading,setSimAnalysisLoading]=useState(false);
   const [bracketPred,setBracketPred]=useState(null);
   const [bracketLoading,setBracketLoading]=useState(false);
+  const [bayesianPred,setBayesianPred]=useState(null);
+  const [bayesianLoading,setBayesianLoading]=useState(false);
   const [bracketGeneratedBy,setBracketGeneratedBy]=useState(null);
   const [commentary,setCommentary]=useState(null);
   const [commentaryLoading,setCommentaryLoading]=useState(false);
@@ -2263,6 +2265,38 @@ export default function App(){
       await sbSaveAIContent(data, commentary, userName, commentaryGeneratedBy, groupCode);
     } catch(e) { console.error('Bracket error:', e); }
     setBracketLoading(false);
+  };
+
+  const generateBayesianUpdate = async () => {
+    setBayesianLoading(true);
+    try {
+      // Played matches from actualMatches
+      const playedMatches = actualMatches
+        .filter(m => m.homeScore !== null && m.awayScore !== null)
+        .map(m => ({ home: m.home, away: m.away, homeScore: m.homeScore, awayScore: m.awayScore }));
+
+      // Prior probs from existing bracket
+      const priorProbs = {};
+      if (bracketPred?.simulationData) {
+        bracketPred.simulationData.forEach(d => { priorProbs[d.team] = d.prob; });
+      }
+
+      // Teams still in tournament (not eliminated)
+      const eliminated = new Set();
+      for (const m of playedMatches) {
+        // Simple heuristic — track group stage eliminations after all group games played
+      }
+      const remainingTeams = [...new Set(Object.values(GROUPS).flat())];
+
+      const res = await fetch('/api/tournament', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'bayesian', playedMatches, priorProbs, remainingTeams }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setBayesianPred(data);
+    } catch(e) { console.error('Bayesian error:', e); }
+    setBayesianLoading(false);
   };
 
   const generateCommentary = async () => {
@@ -6267,6 +6301,91 @@ export default function App(){
               color:"#a78bfa",fontSize:13,fontWeight:700,
               cursor:bracketLoading?"wait":"pointer",fontFamily:"inherit",
             }}>{bracketLoading?"⏳ Predicting tournament…":bracketPred?"🔄 Regenerate AI Bracket":"🔮 Generate AI Tournament Prediction"}</button>
+
+            {/* Bayesian update button — only useful once matches are played */}
+            {actualMatches.filter(m=>m.homeScore!==null).length>0&&(
+              <button onClick={generateBayesianUpdate} disabled={bayesianLoading} style={{
+                width:"100%",padding:"11px",borderRadius:10,cursor:bayesianLoading?"wait":"pointer",
+                background:bayesianLoading?"rgba(16,185,129,0.15)":"rgba(16,185,129,0.1)",
+                border:"1px solid rgba(16,185,129,0.3)",color:"#6ee7b7",fontWeight:700,
+                fontSize:13,fontFamily:"inherit",marginTop:8,
+              }}>
+                {bayesianLoading
+                  ? "⏳ Updating with match results…"
+                  : `🧮 Bayesian Update (${actualMatches.filter(m=>m.homeScore!==null).length} matches played)`}
+              </button>
+            )}
+
+            {/* Bayesian results */}
+            {bayesianPred&&!bayesianLoading&&(
+              <div style={{marginTop:12,padding:"14px",background:"rgba(16,185,129,0.06)",
+                border:"1px solid rgba(16,185,129,0.2)",borderRadius:10}}>
+                <div style={{fontSize:11,color:"#6ee7b7",fontWeight:700,marginBottom:8}}>
+                  🧮 Bayesian Updated Predictions
+                  <span style={{color:"#444",fontWeight:400,marginLeft:6}}>{bayesianPred.matchesProcessed} matches processed</span>
+                </div>
+                {bayesianPred.keyInsight&&(
+                  <div style={{fontSize:12,color:"#888",lineHeight:1.6,marginBottom:10,fontStyle:"italic"}}>
+                    {bayesianPred.keyInsight}
+                  </div>
+                )}
+                {(bayesianPred.biggestRiser||bayesianPred.biggestFaller)&&(
+                  <div style={{display:"flex",gap:8,marginBottom:10}}>
+                    {bayesianPred.biggestRiser&&(
+                      <div style={{flex:1,padding:"8px 10px",background:"rgba(34,197,94,0.1)",
+                        border:"1px solid rgba(34,197,94,0.25)",borderRadius:8,fontSize:11}}>
+                        <div style={{color:"#22c55e",fontWeight:700,marginBottom:2}}>📈 Biggest riser</div>
+                        <div style={{color:"#ddd"}}>{FLAGS[bayesianPred.biggestRiser]||"🏳️"} {bayesianPred.biggestRiser}</div>
+                      </div>
+                    )}
+                    {bayesianPred.biggestFaller&&(
+                      <div style={{flex:1,padding:"8px 10px",background:"rgba(239,68,68,0.08)",
+                        border:"1px solid rgba(239,68,68,0.2)",borderRadius:8,fontSize:11}}>
+                        <div style={{color:"#ef4444",fontWeight:700,marginBottom:2}}>📉 Biggest faller</div>
+                        <div style={{color:"#ddd"}}>{FLAGS[bayesianPred.biggestFaller]||"🏳️"} {bayesianPred.biggestFaller}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {bayesianPred.updatedProbs?.length>0&&(
+                  <div>
+                    <div style={{fontSize:10,color:"#444",marginBottom:6}}>Updated championship odds vs prior</div>
+                    <div style={{background:"rgba(0,0,0,0.2)",borderRadius:8,overflow:"hidden"}}>
+                      <div style={{display:"grid",gridTemplateColumns:"18px 1fr 44px 44px 40px",gap:4,
+                        padding:"5px 10px",borderBottom:"1px solid rgba(255,255,255,0.04)",fontSize:10,color:"#444"}}>
+                        <span>#</span><span>Team</span>
+                        <span style={{textAlign:"right"}}>Now</span>
+                        <span style={{textAlign:"right"}}>Prior</span>
+                        <span style={{textAlign:"right"}}>Elo</span>
+                      </div>
+                      {bayesianPred.updatedProbs.slice(0,8).map((d,i)=>{
+                        const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":"";
+                        return(
+                          <div key={i} style={{display:"grid",gridTemplateColumns:"18px 1fr 44px 44px 40px",gap:4,
+                            padding:"5px 10px",borderBottom:"1px solid rgba(255,255,255,0.03)",
+                            background:i===0?"rgba(16,185,129,0.05)":undefined}}>
+                            <span style={{fontSize:11}}>{medal||i+1}</span>
+                            <div style={{display:"flex",alignItems:"center",gap:5}}>
+                              <span style={{fontSize:12}}>{FLAGS[d.team]||"🏳️"}</span>
+                              <span style={{fontSize:11,color:i===0?"#6ee7b7":"#ddd"}}>{d.team}</span>
+                            </div>
+                            <span style={{fontSize:11,textAlign:"right",color:i===0?"#6ee7b7":"#888",fontWeight:i===0?700:400}}>{d.prob}%</span>
+                            <span style={{fontSize:11,textAlign:"right",color:"#555"}}>{d.priorProb}%</span>
+                            <span style={{fontSize:10,textAlign:"right",
+                              color:d.eloChange>0?"#22c55e":d.eloChange<0?"#ef4444":"#555"}}>
+                              {d.eloChange>0?"+":""}{d.eloChange}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{fontSize:10,color:"#333",marginTop:4}}>
+                      Elo Δ = rating change from results · Now vs Prior = probability shift
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {bracketGeneratedBy&&!bracketLoading&&(
               <div style={{fontSize:10,color:"#444",textAlign:"center",marginTop:5}}>
                 Generated by <strong style={{color:"#6d5a9c"}}>{bracketGeneratedBy}</strong> · visible to all players
