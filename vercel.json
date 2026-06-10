@@ -1,10 +1,14 @@
 {
   "functions": {
-    "api/news.js": {
-      "maxDuration": 60
-    },
-    "api/analytics.js": {
-      "maxDuration": 60
+    "api/news.js":        { "maxDuration": 60 },
+    "api/analytics.js":  { "maxDuration": 60 },
+    "api/tournament.js": { "maxDuration": 60 },
+    "api/daily-recap.js":{ "maxDuration": 30 }
+  },
+  "crons": [
+    {
+      "path": "/api/daily-recap",
+      "schedule": "0 8 * * *"
     }
-  }
+  ]
 }

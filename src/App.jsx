@@ -1166,6 +1166,34 @@ function BracketMethodology({ bracketPred, bayesianPred }) {
   );
 }
 
+function VoiceClip({ url }) {
+  const [playing, setPlaying] = React.useState(false);
+  const audioRef = React.useRef(null);
+  React.useEffect(()=>{
+    if(!audioRef.current) return;
+    const a = audioRef.current;
+    a.onended = ()=>setPlaying(false);
+    return ()=>{ a.onended=null; };
+  },[]);
+  const toggle = ()=>{
+    if(!audioRef.current) return;
+    if(playing){ audioRef.current.pause(); audioRef.current.currentTime=0; setPlaying(false); }
+    else { audioRef.current.play().catch(()=>{}); setPlaying(true); }
+  };
+  return(
+    <span onClick={toggle} style={{
+      display:"inline-flex",alignItems:"center",gap:5,cursor:"pointer",
+      padding:"4px 10px",borderRadius:20,
+      background:playing?"rgba(252,185,0,0.15)":"rgba(255,255,255,0.08)",
+      border:"1px solid rgba(255,255,255,0.12)",fontSize:11,color:"#ccc",
+    }}>
+      <span style={{fontSize:14}}>{playing?"⏹":"▶"}</span>
+      {playing?"Playing…":"Voice clip"}
+      <audio ref={audioRef} src={url} preload="none"/>
+    </span>
+  );
+}
+
 function LeagueSelector({ value, onChange, onEnter, inputStyle }) {
   const [leagues, setLeagues] = React.useState([]);
   const [showCustom, setShowCustom] = React.useState(false);
@@ -1505,6 +1533,9 @@ export default function App(){
   // Chat
   const [chatMessages,setChatMessages]=useState([]);
   const [chatInput,setChatInput]=useState("");
+  const [isRecording,setIsRecording]=useState(false);
+  const [mediaRecorder,setMediaRecorder]=useState(null);
+  const audioChunksRef=React.useRef([]);
   const [chatSending,setChatSending]=useState(false);
   const [chatUnread,setChatUnread]=useState(0);
   const chatBottomRef=React.useRef(null);
@@ -5449,6 +5480,80 @@ export default function App(){
                         homeFlag={FLAGS[home?.name]||"🏳️"} awayFlag={FLAGS[away?.name]||"🏳️"}/>;
                     })()}
 
+                    {/* 👥 Social live panel — who's winning this match */}
+                    {(()=>{
+                      const homeName=home?.name, awayName=away?.name;
+                      if(!homeName||!awayName) return null;
+                      const key1=`${homeName}||${awayName}`, key2=`${awayName}||${homeName}`;
+                      const currentScore={homeScore:score?.home??0, awayScore:score?.away??0};
+                      // Gather all user predictions for this match
+                      const matchPreds = Object.entries(livePredictions)
+                        .filter(([,v])=>typeof v==='object'&&v!==null&&!Array.isArray(v)&&v.username)
+                        .map(([,v])=>v)
+                        .filter(p=>{
+                          const m=p.matches?.find(m=>
+                            (m.home===homeName&&m.away===awayName)||(m.home===awayName&&m.away===homeName));
+                          return m?.homeScore!==null&&m?.homeScore!==undefined;
+                        })
+                        .map(p=>{
+                          const m=p.matches?.find(m=>
+                            (m.home===homeName&&m.away===awayName)||(m.home===awayName&&m.away===homeName));
+                          const flipped=m?.home===awayName;
+                          const pred={homeScore:flipped?m.awayScore:m.homeScore, awayScore:flipped?m.homeScore:m.awayScore};
+                          const pts=score?.home!=null?calcMatchPoints(pred,currentScore):null;
+                          return{username:p.username||'?', pred, pts, points:pts?.points??0};
+                        })
+                        .sort((a,b)=>b.points-a.points);
+
+                      if(!matchPreds.length) return null;
+                      return(
+                        <div style={{marginTop:12,marginBottom:12}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"#888",marginBottom:8,
+                            display:"flex",alignItems:"center",gap:6}}>
+                            <span>👥</span> Who's winning this match
+                          </div>
+                          <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                            {matchPreds.map((p,i)=>{
+                              const isMe=p.username===userName;
+                              const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":"";
+                              return(
+                                <div key={p.username} style={{
+                                  display:"flex",alignItems:"center",gap:8,
+                                  padding:"6px 10px",borderRadius:8,
+                                  background:isMe?"rgba(252,185,0,0.08)":"rgba(255,255,255,0.03)",
+                                  border:`1px solid ${isMe?"rgba(252,185,0,0.25)":"rgba(255,255,255,0.06)"}`,
+                                }}>
+                                  <span style={{fontSize:11,width:16}}>{medal||i+1}</span>
+                                  <span style={{fontSize:12,flex:1,fontWeight:isMe?700:400,
+                                    color:isMe?"#fcb900":"#ccc"}}>
+                                    {p.username}{isMe?" (you)":""}
+                                  </span>
+                                  <span style={{fontSize:11,color:"#555"}}>
+                                    {p.pred.homeScore}–{p.pred.awayScore}
+                                  </span>
+                                  {p.pts&&score?.home!=null?(
+                                    <span style={{
+                                      fontSize:11,fontWeight:700,minWidth:40,textAlign:"right",
+                                      color:p.points===6?"#22c55e":p.points===4?"#fcb900":p.points===2?"#60a5fa":"#444",
+                                    }}>
+                                      {p.points>0?`+${p.points}pts`:"—"}
+                                    </span>
+                                  ):(
+                                    <span style={{fontSize:10,color:"#333",minWidth:40,textAlign:"right"}}>waiting</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {score?.home!=null&&(
+                            <div style={{fontSize:10,color:"#333",marginTop:6}}>
+                              Points based on current score {score.home}–{score.away} · updates live
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {fixtureEvents.length>0&&<div style={{marginBottom:14}}>
                         <div style={{fontSize:11,fontWeight:700,color:"#fcb900",marginBottom:8}}>📋 Match Events</div>
                         {fixtureEvents.map((ev,i)=>{
@@ -6068,8 +6173,9 @@ export default function App(){
                   const sameUser = prevMsg?.username===msg.username&&!showDate&&!isSystem;
 
                   // System messages (reactions echo) — centered, subtle
-                  if(isSystem) return(
-                    <div key={msg.id||i}>
+                  const isAI = msg.username === '🤖 AI';
+                  if(isSystem||isAI) return(
+                    <div key={msg.id||i} style={{margin:"8px 0"}}>
                       {showDate&&(
                         <div style={{textAlign:"center",margin:"12px 0 8px",
                           fontSize:10,color:"#333",
@@ -6079,8 +6185,30 @@ export default function App(){
                           <div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/>
                         </div>
                       )}
-                      <div style={{textAlign:"center",margin:"4px 0",fontSize:11,color:"#444"}}>
-                        {msg.message}
+                      <div style={{
+                        margin:"0 4px",padding:"10px 14px",borderRadius:12,
+                        background:isAI
+                          ?"rgba(139,92,246,0.08)"
+                          :"rgba(252,185,0,0.06)",
+                        border:`1px solid ${isAI?"rgba(139,92,246,0.25)":"rgba(252,185,0,0.2)"}`,
+                      }}>
+                        <div style={{
+                          fontSize:10,fontWeight:700,marginBottom:6,
+                          color:isAI?"#a78bfa":"#fcb900",
+                          display:"flex",alignItems:"center",gap:5,
+                        }}>
+                          <span>{isAI?"🤖":"⚡"}</span>
+                          <span>{isAI?"AI Recap":"Admin"}</span>
+                          <span style={{fontWeight:400,color:"#333",marginLeft:"auto"}}>
+                            {formatTime(msg.created_at)}
+                          </span>
+                        </div>
+                        <div style={{
+                          fontSize:12,color:"#ccc",lineHeight:1.6,
+                          whiteSpace:"pre-wrap",wordBreak:"break-word",
+                        }}>
+                          {msg.message?.replace(/^🌅 Daily Recap\n/,"")}
+                        </div>
                       </div>
                     </div>
                   );
@@ -6122,7 +6250,9 @@ export default function App(){
                           wordBreak:"break-word",
                         }}>
                           <div style={{fontSize:13,color:isMe?"#fcb900":"#ddd",lineHeight:1.5}}>
-                            {msg.message}
+                            {msg.message?.startsWith('🎙__VOICE__')
+                              ? <VoiceClip url={msg.message.slice('🎙__VOICE__'.length)} />
+                              : msg.message}
                           </div>
                           <div style={{fontSize:10,color:"#444",marginTop:3,textAlign:"right"}}>
                             {formatTime(msg.created_at)}
@@ -6155,6 +6285,46 @@ export default function App(){
                       overflowY:"auto",
                     }}
                   />
+                  {/* 🎙 Voice clip button */}
+                  <button onClick={async()=>{
+                    if(isRecording){
+                      mediaRecorder?.stop();
+                      setIsRecording(false);
+                    } else {
+                      try {
+                        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+                        const mr=new MediaRecorder(stream);
+                        audioChunksRef.current=[];
+                        mr.ondataavailable=e=>audioChunksRef.current.push(e.data);
+                        mr.onstop=async()=>{
+                          stream.getTracks().forEach(t=>t.stop());
+                          const blob=new Blob(audioChunksRef.current,{type:'audio/webm'});
+                          if(blob.size<1000){return;}
+                          // Convert to base64 data URL for inline playback (no file storage needed)
+                          const reader=new FileReader();
+                          reader.onload=async()=>{
+                            const dataUrl=reader.result;
+                            await sbSendMessage(userName,`🎙__VOICE__${dataUrl}`,groupCode);
+                          };
+                          reader.readAsDataURL(blob);
+                        };
+                        mr.start();
+                        setMediaRecorder(mr);
+                        setIsRecording(true);
+                        // Auto-stop after 10s
+                        setTimeout(()=>{if(mr.state==='recording'){mr.stop();setIsRecording(false);}},10000);
+                      } catch(e){console.error('Mic error:',e);}
+                    }
+                  }} style={{
+                    padding:"10px 12px",flexShrink:0,
+                    background:isRecording?"rgba(239,68,68,0.2)":"rgba(255,255,255,0.06)",
+                    border:`1px solid ${isRecording?"rgba(239,68,68,0.5)":"rgba(255,255,255,0.12)"}`,
+                    borderRadius:12,color:isRecording?"#ef4444":"#555",
+                    fontSize:16,cursor:"pointer",
+                    animation:isRecording?"pulse 1s ease infinite":undefined,
+                  }} title={isRecording?"Stop recording (10s max)":"Record voice clip"}>
+                    {isRecording?"⏹":"🎙"}
+                  </button>
                   <button onClick={sendMsg} disabled={!chatInput.trim()||chatSending} style={{
                     padding:"10px 16px",
                     background:chatInput.trim()?"#fcb900":"rgba(255,255,255,0.06)",
@@ -7073,7 +7243,24 @@ export default function App(){
                   </div>
                 )}
 
-                {/* WhatsApp Reminder Button */}
+                {/* Daily Recap — manual trigger */}
+                <div style={{marginTop:16,padding:"12px 14px",background:"rgba(255,255,255,0.03)",
+                  border:"1px solid rgba(255,255,255,0.06)",borderRadius:10}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"#888",marginBottom:6}}>🌅 Daily AI Recap</div>
+                  <div style={{fontSize:11,color:"#555",marginBottom:10,lineHeight:1.5}}>
+                    Posts an AI-generated match recap to all league chats. Runs automatically at 8:00 UTC daily during the tournament.
+                  </div>
+                  <button onClick={async()=>{
+                    const r=await fetch('/api/daily-recap',{method:'POST'});
+                    const d=await r.json();
+                    setAdminPinError(d.ok?`✅ Recap posted to ${d.groups} league${d.groups!==1?'s':''}!`:`❌ ${d.error||'Failed'}`);
+                    setTimeout(()=>setAdminPinError(""),4000);
+                  }} style={{
+                    padding:"8px 16px",background:"rgba(252,185,0,0.1)",
+                    border:"1px solid rgba(252,185,0,0.25)",borderRadius:8,
+                    color:"#fcb900",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                  }}>🌅 Post Recap Now</button>
+                </div>
                 {(()=>{
                   const total = leaderboard.length;
                   const daysToKickoff = Math.max(0, Math.ceil((new Date('2026-06-11T17:00:00Z') - new Date()) / 86400000));
