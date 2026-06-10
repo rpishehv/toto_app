@@ -6302,19 +6302,35 @@ export default function App(){
               cursor:bracketLoading?"wait":"pointer",fontFamily:"inherit",
             }}>{bracketLoading?"⏳ Predicting tournament…":bracketPred?"🔄 Regenerate AI Bracket":"🔮 Generate AI Tournament Prediction"}</button>
 
-            {/* Bayesian update button — only useful once matches are played */}
-            {actualMatches.filter(m=>m.homeScore!==null).length>0&&(
-              <button onClick={generateBayesianUpdate} disabled={bayesianLoading} style={{
-                width:"100%",padding:"11px",borderRadius:10,cursor:bayesianLoading?"wait":"pointer",
-                background:bayesianLoading?"rgba(16,185,129,0.15)":"rgba(16,185,129,0.1)",
-                border:"1px solid rgba(16,185,129,0.3)",color:"#6ee7b7",fontWeight:700,
-                fontSize:13,fontFamily:"inherit",marginTop:8,
-              }}>
-                {bayesianLoading
-                  ? "⏳ Updating with match results…"
-                  : `🧮 Bayesian Update (${actualMatches.filter(m=>m.homeScore!==null).length} matches played)`}
-              </button>
-            )}
+            {/* Live update button — always visible, grayed out until matches played */}
+            {(()=>{
+              const playedCount = actualMatches.filter(m=>m.homeScore!==null).length;
+              const hasResults = playedCount > 0;
+              return(
+                <button
+                  onClick={hasResults ? generateBayesianUpdate : undefined}
+                  disabled={bayesianLoading || !hasResults}
+                  style={{
+                    width:"100%",padding:"11px",borderRadius:10,
+                    cursor:bayesianLoading?"wait":hasResults?"pointer":"default",
+                    background:bayesianLoading
+                      ?"rgba(16,185,129,0.15)"
+                      :hasResults
+                      ?"rgba(16,185,129,0.1)"
+                      :"rgba(255,255,255,0.03)",
+                    border:`1px solid ${hasResults?"rgba(16,185,129,0.3)":"rgba(255,255,255,0.08)"}`,
+                    color:hasResults?"#6ee7b7":"#444",
+                    fontWeight:700,fontSize:13,fontFamily:"inherit",marginTop:8,
+                    opacity:bayesianLoading?0.7:1,
+                  }}>
+                  {bayesianLoading
+                    ? "⏳ Refreshing predictions…"
+                    : hasResults
+                    ? `🔁 Refresh Predictions (${playedCount} result${playedCount!==1?'s':''} in)`
+                    : "🔁 Refresh Predictions — available after kickoff"}
+                </button>
+              );
+            })()}
 
             {/* Bayesian results */}
             {bayesianPred&&!bayesianLoading&&(
