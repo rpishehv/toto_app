@@ -3736,31 +3736,6 @@ export default function App(){
         </div>
       )}
 
-      {/* Backup reminder — only after user has saved predictions */}
-      {userName && saved && (() => {
-        const daysSince = lastBackupAt ? (Date.now()-lastBackupAt)/(1000*60*60*24) : null;
-        const noBackup = lastBackupAt===null;
-        const stale = daysSince!==null && daysSince >= BACKUP_WARN_DAYS;
-        if (!noBackup && !stale) return null;
-        return(
-          <div style={{
-            background:"rgba(239,68,68,0.08)",borderBottom:"1px solid rgba(239,68,68,0.2)",
-            padding:"8px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,
-          }}>
-            <span style={{fontSize:11,color:"#fca5a5"}}>
-              ⚠️ {noBackup
-                ? "No backup yet — tap 📦 Backup to save a copy"
-                : `Last backup ${Math.floor(daysSince)} day${Math.floor(daysSince)!==1?"s":""} ago — consider backing up`}
-            </span>
-            <button onClick={exportPredictions} style={{
-              padding:"4px 12px",background:"rgba(239,68,68,0.15)",
-              border:"1px solid rgba(239,68,68,0.3)",borderRadius:6,
-              color:"#fca5a5",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0,
-            }}>📦 Backup now</button>
-          </div>
-        );
-      })()}
-
       {/* Import/export panel */}
       {showImport&&(
         <div style={{
@@ -3977,10 +3952,16 @@ export default function App(){
                   display:"flex",flexDirection:"column",alignItems:"center",gap:1,
                   position:"relative",
                 }}>
-                <span style={{fontSize:18,lineHeight:1}}>⚡</span>
+                <span style={{fontSize:18,lineHeight:1,position:"relative"}}>
+                  ⚡
+                  <span style={{
+                    position:"absolute",bottom:-2,right:-6,fontSize:8,
+                    color:trayOpen?"#60a5fa":"#444",lineHeight:1,
+                  }}>{trayOpen?"▲":"▼"}</span>
+                </span>
                 <span style={{fontSize:10,fontWeight:400,
                   color:advancedTabActive?"#60a5fa":trayOpen?"#60a5fa":"#444",letterSpacing:0.3}}>
-                  More
+                  {trayOpen?"Less":"More"}
                 </span>
                 {hasUnread&&!advancedTabActive&&(
                   <span style={{
