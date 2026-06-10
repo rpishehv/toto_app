@@ -7250,16 +7250,42 @@ export default function App(){
                   <div style={{fontSize:11,color:"#555",marginBottom:10,lineHeight:1.5}}>
                     Posts an AI-generated match recap to all league chats. Runs automatically at 8:00 UTC daily during the tournament.
                   </div>
-                  <button onClick={async()=>{
-                    const r=await fetch('/api/daily-recap',{method:'POST'});
-                    const d=await r.json();
-                    setAdminPinError(d.ok?`✅ Recap posted to ${d.groups} league${d.groups!==1?'s':''}!`:`❌ ${d.error||'Failed'}`);
-                    setTimeout(()=>setAdminPinError(""),4000);
-                  }} style={{
-                    padding:"8px 16px",background:"rgba(252,185,0,0.1)",
-                    border:"1px solid rgba(252,185,0,0.25)",borderRadius:8,
-                    color:"#fcb900",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
-                  }}>🌅 Post Recap Now</button>
+                  {(()=>{
+                    const [recapStatus,setRecapStatus]=React.useState(null);
+                    const [recapLoading,setRecapLoading]=React.useState(false);
+                    return(
+                      <div>
+                        <button onClick={async()=>{
+                          setRecapLoading(true);
+                          setRecapStatus(null);
+                          try {
+                            const r=await fetch('/api/daily-recap',{method:'POST'});
+                            const d=await r.json();
+                            setRecapStatus(d.ok
+                              ?{ok:true, msg:`✅ Recap posted to ${d.groups} league${d.groups!==1?'s':''}!`}
+                              :{ok:false, msg:`❌ ${d.error||'Failed'}`});
+                          } catch(e){
+                            setRecapStatus({ok:false,msg:`❌ Network error: ${e.message}`});
+                          }
+                          setRecapLoading(false);
+                        }} disabled={recapLoading} style={{
+                          padding:"8px 16px",
+                          background:recapLoading?"rgba(255,255,255,0.04)":"rgba(252,185,0,0.1)",
+                          border:"1px solid rgba(252,185,0,0.25)",borderRadius:8,
+                          color:recapLoading?"#555":"#fcb900",fontSize:12,fontWeight:700,
+                          cursor:recapLoading?"wait":"pointer",fontFamily:"inherit",
+                        }}>
+                          {recapLoading?"⏳ Generating recap…":"🌅 Post Recap Now"}
+                        </button>
+                        {recapStatus&&(
+                          <div style={{marginTop:8,fontSize:11,
+                            color:recapStatus.ok?"#22c55e":"#ef4444",lineHeight:1.5}}>
+                            {recapStatus.msg}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 {(()=>{
                   const total = leaderboard.length;
