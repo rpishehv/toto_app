@@ -1067,7 +1067,7 @@ function GroupWinnerOdds({ groupLetter, teams, slug, highlight }) {
   );
 }
 
-function BracketMethodology({ bracketPred }) {
+function BracketMethodology({ bracketPred, bayesianPred }) {
   const [open, setOpen] = React.useState(false);
   if (!bracketPred) return null;
   return (
@@ -1087,18 +1087,17 @@ function BracketMethodology({ bracketPred }) {
       {open&&(
         <div style={{padding:"12px",background:"rgba(139,92,246,0.04)",
           border:"1px solid rgba(139,92,246,0.2)",borderTop:"none",borderRadius:"0 0 8px 8px"}}>
-          {bracketPred.methodologySummary&&(
-            <div style={{fontSize:11,color:"#888",lineHeight:1.7,marginBottom:8}}>
-              <span style={{color:"#a78bfa",fontWeight:700}}>Pipeline: </span>
-              {bracketPred.methodologySummary}
-            </div>
-          )}
-          {!bracketPred.methodologySummary&&(
-            <div style={{fontSize:11,color:"#888",lineHeight:1.7,marginBottom:8}}>
-              <span style={{color:"#a78bfa",fontWeight:700}}>Pipeline: </span>
-              FIFA Elo + weighted squad ratings (0.6×Elo + 0.4×squad avg) → Dixon-Coles Poisson match probabilities → 5,000 full Monte Carlo tournament simulations including group-stage round-robin.
-            </div>
-          )}
+
+          {/* Step 1–3: Pre-tournament model */}
+          <div style={{fontSize:10,color:"#a78bfa",fontWeight:700,marginBottom:6,letterSpacing:0.5}}>
+            STEP 1–3 · PRE-TOURNAMENT MODEL
+          </div>
+          <div style={{fontSize:11,color:"#888",lineHeight:1.7,marginBottom:10}}>
+            {bracketPred.methodologySummary||
+              "FIFA Elo + weighted squad ratings (0.6×Elo + 0.4×squad avg) → Dixon-Coles Poisson match probabilities → 5,000 full Monte Carlo tournament simulations including group-stage round-robin."}
+          </div>
+
+          {/* Convergence chart */}
           {bracketPred.convergenceSummary&&(
             <div style={{fontSize:11,color:"#888",lineHeight:1.7,marginBottom:10}}>
               <span style={{color:"#a78bfa",fontWeight:700}}>Convergence: </span>
@@ -1106,9 +1105,9 @@ function BracketMethodology({ bracketPred }) {
             </div>
           )}
           {bracketPred.convergenceData&&(
-            <div>
+            <div style={{marginBottom:14}}>
               <div style={{fontSize:10,color:"#555",marginBottom:6}}>
-                {bracketPred.champion} championship % as simulations accumulated
+                {bracketPred.champion} pre-tournament championship % — stabilised across simulation runs
               </div>
               <div style={{display:"flex",gap:6,alignItems:"flex-end",height:60}}>
                 {Object.entries(bracketPred.convergenceData).map(([n,top])=>(
@@ -1123,9 +1122,42 @@ function BracketMethodology({ bracketPred }) {
               </div>
             </div>
           )}
-          {!bracketPred.convergenceData&&bracketPred.simulationData?.length>0&&(
-            <div style={{fontSize:11,color:"#555",marginTop:4}}>
-              Regenerate the bracket to see full convergence data from the latest simulation run.
+          {!bracketPred.convergenceData&&(
+            <div style={{fontSize:11,color:"#444",marginBottom:14}}>
+              Regenerate the bracket to see convergence data from the latest simulation.
+            </div>
+          )}
+
+          {/* Divider */}
+          <div style={{borderTop:"1px solid rgba(255,255,255,0.06)",margin:"10px 0"}}/>
+
+          {/* Step 4: Bayesian update */}
+          <div style={{fontSize:10,color:"#6ee7b7",fontWeight:700,marginBottom:6,letterSpacing:0.5}}>
+            STEP 4 · BAYESIAN UPDATE FROM ACTUAL RESULTS
+          </div>
+          {bayesianPred?(
+            <div>
+              <div style={{fontSize:11,color:"#888",lineHeight:1.7,marginBottom:8}}>
+                After each match, teams' Elo ratings are updated using the standard Elo formula (K=32 for World Cup games).
+                Updated Elos feed back into a fresh 3,000-run Monte Carlo simulation, shifting championship probabilities
+                to reflect what has actually happened on the pitch.
+              </div>
+              {bayesianPred.keyInsight&&(
+                <div style={{fontSize:11,color:"#6ee7b7",lineHeight:1.6,marginBottom:8,
+                  padding:"8px 10px",background:"rgba(16,185,129,0.06)",
+                  border:"1px solid rgba(16,185,129,0.15)",borderRadius:6,fontStyle:"italic"}}>
+                  {bayesianPred.keyInsight}
+                </div>
+              )}
+              <div style={{fontSize:10,color:"#444"}}>
+                {bayesianPred.matchesProcessed} match result{bayesianPred.matchesProcessed!==1?'s':''} processed ·
+                3,000 simulations re-run with updated team ratings
+              </div>
+            </div>
+          ):(
+            <div style={{fontSize:11,color:"#444",lineHeight:1.6}}>
+              Not run yet — tap <strong style={{color:"#6ee7b7"}}>🔁 Refresh Predictions</strong> after
+              match results are in to update probabilities based on actual tournament performance.
             </div>
           )}
         </div>
@@ -6420,7 +6452,7 @@ export default function App(){
                 </div>
 
                 {/* Methodology & convergence — collapsible */}
-                <BracketMethodology bracketPred={bracketPred} />
+                <BracketMethodology bracketPred={bracketPred} bayesianPred={bayesianPred} />
 
                 {/* Podium */}
                 <div style={{display:"flex",gap:8,marginBottom:14}}>
