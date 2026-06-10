@@ -6329,28 +6329,36 @@ export default function App(){
                       setIsRecording(false);
                     } else {
                       try {
-                        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-                        const mr=new MediaRecorder(stream);
+                        const stream=await navigator.mediaDevices.getUserMedia({audio:{sampleRate:16000,channelCount:1}});
+                        // Pick smallest supported format
+                        const mimeType=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4']
+                          .find(t=>MediaRecorder.isTypeSupported(t)) || 'audio/webm';
+                        const mr=new MediaRecorder(stream,{mimeType, audioBitsPerSecond:16000});
                         audioChunksRef.current=[];
-                        mr.ondataavailable=e=>audioChunksRef.current.push(e.data);
+                        mr.ondataavailable=e=>{if(e.data.size>0) audioChunksRef.current.push(e.data);};
                         mr.onstop=async()=>{
                           stream.getTracks().forEach(t=>t.stop());
-                          const blob=new Blob(audioChunksRef.current,{type:'audio/webm'});
-                          if(blob.size<1000){return;}
-                          // Convert to base64 data URL for inline playback (no file storage needed)
+                          const blob=new Blob(audioChunksRef.current,{type:mimeType});
+                          if(blob.size<500){ alert('Recording too short — try again'); return; }
+                          if(blob.size>200000){ alert('Recording too long — keep it under 5 seconds'); return; }
                           const reader=new FileReader();
                           reader.onload=async()=>{
-                            const dataUrl=reader.result;
-                            await sbSendMessage(userName,`🎙__VOICE__${dataUrl}`,groupCode);
+                            try {
+                              await sbSendMessage(userName,`🎙__VOICE__${reader.result}`,groupCode);
+                            } catch(e){ alert('Failed to send voice clip: '+e.message); }
                           };
+                          reader.onerror=()=>alert('Failed to read audio');
                           reader.readAsDataURL(blob);
                         };
-                        mr.start();
+                        mr.start(100); // collect in 100ms chunks
                         setMediaRecorder(mr);
                         setIsRecording(true);
-                        // Auto-stop after 10s
-                        setTimeout(()=>{if(mr.state==='recording'){mr.stop();setIsRecording(false);}},10000);
-                      } catch(e){console.error('Mic error:',e);}
+                        // Auto-stop after 5s
+                        setTimeout(()=>{if(mr.state==='recording'){mr.stop();setIsRecording(false);}},5000);
+                      } catch(e){
+                        if(e.name==='NotAllowedError') alert('Microphone access denied — please allow mic access in your browser settings');
+                        else alert('Recording error: '+e.message);
+                      }
                     }
                   }} style={{
                     padding:"10px 12px",flexShrink:0,
@@ -6358,8 +6366,7 @@ export default function App(){
                     border:`1px solid ${isRecording?"rgba(239,68,68,0.5)":"rgba(255,255,255,0.12)"}`,
                     borderRadius:12,color:isRecording?"#ef4444":"#555",
                     fontSize:16,cursor:"pointer",
-                    animation:isRecording?"pulse 1s ease infinite":undefined,
-                  }} title={isRecording?"Stop recording (10s max)":"Record voice clip"}>
+                  }} title={isRecording?"Stop (5s max)":"Record voice clip"}>
                     {isRecording?"⏹":"🎙"}
                   </button>
                   <button onClick={sendMsg} disabled={!chatInput.trim()||chatSending} style={{

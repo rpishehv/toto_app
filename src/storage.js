@@ -250,9 +250,12 @@ export async function sbGetMessages(limit=50, groupCode='default') {
 export async function sbSendMessage(username, message, groupCode='default') {
   const { error } = await supabase
     .from('chat_messages')
-    .insert({ username, message: message.trim(), group_code: groupCode })
-  if (error) console.error('sbSendMessage error:', error.message)
-  return !error
+    .insert({ username, message: message.slice(0, 500000), group_code: groupCode })
+  if (error) {
+    console.error('sbSendMessage error:', error.message);
+    throw new Error(error.message);
+  }
+  return true;
 }
 
 export async function sbDeleteMessage(id) {
