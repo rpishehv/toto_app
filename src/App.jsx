@@ -1721,6 +1721,13 @@ export default function App(){
         const aiContent = await sbGetAIContent(gc);
         if(aiContent?.bracket)   { setBracketPred(aiContent.bracket); setBracketGeneratedBy(aiContent.bracket_generated_by); }
         if(aiContent?.commentary){ setCommentary(aiContent.commentary); setCommentaryGeneratedBy(aiContent.commentary_generated_by); }
+        if(aiContent?.match_analyses) {
+          const analyses = {};
+          Object.entries(aiContent.match_analyses).forEach(([id, a]) => {
+            analyses[id] = { text: a.text, loading: false };
+          });
+          setMatchAnalysis(analyses);
+        }
         // Load news
         const newsData = await sbGetNews(gc);
         if(newsData?.news){ setNewsStories(newsData.news); setNewsUpdatedBy(newsData.news_updated_by); setNewsUpdatedAt(newsData.news_updated_at); }
@@ -2392,6 +2399,13 @@ export default function App(){
       });
       const data = await res.json();
       setMatchAnalysis(prev => ({...prev, [id]: {text: data.analysis||data.error, loading:false}}));
+      // Persist to Supabase ai_content
+      try {
+        const existing = await sbGetAIContent(groupCode);
+        const analyses = existing?.match_analyses || {};
+        analyses[id] = { text: data.analysis||data.error, home: homeName, away: awayName, ts: Date.now() };
+        await supabase.from('ai_content').upsert({ group_code: groupCode, match_analyses: analyses }, { onConflict: 'group_code' });
+      } catch(e) { /* non-critical */ }
     } catch(e) {
       setMatchAnalysis(prev => ({...prev, [id]: {text:`Error: ${e.message}`, loading:false}}));
     }
