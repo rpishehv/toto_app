@@ -5205,8 +5205,8 @@ export default function App(){
               </h2>
 
               {total===0?(
-                <div style={{textAlign:"center",color:"#444",padding:"40px 20px",fontSize:13}}>
-                  Stats will appear here once matches kick off and results are entered.
+                <div style={{textAlign:"center",color:"#444",padding:"20px 20px 0",fontSize:13}}>
+                  No personal stats yet — enter your predictions to see your scoring breakdown.
                 </div>
               ):(
                 <>
@@ -5537,7 +5537,7 @@ export default function App(){
                 </div>);
               })()}
 
-              {/* ── Match Results Breakdown ── */}
+              {/* ── Match Results Breakdown — always visible when results exist ── */}
               {allPlayed.length>0&&(()=>{
                 const [openMatch, setOpenMatch] = React.useState(null);
                 const [filterGroup, setFilterGroup] = React.useState('All');
