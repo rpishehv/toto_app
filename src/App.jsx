@@ -1774,11 +1774,15 @@ export default function App(){
       const lastSeen = parseInt(localStorage.getItem(`wc26_chat_seen_${groupCode}`) || '0');
       const unreadAdmin = msgs.filter(m =>
         (m.username === 'Admin' || m.username === 'AI Recap') &&
-        new Date(m.created_at).getTime() > lastSeen
+        new Date(m.created_at).getTime() > lastSeen &&
+        m.username !== userName // don't show modal for your own messages
       );
       if (unreadAdmin.length > 0) {
-        setAdminReminderMsg(unreadAdmin[unreadAdmin.length - 1]);
-        setShowAdminReminderModal(true);
+        // Small delay so other modals (pred reminder, podium) appear first
+        setTimeout(() => {
+          setAdminReminderMsg(unreadAdmin[unreadAdmin.length - 1]);
+          setShowAdminReminderModal(true);
+        }, 2000);
       }
     });
     const chatSub = supabase
@@ -3656,7 +3660,7 @@ export default function App(){
       )}
 
       {/* Admin/AI reminder modal */}
-      {showAdminReminderModal&&adminReminderMsg&&(
+      {showAdminReminderModal&&adminReminderMsg&&!showPredReminder&&!showPodiumReminder&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",
           display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}}>
           <div style={{background:"#141922",border:"1px solid rgba(96,165,250,0.3)",
