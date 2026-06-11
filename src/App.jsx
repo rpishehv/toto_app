@@ -6636,9 +6636,9 @@ export default function App(){
                     <div style={{fontSize:13,fontWeight:700,color:"#ddd",marginBottom:6,lineHeight:1.4}}>
                       {story.headline}
                     </div>
-                    {/* Summary */}
+                    {/* Summary — strip citation tags from AI output */}
                     <div style={{fontSize:11,color:"#666",lineHeight:1.6}}>
-                      {story.summary}
+                      {(story.summary||'').replace(/<cite[^>]*>(.*?)<\/cite>/gs,'$1').replace(/<[^>]+>/g,'').trim()}
                     </div>
                     {/* Source */}
                     {story.source&&(

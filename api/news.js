@@ -23,7 +23,7 @@ Return 5-6 stories in this exact format:
 
 category must be one of: Injury, Team News, Match Preview, Match Report, Analysis, Transfer, Standings
 urgent is true only for breaking news from the last few hours
-headline max 80 chars, summary 2-3 sentences`;
+headline max 80 chars, summary 2-3 sentences plain text only — no HTML, no <cite> tags, no markdown`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -80,7 +80,7 @@ headline max 80 chars, summary 2-3 sentences`;
 
     const safe = stories.map(s => ({
       headline: String(s.headline || '').slice(0, 100),
-      summary:  String(s.summary  || ''),
+      summary:  String(s.summary  || '').replace(/<cite[^>]*>(.*?)<\/cite>/gs,'$1').replace(/<[^>]+>/g,'').trim(),
       category: String(s.category || 'General'),
       team:     String(s.team     || 'General'),
       source:   String(s.source   || ''),
