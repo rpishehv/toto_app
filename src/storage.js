@@ -90,14 +90,16 @@ export async function sbGetActualResults(groupCode='default') {
 }
 
 export async function sbSaveActualResults(matches, knockout, actualPodium, koKickoffs, livePredictions, groupCode='default') {
-  const { error } = await supabase.from('actual_results').upsert({
-    id: 1, matches, knockout,
+  // Row id=1 always exists (inserted in schema), so use update not upsert
+  const { data, error } = await supabase.from('actual_results').update({
+    matches, knockout,
     actual_podium: actualPodium,
     ko_kickoffs: koKickoffs,
     live_predictions: livePredictions || {},
     updated_at: new Date().toISOString()
-  }, { onConflict: 'id' })
-  if (error) console.error('sbSaveActualResults error:', error.message)
+  }).eq('id', 1).select()
+  if (error) console.error('sbSaveActualResults error:', error.message, error.code, error.details)
+  else console.log('sbSaveActualResults success, rows updated:', data?.length)
 }
 
 // ─── LEADERBOARD ─────────────────────────────────────────────────────────────
