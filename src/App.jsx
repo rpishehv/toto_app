@@ -1538,6 +1538,7 @@ export default function App(){
   const [matchQueryLoading,setMatchQueryLoading]=useState(false);
   const [openMatch,setOpenMatch]=useState(null);
   const [filterGroup,setFilterGroup]=useState('All');
+  const [allPlayerPreds,setAllPlayerPreds]=useState({});
   const [simActive,setSimActive]=useState(false);
   const [simMinute,setSimMinute]=useState(0);
   const [simEvents,setSimEvents]=useState([]);
@@ -1706,18 +1707,17 @@ export default function App(){
         if(actual?.actual_podium)    setActualPodium(p=>({...p,...actual.actual_podium}));
         if(actual?.ko_kickoffs)      setKoKickoffs(actual.ko_kickoffs);
         if(actual?.live_predictions) setLivePredictions(actual.live_predictions);
-        // Also load all players' predictions for live match social panel
+        // Also load all players' predictions for live match social panel and stats breakdown
         sbGetAllPredictions(gc).then(allPreds => {
           if (!allPreds?.length) return;
-          setLivePredictions(prev => {
-            const predsMap = {};
-            allPreds.forEach(p => {
-              if (p?.username) {
-                predsMap[p.username] = { username: p.username, matches: p.matches||[], podium: p.podium||null };
-              }
-            });
-            return { ...prev, ...predsMap };
+          const predsMap = {};
+          allPreds.forEach(p => {
+            if (p?.username) {
+              predsMap[p.username] = { username: p.username, matches: p.matches||[], knockout: p.knockout||[], podium: p.podium||null };
+            }
           });
+          setAllPlayerPreds(predsMap);
+          setLivePredictions(prev => ({ ...prev, ...predsMap }));
         }).catch(()=>{});
         if(actual)                   setAdminHasSaved(true);
         const hist = await sbGetSaveHistory();
@@ -5576,17 +5576,18 @@ export default function App(){
                     {Object.entries(filteredGroups).map(([groupKey, groupMatches])=>(
                       <div key={groupKey} style={{marginBottom:16}}>
                         <div style={{fontSize:11,color:"#555",fontWeight:700,letterSpacing:0.5,marginBottom:6,textTransform:"uppercase"}}>{groupKey}</div>
-                        {groupMatches.map(actual=>{
+                        {(groupMatches||[]).filter(actual=>actual&&actual.id).map(actual=>{
                           const isOpen = openMatch === actual.id;
-                          const playerRows = leaderboard.map(e=>{
-                            const playerPreds = e.username===userName
-                              ? [...matches,...knockout]
-                              : (livePredictions[e.username]?.matches || livePredictions[e.username] || []);
-                            const predsArr = Array.isArray(playerPreds) ? playerPreds : [];
-                            const pred = predsArr.find(m=>m.id===actual.id);
+                          const playerRows = (leaderboard||[]).map(e=>{
+                            if (!e?.username) return null;
+                            const isMe = e.username===userName;
+                            const playerPreds = isMe
+                              ? [...(matches||[]),...(knockout||[])]
+                              : (allPlayerPreds[e.username]?.matches || []);
+                            const pred = playerPreds.find(m=>m&&m.id===actual.id);
                             const result = pred ? calcMatchPoints(pred, actual) : null;
                             return { username:e.username, pred, result };
-                          }).filter(r=>r.pred&&r.pred.homeScore!==null);
+                          }).filter(r=>r&&r.pred&&r.pred.homeScore!==null);
 
                           // Summary counts for collapsed view
                           const exactCount = playerRows.filter(r=>r.result?.points===6).length;
@@ -5631,7 +5632,7 @@ export default function App(){
                                       background:"rgba(255,255,255,0.06)",
                                       display:"flex",alignItems:"center",justifyContent:"center",
                                       fontSize:9,color:"#555",fontWeight:700,
-                                    }}>{row.username.slice(0,2).toUpperCase()}</div>
+                                    }}>{(row.username||'??').slice(0,2).toUpperCase()}</div>
                                     <div style={{flex:1,fontSize:11,color:isMe?"#fcb900":"#888",fontWeight:isMe?700:400}}>
                                       {row.username}{isMe?" (you)":""}
                                     </div>
