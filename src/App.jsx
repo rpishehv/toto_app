@@ -1533,6 +1533,9 @@ export default function App(){
   const [todayMatches,setTodayMatches]=useState([]);
   const [refreshCooldown,setRefreshCooldown]=useState(0); // seconds remaining
   const [matchAnalysis,setMatchAnalysis]=useState({});
+  const [matchQuery,setMatchQuery]=useState('');
+  const [matchQueryAnswer,setMatchQueryAnswer]=useState({});
+  const [matchQueryLoading,setMatchQueryLoading]=useState(false);
   const [simActive,setSimActive]=useState(false);
   const [simMinute,setSimMinute]=useState(0);
   const [simEvents,setSimEvents]=useState([]);
@@ -2368,6 +2371,40 @@ export default function App(){
     } catch(e) {
       console.error('Fixture details error:', e);
     }
+  };
+
+  const askMatchQuery = async (question, fixture) => {
+    if (!question.trim() || matchQueryLoading) return;
+    const id = fixture?.fixture?.id;
+    setMatchQueryLoading(true);
+    try {
+      const res = await fetch('/api/matchquery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question,
+          home: fixture?.teams?.home?.name,
+          away: fixture?.teams?.away?.name,
+          homeScore: fixture?.goals?.home,
+          awayScore: fixture?.goals?.away,
+          elapsed: fixture?.fixture?.status?.elapsed,
+          events: fixtureEvents.slice(-10),
+          stats: fixtureStats,
+        }),
+      });
+      const data = await res.json();
+      setMatchQueryAnswer(prev => ({
+        ...prev,
+        [id]: [...(prev[id]||[]), { q: question, a: data.answer||data.error }],
+      }));
+    } catch(e) {
+      setMatchQueryAnswer(prev => ({
+        ...prev,
+        [id]: [...(prev[id]||[]), { q: question, a: `Error: ${e.message}` }],
+      }));
+    }
+    setMatchQueryLoading(false);
+    setMatchQuery('');
   };
 
   const analyseMatch = async (fixture) => {
@@ -5972,6 +6009,53 @@ export default function App(){
                           {analysis.text}
                         </div>
                       )}
+
+                      {/* 🔍 Match Q&A */}
+                      <div style={{marginTop:10}}>
+                        <div style={{fontSize:11,color:"#555",fontWeight:700,marginBottom:6}}>
+                          🔍 Ask anything about this match
+                        </div>
+                        {/* Previous answers */}
+                        {(matchQueryAnswer[id]||[]).map((qa,i)=>(
+                          <div key={i} style={{marginBottom:8}}>
+                            <div style={{fontSize:11,color:"#888",marginBottom:3}}>Q: {qa.q}</div>
+                            <div style={{fontSize:12,color:"#c4b5fd",lineHeight:1.6,padding:"8px 10px",
+                              background:"rgba(96,165,250,0.06)",border:"1px solid rgba(96,165,250,0.15)",
+                              borderRadius:6}}>{qa.a}</div>
+                          </div>
+                        ))}
+                        {/* Suggested questions */}
+                        {!(matchQueryAnswer[id]?.length) && (
+                          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+                            {["How many fans in the stadium?","Who's the referee?","What's the weather like?","Any injury news?"].map(q=>(
+                              <button key={q} onClick={()=>askMatchQuery(q,f)} style={{
+                                fontSize:10,padding:"4px 8px",borderRadius:6,
+                                background:"rgba(96,165,250,0.08)",border:"1px solid rgba(96,165,250,0.2)",
+                                color:"#60a5fa",cursor:"pointer",fontFamily:"inherit",
+                              }}>{q}</button>
+                            ))}
+                          </div>
+                        )}
+                        {/* Input */}
+                        <div style={{display:"flex",gap:6}}>
+                          <input
+                            value={matchQuery}
+                            onChange={e=>setMatchQuery(e.target.value)}
+                            onKeyDown={e=>e.key==="Enter"&&askMatchQuery(matchQuery,f)}
+                            placeholder="Ask about the match…"
+                            style={{flex:1,padding:"8px 10px",background:"rgba(255,255,255,0.05)",
+                              border:"1px solid rgba(255,255,255,0.12)",borderRadius:7,
+                              color:"#fff",fontSize:12,fontFamily:"inherit",outline:"none"}}
+                          />
+                          <button onClick={()=>askMatchQuery(matchQuery,f)} disabled={matchQueryLoading||!matchQuery.trim()}
+                            style={{padding:"8px 12px",background:matchQueryLoading?"rgba(96,165,250,0.1)":"rgba(96,165,250,0.2)",
+                              border:"1px solid rgba(96,165,250,0.3)",borderRadius:7,
+                              color:"#60a5fa",fontSize:12,fontWeight:700,cursor:matchQueryLoading?"wait":"pointer",
+                              fontFamily:"inherit",minWidth:48}}>
+                            {matchQueryLoading?"⏳":"Ask"}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
