@@ -1775,13 +1775,14 @@ export default function App(){
       const unreadAdmin = msgs.filter(m =>
         (m.username === 'Admin' || m.username === 'AI Recap') &&
         new Date(m.created_at).getTime() > lastSeen &&
-        m.username !== userName // don't show modal for your own messages
+        m.username !== userName
       );
+      console.log('[AdminModal] msgs:', msgs.length, 'lastSeen:', lastSeen, 'unreadAdmin:', unreadAdmin.length, unreadAdmin.map(m=>({u:m.username,t:m.created_at})));
       if (unreadAdmin.length > 0) {
-        // Small delay so other modals (pred reminder, podium) appear first
         setTimeout(() => {
           setAdminReminderMsg(unreadAdmin[unreadAdmin.length - 1]);
           setShowAdminReminderModal(true);
+          console.log('[AdminModal] showing modal for:', unreadAdmin[unreadAdmin.length-1]);
         }, 2000);
       }
     });
