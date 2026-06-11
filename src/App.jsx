@@ -2509,22 +2509,31 @@ export default function App(){
         e.team?.name === teamName
       );
       const reds = events.filter(e =>
-        e.type === "Card" && e.detail === "Red Card" &&
+        e.type === "Card" && 
+        (e.detail === "Red Card" || e.detail === "Yellow-Red Card" || e.detail === "Direct Red") &&
         e.team?.name === teamName
       );
       // Apply subs
       subs.forEach(sub => {
         const outName = sub.player?.name || sub.assist?.name;
         const inName  = sub.assist?.name || sub.player?.name;
-        const idx = current.findIndex(p => p.name === outName || p.player?.name === outName);
+        const idx = current.findIndex(p => 
+          p.name === outName || p.player?.name === outName ||
+          (outName && p.name?.includes(outName?.split(' ').slice(-1)[0]))
+        );
         if (idx >= 0) {
           current[idx] = { ...current[idx], name: inName, subbed: true };
         }
       });
-      // Apply red cards
+      // Apply red cards — flexible name matching
       reds.forEach(red => {
         const name = red.player?.name;
-        const idx = current.findIndex(p => p.name === name || p.player?.name === name);
+        if (!name) return;
+        const lastName = name.split(' ').slice(-1)[0].toLowerCase();
+        const idx = current.findIndex(p => {
+          const pName = (p.name || p.player?.name || '').toLowerCase();
+          return pName === name.toLowerCase() || pName.includes(lastName);
+        });
         if (idx >= 0) current[idx] = { ...current[idx], redCard: true };
       });
       return current;
