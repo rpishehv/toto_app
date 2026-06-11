@@ -1536,6 +1536,8 @@ export default function App(){
   const [matchQuery,setMatchQuery]=useState('');
   const [matchQueryAnswer,setMatchQueryAnswer]=useState({});
   const [matchQueryLoading,setMatchQueryLoading]=useState(false);
+  const [openMatch,setOpenMatch]=useState(null);
+  const [filterGroup,setFilterGroup]=useState('All');
   const [simActive,setSimActive]=useState(false);
   const [simMinute,setSimMinute]=useState(0);
   const [simEvents,setSimEvents]=useState([]);
@@ -5539,9 +5541,6 @@ export default function App(){
 
               {/* ── Match Results Breakdown — always visible when results exist ── */}
               {allPlayed.length>0&&(()=>{
-                const [openMatch, setOpenMatch] = React.useState(null);
-                const [filterGroup, setFilterGroup] = React.useState('All');
-
                 // Group completed matches by round/group
                 const groups = {};
                 allPlayed.forEach(m => {
@@ -5582,8 +5581,9 @@ export default function App(){
                           const playerRows = leaderboard.map(e=>{
                             const playerPreds = e.username===userName
                               ? [...matches,...knockout]
-                              : (livePredictions[e.username]||[]);
-                            const pred = playerPreds.find?.(m=>m.id===actual.id);
+                              : (livePredictions[e.username]?.matches || livePredictions[e.username] || []);
+                            const predsArr = Array.isArray(playerPreds) ? playerPreds : [];
+                            const pred = predsArr.find(m=>m.id===actual.id);
                             const result = pred ? calcMatchPoints(pred, actual) : null;
                             return { username:e.username, pred, result };
                           }).filter(r=>r.pred&&r.pred.homeScore!==null);
