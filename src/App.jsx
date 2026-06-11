@@ -1772,19 +1772,16 @@ export default function App(){
       setChatMessages(msgs);
       // Check for unread admin/AI messages — show modal if user hasn't been in chat tab
       const lastSeen = parseInt(localStorage.getItem(`wc26_chat_seen_${groupCode}`) || '0');
+      const isAdminLike = u => ['Admin','AI Recap','🤖 AI','⚡'].includes(u);
       const unreadAdmin = msgs.filter(m =>
-        (m.username === 'Admin' || m.username === 'AI Recap') &&
+        isAdminLike(m.username) &&
         new Date(m.created_at).getTime() > lastSeen &&
         m.username !== userName
       );
-      console.log('[AdminModal] msgs:', msgs.length, 'lastSeen:', lastSeen, 'unreadAdmin:', unreadAdmin.length, unreadAdmin.map(m=>({u:m.username,t:m.created_at})));
-      console.log('[AdminModal] all usernames:', [...new Set(msgs.map(m=>m.username))]);
-      console.log('[AdminModal] admin-like msgs:', msgs.filter(m=>m.username?.toLowerCase().includes('admin')||m.username?.toLowerCase().includes('recap')||m.username?.toLowerCase().includes('ai')));
       if (unreadAdmin.length > 0) {
         setTimeout(() => {
           setAdminReminderMsg(unreadAdmin[unreadAdmin.length - 1]);
           setShowAdminReminderModal(true);
-          console.log('[AdminModal] showing modal for:', unreadAdmin[unreadAdmin.length-1]);
         }, 2000);
       }
     });
@@ -3669,11 +3666,11 @@ export default function App(){
           <div style={{background:"#141922",border:"1px solid rgba(96,165,250,0.3)",
             borderRadius:16,padding:"24px 22px",maxWidth:360,width:"100%"}}>
             <div style={{fontSize:28,textAlign:"center",marginBottom:8}}>
-              {adminReminderMsg.username==="AI Recap"?"🤖":"📣"}
+              {(adminReminderMsg.username==="🤖 AI"||adminReminderMsg.username==="AI Recap")?"🤖":"📣"}
             </div>
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,
               color:"#60a5fa",textAlign:"center",letterSpacing:1,marginBottom:10}}>
-              {adminReminderMsg.username==="AI Recap"?"New AI Digest":"Admin Message"}
+              {(adminReminderMsg.username==="🤖 AI"||adminReminderMsg.username==="AI Recap")?"New AI Digest":"Admin Message"}
             </div>
             <div style={{
               fontSize:12,color:"#888",lineHeight:1.7,marginBottom:16,
