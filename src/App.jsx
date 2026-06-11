@@ -5687,6 +5687,7 @@ export default function App(){
               <div style={{fontSize:11,color:"#555",textAlign:"center",marginBottom:8}}>
                 ☝️ Tap a match to see live stats, formations & everyone's predictions
               </div>
+              {selectedFixture&&(()=>{
                 const f=selectedFixture;
                 const home=f.teams?.home, away=f.teams?.away;
                 const score=f.goals, status=f.fixture?.status, id=f.fixture?.id;
