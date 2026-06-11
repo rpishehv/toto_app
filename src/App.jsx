@@ -1809,11 +1809,13 @@ export default function App(){
     // A KO match is open once both teams are known (not TBD)
     const groupDone = matches.filter(m=>m.homeScore!==null&&m.awayScore!==null).length;
 
-    const r32Open    = knockout.filter(m=>m.round==='Round of 32'&&m.home!=='TBD'&&m.away!=='TBD');
-    const r16Open    = knockout.filter(m=>m.round==='Round of 16'&&m.home!=='TBD'&&m.away!=='TBD');
-    const qfOpen     = knockout.filter(m=>m.round==='Quarter-Finals'&&m.home!=='TBD'&&m.away!=='TBD');
-    const sfOpen     = knockout.filter(m=>m.round==='Semi-Finals'&&m.home!=='TBD'&&m.away!=='TBD');
-    const finalOpen  = knockout.filter(m=>m.round==='Final'&&m.home!=='TBD'&&m.away!=='TBD');
+    // Only show KO predictions as part of total once admin has entered group results
+    const groupResultsExist = actualMatches.some(m=>m.homeScore!==null);
+    const r32Open    = groupResultsExist ? knockout.filter(m=>m.round==='Round of 32'&&m.home!=='TBD'&&m.away!=='TBD') : [];
+    const r16Open    = groupResultsExist ? knockout.filter(m=>m.round==='Round of 16'&&m.home!=='TBD'&&m.away!=='TBD') : [];
+    const qfOpen     = groupResultsExist ? knockout.filter(m=>m.round==='Quarter-Finals'&&m.home!=='TBD'&&m.away!=='TBD') : [];
+    const sfOpen     = groupResultsExist ? knockout.filter(m=>m.round==='Semi-Finals'&&m.home!=='TBD'&&m.away!=='TBD') : [];
+    const finalOpen  = groupResultsExist ? knockout.filter(m=>m.round==='Final'&&m.home!=='TBD'&&m.away!=='TBD') : [];
 
     const koDone = knockout.filter(m=>
       m.homeScore!==null&&m.awayScore!==null&&m.home!=='TBD'
