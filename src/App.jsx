@@ -2280,7 +2280,8 @@ export default function App(){
 
   // ── Live Match Functions ────────────────────────────────────────────────────
   const fetchLiveMatches = async () => {
-    if (refreshCooldown > 0) return;
+    console.log('[Live] fetchLiveMatches called, cooldown:', refreshCooldown);
+    if (refreshCooldown > 0) { console.log('[Live] blocked by cooldown'); return; }
     setLiveLoading(true);
     setLiveError(null);
     try {
@@ -2831,7 +2832,7 @@ export default function App(){
   // Load live data when tab is opened — only if cooldown expired (saves API quota)
   useEffect(()=>{
     if(tab!=="live") return;
-    // Don't re-fetch if we already have data from less than 55s ago
+    console.log('[Live] tab opened, cooldown:', refreshCooldown);
     if(refreshCooldown > 0) return;
     fetchLiveMatches();
   },[tab]);
