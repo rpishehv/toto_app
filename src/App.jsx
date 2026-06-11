@@ -2291,8 +2291,8 @@ export default function App(){
       ]);
       console.log('[Live] HTTP status:', liveRes.status, todayRes.status);
       const [liveData, todayData] = await Promise.all([liveRes.json(), todayRes.json()]);
-      console.log('[Live] liveData:', JSON.stringify(liveData).slice(0,300));
-      console.log('[Live] todayData:', JSON.stringify(todayData).slice(0,300));
+      console.log('[Live] liveData:', JSON.stringify(liveData).slice(0,500));
+      console.log('[Live] todayData results:', todayData.results, 'first fixture:', JSON.stringify(todayData.response?.[0]?.fixture).slice(0,200));
       if (liveData._unavailable) {
         console.log('[Live] _unavailable, _error:', liveData._error);
       }

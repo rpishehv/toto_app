@@ -60,19 +60,13 @@ export default async function handler(req) {
     }
 
     const data = await response.json();
+    // Log errors but return raw for debugging
     if (data.errors && Object.keys(data.errors).length > 0) {
       const msg = Object.values(data.errors).join(', ');
-      console.log('[live.js] API error:', msg);
-      // Season not available or internal errors — return empty gracefully
-      if (msg.toLowerCase().includes('season') ||
-          msg.toLowerCase().includes('2026') ||
-          msg.toLowerCase().includes('internal')) {
-        return new Response(JSON.stringify({ response: [], results: 0, _unavailable: true, _error: msg }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
-        });
-      }
-      return new Response(JSON.stringify({ error: msg }), { status: 400 });
+      return new Response(JSON.stringify({ response: [], results: 0, _unavailable: true, _error: msg }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+      });
     }
 
     return new Response(JSON.stringify(data), {
