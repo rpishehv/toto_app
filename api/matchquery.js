@@ -1,4 +1,4 @@
-// api/matchquery.js — Answer live match questions using Claude + web search
+// api/matchquery.js — Answer live match questions using Claude + web search + API-Football
 
 export const config = { runtime: 'edge' };
 
@@ -7,16 +7,36 @@ export default async function handler(req) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return new Response(JSON.stringify({ error: 'No API key' }), { status: 500 });
 
-  const { question, home, away, homeScore, awayScore, elapsed, stats, events, venue, city, attendance, referee } = await req.json();
+  const { question, home, away, homeScore, awayScore, elapsed, stats, events, fixtureId } = await req.json();
   if (!question) return new Response(JSON.stringify({ error: 'No question' }), { status: 400 });
+
+  // Fetch fresh fixture details from API-Football
+  let venue = 'Unknown', city = '', attendance = null, referee = 'Unknown';
+  if (fixtureId) {
+    try {
+      const footballKey = process.env.RAPIDAPI_KEY;
+      if (footballKey) {
+        const fRes = await fetch(`https://v3.football.api-sports.io/fixtures?id=${fixtureId}`, {
+          headers: { 'x-apisports-key': footballKey },
+        });
+        const fData = await fRes.json();
+        const fix = fData.response?.[0]?.fixture;
+        if (fix) {
+          venue = fix.venue?.name || venue;
+          city = fix.venue?.city || city;
+          attendance = fix.attendance || null;
+          referee = fix.referee || referee;
+        }
+      }
+    } catch(e) { /* non-critical */ }
+  }
 
   const matchContext = `
 Current match: ${home} ${homeScore ?? '-'} – ${awayScore ?? '-'} ${away} (${elapsed ? elapsed + "'" : 'Not started'})
-Venue: ${venue || 'Unknown'}${city ? ', ' + city : ''}
-Attendance: ${attendance ? attendance.toLocaleString() : 'Not yet available'}
-Referee: ${referee || 'Unknown'}
+Venue: ${venue}${city ? ', ' + city : ''}
+Attendance: ${attendance ? parseInt(attendance).toLocaleString() + ' fans' : 'Not yet released'}
+Referee: ${referee}
 Recent events: ${(events||[]).slice(-5).map(e=>`${e.time?.elapsed}' ${e.type} - ${e.player?.name}`).join(', ') || 'None'}
-Stats available: ${stats?.length ? 'Yes' : 'No'}
 `.trim();
 
   const prompt = `You are a football analyst assistant for a live World Cup 2026 match.
@@ -26,7 +46,7 @@ ${matchContext}
 
 User question: "${question}"
 
-Answer the question concisely (2-4 sentences). If it's about stadium attendance, TV viewers, or other facts not in the match context, use your web search tool to find accurate information. If it's about the current match, use the provided context.`;
+Answer concisely in 2-3 sentences using the match context above. Only use web search if the question cannot be answered from the context provided.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -38,7 +58,7 @@ Answer the question concisely (2-4 sentences). If it's about stadium attendance,
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 1024,
+        max_tokens: 512,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -54,7 +74,7 @@ Answer the question concisely (2-4 sentences). If it's about stadium attendance,
       .join('\n')
       .trim() || 'Could not generate an answer.';
 
-    return new Response(JSON.stringify({ answer }), {
+    return new Response(JSON.stringify({ answer, venue, attendance, referee }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
