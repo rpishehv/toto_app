@@ -32,7 +32,6 @@ Answer the question concisely (2-4 sentences). If it's about stadium attendance,
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'interleaved-thinking-2025-05-14',
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
@@ -43,11 +42,14 @@ Answer the question concisely (2-4 sentences). If it's about stadium attendance,
     });
 
     const data = await response.json();
-    const answer = data.content
-      ?.filter(b => b.type === 'text')
-      ?.map(b => b.text)
-      ?.join('\n')
-      ?.trim() || 'Could not generate an answer.';
+    if (data.error) {
+      return new Response(JSON.stringify({ answer: `API error: ${data.error.message}` }), { status: 200 });
+    }
+    const answer = (data.content || [])
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('\n')
+      .trim() || 'Could not generate an answer.';
 
     return new Response(JSON.stringify({ answer }), {
       status: 200,
