@@ -1701,6 +1701,14 @@ export default function App(){
         if(actual?.actual_podium)    setActualPodium(p=>({...p,...actual.actual_podium}));
         if(actual?.ko_kickoffs)      setKoKickoffs(actual.ko_kickoffs);
         if(actual?.live_predictions) setLivePredictions(actual.live_predictions);
+        // Also load all players' predictions for live match social panel
+        sbGetAllPredictions(gc).then(allPreds => {
+          const predsMap = {};
+          allPreds.forEach(p => {
+            predsMap[p.username] = { username: p.username, matches: p.matches||[], podium: p.podium||null };
+          });
+          setLivePredictions(prev => ({ ...predsMap, ...prev }));
+        });
         if(actual)                   setAdminHasSaved(true);
         const hist = await sbGetSaveHistory();
         if(hist) setSaveHistory(hist);
@@ -1781,9 +1789,6 @@ export default function App(){
         isAdminLike(m.username) &&
         new Date(m.created_at).getTime() > lastSeen
       );
-      console.log('[Modal] groupCode:', groupCode, 'lastSeen:', lastSeen, 'msgs:', msgs.length,
-        'adminMsgs:', msgs.filter(m=>isAdminLike(m.username)).length,
-        'unread:', unreadAdmin.length);
       if (unreadAdmin.length > 0) {
         setTimeout(() => {
           setAdminReminderMsg(unreadAdmin[unreadAdmin.length - 1]);
@@ -2280,7 +2285,6 @@ export default function App(){
 
   // ── Live Match Functions ────────────────────────────────────────────────────
   const fetchLiveMatches = async () => {
-    console.log('[Live] fetchLiveMatches called, cooldown:', refreshCooldown);
     if (refreshCooldown > 0) { console.log('[Live] blocked by cooldown'); return; }
     setLiveLoading(true);
     setLiveError(null);
@@ -2289,20 +2293,15 @@ export default function App(){
         fetch('/api/live?type=live'),
         fetch('/api/live?type=today'),
       ]);
-      console.log('[Live] HTTP status:', liveRes.status, todayRes.status);
       const [liveData, todayData] = await Promise.all([liveRes.json(), todayRes.json()]);
-      console.log('[Live] liveData:', JSON.stringify(liveData).slice(0,500));
-      console.log('[Live] todayData results:', todayData.results, 'first fixture:', JSON.stringify(todayData.response?.[0]?.fixture).slice(0,200));
+
       if (liveData._unavailable) {
-        console.log('[Live] _unavailable, _error:', liveData._error);
       }
       if (liveData.error) {
-        console.log('[Live] error detected:', liveData.error);
         const isSeasonError = liveData.error.toLowerCase().includes('internal') ||
           liveData.error.toLowerCase().includes('season') ||
           liveData.error.toLowerCase().includes('2026');
         if (isSeasonError) {
-          console.log('[Live] suppressed as season error — treating as no matches');
           setLiveMatches([]);
           setTodayMatches([]);
           setLiveLastUpdated(new Date());
@@ -2312,13 +2311,11 @@ export default function App(){
         }
         throw new Error(liveData.tip ? `${liveData.error} — ${liveData.tip}` : liveData.error);
       }
-      console.log('[Live] matches found:', liveData.response?.length, 'today:', todayData.response?.length);
       setLiveMatches(liveData.response || []);
       setTodayMatches(todayData.response || []);
       setLiveLastUpdated(new Date());
       setRefreshCooldown(120);
     } catch(e) {
-      console.log('[Live] caught error:', e.message);
       setLiveError(e.message);
     }
     setLiveLoading(false);
@@ -2835,7 +2832,6 @@ export default function App(){
   // Load live data when tab is opened — only if cooldown expired (saves API quota)
   useEffect(()=>{
     if(tab!=="live") return;
-    console.log('[Live] tab opened, cooldown:', refreshCooldown);
     if(refreshCooldown > 0) return;
     fetchLiveMatches();
   },[tab]);
@@ -5683,7 +5679,9 @@ export default function App(){
                   );
                 })}
               </div>
-              {selectedFixture&&(()=>{
+              <div style={{fontSize:11,color:"#555",textAlign:"center",marginBottom:8}}>
+                ☝️ Tap a match to see live stats, formations & everyone's predictions
+              </div>
                 const f=selectedFixture;
                 const home=f.teams?.home, away=f.teams?.away;
                 const score=f.goals, status=f.fixture?.status, id=f.fixture?.id;
