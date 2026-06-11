@@ -5409,13 +5409,14 @@ export default function App(){
                   {/* Podium picks breakdown */}
                   {leaderboard.length>0&&(()=>{
                     // Build counts for each place from leaderboard podium field
-                    const placeCounts = { first:{}, second:{}, third:{} };
+                    const placeCounts = { first:{}, second:{}, third:{}, topScorer:{} };
                     leaderboard.forEach(e=>{
                       const p = e.podium || {};
                       ['first','second','third'].forEach(place=>{
                         const t = p[place] || (place==='first' ? (e.champion||'?') : '?');
                         placeCounts[place][t] = (placeCounts[place][t]||0)+1;
                       });
+                      if(p.topScorer) placeCounts.topScorer[p.topScorer] = (placeCounts.topScorer[p.topScorer]||0)+1;
                     });
 
                     const places = [
@@ -5429,8 +5430,8 @@ export default function App(){
                       <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"14px"}}>
                         <div style={{fontSize:12,fontWeight:700,marginBottom:14}}>👑 Podium Picks</div>
                         {places.map(place=>{
-                          const counts = placeCounts[place.key];
-                          const sorted = Object.entries(counts||{})
+                          const counts = placeCounts[place.key] || {};
+                          const sorted = Object.entries(counts)
                             .filter(([t])=>t!=='?')
                             .sort((a,b)=>b[1]-a[1]).slice(0,5);
                           const unknown = counts['?']||0;
