@@ -5476,12 +5476,25 @@ export default function App(){
               <div style={{height:1,background:"rgba(255,255,255,0.06)",margin:"20px 0 16px"}}/>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#a78bfa",letterSpacing:1}}>🔍 Group Analytics</div>
-                <button onClick={generateGroupAnalytics} disabled={analyticsLoading} style={{
-                  padding:"6px 14px",borderRadius:8,fontFamily:"inherit",fontWeight:700,fontSize:12,
-                  cursor:analyticsLoading?"wait":"pointer",
-                  background:analyticsLoading?"rgba(139,92,246,0.04)":"rgba(139,92,246,0.12)",
-                  border:"1px solid rgba(139,92,246,0.3)",color:analyticsLoading?"#444":"#a78bfa",
-                }}>{analyticsLoading?"⏳ Analysing…":"🔍 Generate Analysis"}</button>
+                {(()=>{
+                  const SIX_HOURS = 6 * 60 * 60 * 1000;
+                  const lastGen = analyticsGeneratedAt ? new Date(analyticsGeneratedAt).getTime() : 0;
+                  const msSince = Date.now() - lastGen;
+                  const onCooldown = msSince < SIX_HOURS && lastGen > 0;
+                  const hoursLeft = onCooldown ? Math.ceil((SIX_HOURS - msSince) / 3600000) : 0;
+                  return(
+                    <button onClick={generateGroupAnalytics}
+                      disabled={analyticsLoading||onCooldown} style={{
+                      padding:"6px 14px",borderRadius:8,fontFamily:"inherit",fontWeight:700,fontSize:12,
+                      cursor:(analyticsLoading||onCooldown)?"not-allowed":"pointer",
+                      background:(analyticsLoading||onCooldown)?"rgba(139,92,246,0.04)":"rgba(139,92,246,0.12)",
+                      border:"1px solid rgba(139,92,246,0.3)",
+                      color:(analyticsLoading||onCooldown)?"#444":"#a78bfa",
+                    }}>
+                      {analyticsLoading?"⏳ Analysing…":onCooldown?`⏱ ${hoursLeft}h cooldown`:"🔍 Generate Analysis"}
+                    </button>
+                  );
+                })()}
               </div>
               {analyticsError&&<div style={{padding:"10px 14px",borderRadius:8,marginBottom:12,
                 background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",
