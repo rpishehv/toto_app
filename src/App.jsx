@@ -2293,6 +2293,9 @@ export default function App(){
       const [liveData, todayData] = await Promise.all([liveRes.json(), todayRes.json()]);
       console.log('[Live] liveData:', JSON.stringify(liveData).slice(0,300));
       console.log('[Live] todayData:', JSON.stringify(todayData).slice(0,300));
+      if (liveData._unavailable) {
+        console.log('[Live] _unavailable, _error:', liveData._error);
+      }
       if (liveData.error) {
         console.log('[Live] error detected:', liveData.error);
         const isSeasonError = liveData.error.toLowerCase().includes('internal') ||
