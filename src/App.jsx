@@ -1703,12 +1703,17 @@ export default function App(){
         if(actual?.live_predictions) setLivePredictions(actual.live_predictions);
         // Also load all players' predictions for live match social panel
         sbGetAllPredictions(gc).then(allPreds => {
-          const predsMap = {};
-          allPreds.forEach(p => {
-            predsMap[p.username] = { username: p.username, matches: p.matches||[], podium: p.podium||null };
+          if (!allPreds?.length) return;
+          setLivePredictions(prev => {
+            const predsMap = {};
+            allPreds.forEach(p => {
+              if (p?.username) {
+                predsMap[p.username] = { username: p.username, matches: p.matches||[], podium: p.podium||null };
+              }
+            });
+            return { ...prev, ...predsMap };
           });
-          setLivePredictions(prev => ({ ...predsMap, ...prev }));
-        });
+        }).catch(()=>{});
         if(actual)                   setAdminHasSaved(true);
         const hist = await sbGetSaveHistory();
         if(hist) setSaveHistory(hist);
@@ -5738,7 +5743,7 @@ export default function App(){
                       const currentScore={homeScore:score?.home??0, awayScore:score?.away??0};
                       // Gather all user predictions for this match
                       const matchPreds = Object.entries(livePredictions)
-                        .filter(([,v])=>typeof v==='object'&&v!==null&&!Array.isArray(v)&&v.username)
+                        .filter(([k,v])=>k && typeof v==='object'&&v!==null&&!Array.isArray(v)&&v.username&&Array.isArray(v.matches))
                         .map(([,v])=>v)
                         .filter(p=>{
                           const m=p.matches?.find(m=>
