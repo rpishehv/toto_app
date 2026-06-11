@@ -6605,26 +6605,39 @@ export default function App(){
                             {isMe?"You":msg.username}
                           </div>
                         )}
-                        <div style={{
-                          maxWidth:"85%",padding:"8px 12px",borderRadius:12,
-                          borderBottomRightRadius:isMe?2:12,
-                          borderBottomLeftRadius:isMe?12:2,
-                          background:isMe
-                            ?"linear-gradient(135deg,rgba(252,185,0,0.25),rgba(252,185,0,0.15))"
-                            :"rgba(255,255,255,0.06)",
-                          border:isMe
-                            ?"1px solid rgba(252,185,0,0.3)"
-                            :"1px solid rgba(255,255,255,0.10)",
-                          wordBreak:"break-word",
-                        }}>
-                          <div style={{fontSize:13,color:isMe?"#fcb900":"#ddd",lineHeight:1.5}}>
-                            {msg.message?.startsWith('🎙__VOICE__')
-                              ? <VoiceClip url={msg.message.slice('🎙__VOICE__'.length)} />
-                              : msg.message}
+                        <div style={{display:"flex",alignItems:"flex-end",gap:6,flexDirection:isMe?"row-reverse":"row"}}>
+                          <div style={{
+                            maxWidth:"85%",padding:"8px 12px",borderRadius:12,
+                            borderBottomRightRadius:isMe?2:12,
+                            borderBottomLeftRadius:isMe?12:2,
+                            background:isMe
+                              ?"linear-gradient(135deg,rgba(252,185,0,0.25),rgba(252,185,0,0.15))"
+                              :"rgba(255,255,255,0.06)",
+                            border:isMe
+                              ?"1px solid rgba(252,185,0,0.3)"
+                              :"1px solid rgba(255,255,255,0.10)",
+                            wordBreak:"break-word",
+                          }}>
+                            <div style={{fontSize:13,color:isMe?"#fcb900":"#ddd",lineHeight:1.5}}>
+                              {msg.message?.startsWith('🎙__VOICE__')
+                                ? <VoiceClip url={msg.message.slice('🎙__VOICE__'.length)} />
+                                : msg.message}
+                            </div>
+                            <div style={{fontSize:10,color:"#444",marginTop:3,textAlign:"right"}}>
+                              {formatTime(msg.created_at)}
+                            </div>
                           </div>
-                          <div style={{fontSize:10,color:"#444",marginTop:3,textAlign:"right"}}>
-                            {formatTime(msg.created_at)}
-                          </div>
+                          {(isMe||isAdmin)&&msg.id&&(
+                            <button onClick={async()=>{
+                              if(!window.confirm("Delete this message?")) return;
+                              await sbDeleteMessage(msg.id);
+                              setChatMessages(prev=>prev.filter(m=>m.id!==msg.id));
+                            }} style={{
+                              padding:"3px 6px",background:"transparent",border:"none",
+                              color:"#333",fontSize:12,cursor:"pointer",
+                              opacity:0.5,flexShrink:0,
+                            }}>🗑</button>
+                          )}
                         </div>
                       </div>
                     </div>
