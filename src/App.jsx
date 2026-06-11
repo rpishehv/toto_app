@@ -1487,6 +1487,7 @@ export default function App(){
     setTab(id);
     if(id==="chat") {
       setChatUnread(0);
+      localStorage.setItem(`wc26_chat_seen_${groupCode}`, Date.now().toString());
       setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
     }
   };
@@ -1581,6 +1582,8 @@ export default function App(){
   const audioChunksRef=React.useRef([]);
   const [chatSending,setChatSending]=useState(false);
   const [chatUnread,setChatUnread]=useState(0);
+  const [showAdminReminderModal,setShowAdminReminderModal]=useState(false);
+  const [adminReminderMsg,setAdminReminderMsg]=useState(null);
   const chatBottomRef=React.useRef(null);
   // Analytics
   const [groupAnalytics,setGroupAnalytics]=useState(null);
@@ -1765,7 +1768,19 @@ export default function App(){
       .subscribe();
 
     // Load chat + subscribe to new messages — filter by group_code
-    sbGetMessages(50, groupCode).then(msgs => setChatMessages(msgs));
+    sbGetMessages(50, groupCode).then(msgs => {
+      setChatMessages(msgs);
+      // Check for unread admin/AI messages — show modal if user hasn't been in chat tab
+      const lastSeen = parseInt(localStorage.getItem(`wc26_chat_seen_${groupCode}`) || '0');
+      const unreadAdmin = msgs.filter(m =>
+        (m.username === 'Admin' || m.username === 'AI Recap') &&
+        new Date(m.created_at).getTime() > lastSeen
+      );
+      if (unreadAdmin.length > 0) {
+        setAdminReminderMsg(unreadAdmin[unreadAdmin.length - 1]);
+        setShowAdminReminderModal(true);
+      }
+    });
     const chatSub = supabase
       .channel(`chat_${groupCode}`)
       .on('postgres_changes', { event:'INSERT', schema:'public', table:'chat_messages',
@@ -3631,6 +3646,49 @@ export default function App(){
                 color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",
               }}>👑 Go to My Pick</button>
               <button onClick={()=>setShowPodiumReminder(false)} style={{
+                flex:1,padding:"12px",background:"rgba(255,255,255,0.06)",
+                border:"1px solid rgba(255,255,255,0.10)",borderRadius:10,
+                color:"#666",fontSize:13,cursor:"pointer",fontFamily:"inherit",
+              }}>Later</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin/AI reminder modal */}
+      {showAdminReminderModal&&adminReminderMsg&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",
+          display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}}>
+          <div style={{background:"#141922",border:"1px solid rgba(96,165,250,0.3)",
+            borderRadius:16,padding:"24px 22px",maxWidth:360,width:"100%"}}>
+            <div style={{fontSize:28,textAlign:"center",marginBottom:8}}>
+              {adminReminderMsg.username==="AI Recap"?"🤖":"📣"}
+            </div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,
+              color:"#60a5fa",textAlign:"center",letterSpacing:1,marginBottom:10}}>
+              {adminReminderMsg.username==="AI Recap"?"New AI Digest":"Admin Message"}
+            </div>
+            <div style={{
+              fontSize:12,color:"#888",lineHeight:1.7,marginBottom:16,
+              background:"rgba(255,255,255,0.04)",borderRadius:8,padding:"10px 12px",
+              maxHeight:120,overflow:"hidden",position:"relative",
+            }}>
+              {(adminReminderMsg.message||'').slice(0,200)}{adminReminderMsg.message?.length>200?'…':''}
+              <div style={{
+                position:"absolute",bottom:0,left:0,right:0,height:30,
+                background:"linear-gradient(transparent,#141922)",
+              }}/>
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>{
+                setShowAdminReminderModal(false);
+                handleTabChange("chat");
+                setShowAdvancedTray(true);
+              }} style={{
+                flex:2,padding:"12px",background:"#60a5fa",border:"none",borderRadius:10,
+                color:"#000",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",
+              }}>💬 Open Chat</button>
+              <button onClick={()=>setShowAdminReminderModal(false)} style={{
                 flex:1,padding:"12px",background:"rgba(255,255,255,0.06)",
                 border:"1px solid rgba(255,255,255,0.10)",borderRadius:10,
                 color:"#666",fontSize:13,cursor:"pointer",fontFamily:"inherit",
