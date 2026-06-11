@@ -2320,6 +2320,10 @@ export default function App(){
       setTodayMatches(todayData.response || []);
       setLiveLastUpdated(new Date());
       setRefreshCooldown(120);
+      // Re-fetch fixture details if a match is selected
+      if (selectedFixture?.fixture?.id) {
+        fetchFixtureDetails(selectedFixture.fixture.id);
+      }
     } catch(e) {
       setLiveError(e.message);
     }
