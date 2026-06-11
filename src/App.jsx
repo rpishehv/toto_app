@@ -424,9 +424,9 @@ function calcTotal(pM,aM,pK,aK,predPodium,actualPodium){
   for(const p of pM){const a=aM.find(m=>m.id===p.id);if(a){const r=calcMatchPoints(p,a);if(r)t+=r.points;}}
   for(const p of pK){const a=aK.find(m=>m.id===p.id);if(a){const r=calcMatchPoints(p,a);if(r)t+=r.points;}}
   if(actualPodium&&predPodium){
-    if(predPodium.first  && predPodium.first ===actualPodium.first)  t+=100;
-    if(predPodium.second && predPodium.second===actualPodium.second) t+=50;
-    if(predPodium.third  && predPodium.third ===actualPodium.third)  t+=25;
+    if(predPodium.first  && predPodium.first ===actualPodium.first)  t+=50;
+    if(predPodium.second && predPodium.second===actualPodium.second) t+=25;
+    if(predPodium.third  && predPodium.third ===actualPodium.third)  t+=15;
     // Top scorer — fuzzy match (last name or full name match)
     if(predPodium.topScorer && actualPodium.topScorer){
       const norm = s => (s||'').toLowerCase().trim().replace(/[^a-z\s]/g,'').replace(/\s+/g,' ');
@@ -438,7 +438,7 @@ function calcTotal(pM,aM,pK,aK,predPodium,actualPodium){
       const fuzzy = pred===act ||
         act.includes(pred) || pred.includes(act) ||
         predParts.some(w=>w.length>=4 && actParts.some(a2=>a2.length>=4 && (a2.startsWith(w)||w.startsWith(a2))));
-      if(fuzzy) t+=25;
+      if(fuzzy) t+=10;
     }
   }
   return t;
@@ -3599,7 +3599,7 @@ export default function App(){
             </div>
             <div style={{fontSize:13,color:"#c0c0c0",lineHeight:1.7,marginBottom:14,textAlign:"center"}}>
               You haven't filled in all your bonus picks — these are worth up to{" "}
-              <strong style={{color:"#a78bfa"}}>200 extra points!</strong>
+              <strong style={{color:"#a78bfa"}}>100 extra points!</strong>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:18}}>
               {podiumReminderItems.map((item,i)=>(
@@ -4216,10 +4216,10 @@ export default function App(){
           const champCountdown = timeUntilChampionLock(now);
           const allTeams = Object.values(GROUPS).flat();
           const places = [
-            {key:"first",     label:"1st Place 🥇", pts:100, color:"#f59e0b", actual:actualPodium?.first},
-            {key:"second",    label:"2nd Place 🥈", pts:50,  color:"#c0c0c0", actual:actualPodium?.second},
-            {key:"third",     label:"3rd Place 🥉", pts:25,  color:"#cd7f32", actual:actualPodium?.third},
-            {key:"topScorer", label:"Top Scorer ⚽", pts:25,  color:"#60a5fa", actual:actualPodium?.topScorer, freeText:true},
+            {key:"first",     label:"1st Place 🥇", pts:50, color:"#f59e0b", actual:actualPodium?.first},
+            {key:"second",    label:"2nd Place 🥈", pts:25,  color:"#c0c0c0", actual:actualPodium?.second},
+            {key:"third",     label:"3rd Place 🥉", pts:15,  color:"#cd7f32", actual:actualPodium?.third},
+            {key:"topScorer", label:"Top Scorer ⚽", pts:10,  color:"#60a5fa", actual:actualPodium?.topScorer, freeText:true},
           ];
 
           // AI podium suggestion — default or admin-updated
@@ -4545,10 +4545,10 @@ export default function App(){
           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,letterSpacing:1,color:"#888",margin:"20px 0 10px"}}>👑 PODIUM & TOP SCORER PREDICTIONS</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
             {[
-              {pts:100,label:"1st Place",  icon:"🥇",desc:"Correct champion",          color:"#f59e0b"},
-              {pts:50, label:"2nd Place",  icon:"🥈",desc:"Correct runner-up",         color:"#c0c0c0"},
-              {pts:25, label:"3rd Place",  icon:"🥉",desc:"Correct 3rd place playoff", color:"#cd7f32"},
-              {pts:25, label:"Top Scorer", icon:"⚽",desc:"Fuzzy name match accepted",  color:"#60a5fa"},
+              {pts:50, label:"1st Place",  icon:"🥇",desc:"Correct champion",          color:"#f59e0b"},
+              {pts:25, label:"2nd Place",  icon:"🥈",desc:"Correct runner-up",         color:"#c0c0c0"},
+              {pts:15, label:"3rd Place",  icon:"🥉",desc:"Correct 3rd place playoff", color:"#cd7f32"},
+              {pts:10, label:"Top Scorer", icon:"⚽",desc:"Fuzzy name match accepted",  color:"#60a5fa"},
             ].map(r=>(
               <div key={r.label} style={{
                 background:`${r.color}0e`,border:`1px solid ${r.color}30`,
@@ -4567,7 +4567,7 @@ export default function App(){
             borderRadius:10,padding:"10px 14px",marginBottom:20,fontSize:11,color:"#777",lineHeight:1.7,
           }}>
             🔒 Podium & top scorer picks lock at <strong style={{color:"#fcb900"}}>June 11, 2026 17:00 UTC</strong> (first kickoff).<br/>
-            Max bonus: <strong style={{color:"#f59e0b"}}>200 pts</strong> if all 3 podium + top scorer correct.
+            Max bonus: <strong style={{color:"#f59e0b"}}>100 pts</strong> if all 3 podium + top scorer correct.
             ⚽ Top scorer uses fuzzy matching — "mbappe" matches "Kylian Mbappé".
           </div>
 
@@ -4591,9 +4591,9 @@ export default function App(){
           }}>
             <div style={{fontSize:11,color:"#555",marginBottom:10}}>🏆 Podium Picks</div>
             {[
-              {key:"first", label:"🥇 1st Place", pts:100, color:"#f59e0b"},
-              {key:"second",label:"🥈 2nd Place", pts:50,  color:"#c0c0c0"},
-              {key:"third", label:"🥉 3rd Place", pts:25,  color:"#cd7f32"},
+              {key:"first", label:"🥇 1st Place", pts:50, color:"#f59e0b"},
+              {key:"second",label:"🥈 2nd Place", pts:25,  color:"#c0c0c0"},
+              {key:"third", label:"🥉 3rd Place", pts:15,  color:"#cd7f32"},
             ].map(place=>{
               const myPick   = podium?.[place.key];
               const actual   = actualPodium?.[place.key];
@@ -5234,10 +5234,10 @@ export default function App(){
                     });
 
                     const places = [
-                      {key:'first',     label:'🥇 1st Place', color:'#f59e0b', pts:100},
-                      {key:'second',    label:'🥈 2nd Place', color:'#c0c0c0', pts:50},
-                      {key:'third',     label:'🥉 3rd Place', color:'#cd7f32', pts:25},
-                      {key:'topScorer', label:'⚽ Top Scorer', color:'#60a5fa', pts:25, freeText:true},
+                      {key:'first',     label:'🥇 1st Place', color:'#f59e0b', pts:50},
+                      {key:'second',    label:'🥈 2nd Place', color:'#c0c0c0', pts:25},
+                      {key:'third',     label:'🥉 3rd Place', color:'#cd7f32', pts:15},
+                      {key:'topScorer', label:'⚽ Top Scorer', color:'#60a5fa', pts:10, freeText:true},
                     ];
 
                     return(
@@ -7803,9 +7803,9 @@ export default function App(){
                 ["Correct goal difference","Right margin, wrong scores (e.g. predicted 3-2, actual 2-1) → 4 pts"],
                 ["Correct outcome only","Right winner or draw, wrong everything else → 2 pts"],
                 ["Wrong prediction","None of the above → 0 pts"],
-                ["Podium bonus","🥇 Champion = 100 pts · 🥈 Runner-up = 50 pts · 🥉 3rd place = 25 pts"],
-                ["Top scorer bonus","⚽ Correct top scorer = 25 pts · Fuzzy name matching (\"mbappe\" matches \"Kylian Mbappé\")"],
-                ["Max bonus","Get all 3 podium places + top scorer correct = 200 bonus pts"],
+                ["Podium bonus","🥇 Champion = 50 pts · 🥈 Runner-up = 25 pts · 🥉 3rd place = 15 pts"],
+                ["Top scorer bonus","⚽ Correct top scorer = 10 pts · Fuzzy name matching (\"mbappe\" matches \"Kylian Mbappé\")"],
+                ["Max bonus","Get all 3 podium places + top scorer correct = 100 bonus pts"],
                 ["Rules are mutually exclusive","For match scoring, you get the highest applicable category only — no stacking."],
               ]
             },
