@@ -5598,15 +5598,15 @@ export default function App(){
                 Updated {liveLastUpdated.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}
               </span>
             )}
-            <button onClick={fetchLiveMatches} disabled={liveLoading||refreshCooldown>0} style={{
+            <button onClick={()=>{setRefreshCooldown(0); fetchLiveMatches();}} disabled={liveLoading} style={{
               marginLeft:"auto",padding:"6px 14px",
-              background:refreshCooldown>0?"rgba(255,255,255,0.03)":"rgba(239,68,68,0.1)",
-              border:`1px solid ${refreshCooldown>0?"rgba(255,255,255,0.06)":"rgba(239,68,68,0.25)"}`,
-              borderRadius:6,color:refreshCooldown>0?"#444":"#ef4444",fontSize:12,fontWeight:700,
-              cursor:liveLoading||refreshCooldown>0?"not-allowed":"pointer",fontFamily:"inherit",
+              background:liveLoading?"rgba(255,255,255,0.03)":"rgba(239,68,68,0.1)",
+              border:`1px solid ${liveLoading?"rgba(255,255,255,0.06)":"rgba(239,68,68,0.25)"}`,
+              borderRadius:6,color:liveLoading?"#444":"#ef4444",fontSize:12,fontWeight:700,
+              cursor:liveLoading?"not-allowed":"pointer",fontFamily:"inherit",
               minWidth:90,textAlign:"center",
             }}>
-              {liveLoading?"⏳ Loading…":refreshCooldown>0?`⏱ ${refreshCooldown}s`:"🔄 Refresh"}
+              {liveLoading?"⏳ Loading…":refreshCooldown>0?`🔄 Refresh (${refreshCooldown}s)`:"🔄 Refresh"}
             </button>
           </div>
 
