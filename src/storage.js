@@ -84,24 +84,19 @@ export async function sbSavePrediction(username, matches, knockout, podium, grou
 
 export async function sbGetActualResults(groupCode='default') {
   const { data, error } = await supabase
-    .from('actual_results').select('*').eq('group_code', groupCode).maybeSingle()
+    .from('actual_results').select('*').eq('id', 1).maybeSingle()
   if (error) console.error('sbGetActualResults error:', error.message)
-  // Fallback: try id=1 for backwards compatibility
-  if (!data) {
-    const { data: d2 } = await supabase.from('actual_results').select('*').eq('id', 1).maybeSingle()
-    return d2 || null
-  }
   return data || null
 }
 
 export async function sbSaveActualResults(matches, knockout, actualPodium, koKickoffs, livePredictions, groupCode='default') {
   const { error } = await supabase.from('actual_results').upsert({
-    id: 1, group_code: groupCode, matches, knockout,
+    id: 1, matches, knockout,
     actual_podium: actualPodium,
     ko_kickoffs: koKickoffs,
     live_predictions: livePredictions || {},
     updated_at: new Date().toISOString()
-  }, { onConflict: 'group_code' })
+  }, { onConflict: 'id' })
   if (error) console.error('sbSaveActualResults error:', error.message)
 }
 
