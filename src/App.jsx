@@ -1017,9 +1017,9 @@ function ScoringBar(){
     <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"11px 15px",marginBottom:20,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
       <span style={{fontSize:11,fontWeight:700,color:"#fcb900",marginRight:2}}>📋 Scoring:</span>
       {[
-        {pts:100,text:"1st place",color:"#f59e0b",icon:"🥇"},
-        {pts:50,text:"2nd place",color:"#c0c0c0",icon:"🥈"},
-        {pts:25,text:"3rd place",color:"#cd7f32",icon:"🥉"},
+        {pts:50, text:"1st place",color:"#f59e0b",icon:"🥇"},
+        {pts:25, text:"2nd place",color:"#c0c0c0",icon:"🥈"},
+        {pts:15, text:"3rd place",color:"#cd7f32",icon:"🥉"},
         {pts:6,text:"Exact score",color:"#22c55e",icon:"⭐"},
         {pts:4,text:"Correct GD",color:"#fcb900",icon:"📐"},
         {pts:2,text:"Correct outcome",color:"#60a5fa",icon:"✓"},
@@ -4844,9 +4844,9 @@ export default function App(){
                       <div style={{fontSize:11,color:"#a78bfa",fontWeight:700,marginBottom:8}}>👑 Podium Picks</div>
                       <div style={{display:"flex",gap:8}}>
                         {[
-                          {key:"first", label:"🥇",pts:100,color:"#f59e0b",actual:actualPodium?.first},
-                          {key:"second",label:"🥈",pts:50, color:"#c0c0c0",   actual:actualPodium?.second},
-                          {key:"third", label:"🥉",pts:25, color:"#cd7f32",actual:actualPodium?.third},
+                          {key:"first", label:"🥇",pts:50, color:"#f59e0b",actual:actualPodium?.first},
+                          {key:"second",label:"🥈",pts:25, color:"#c0c0c0",actual:actualPodium?.second},
+                          {key:"third", label:"🥉",pts:15, color:"#cd7f32",actual:actualPodium?.third},
                         ].map(place=>{
                           const pick = p.podium[place.key];
                           const correct = pick && place.actual && pick===place.actual;
