@@ -337,7 +337,7 @@ function timeUntilLock(match, kickoffs) {
 }
 
 // Champion pick locks at kickoff of first match — June 11, 2026 17:00 UTC
-const CHAMPION_LOCK_DATE = new Date("2026-06-11T17:00:00Z").getTime();
+const CHAMPION_LOCK_DATE = new Date("2026-06-13T00:00:00Z").getTime(); // End of Friday June 12
 function isChampionLocked(nowMs = Date.now()) { return nowMs >= CHAMPION_LOCK_DATE; }
 function timeUntilChampionLock(nowMs = Date.now()) {
   const diff = CHAMPION_LOCK_DATE - nowMs;
@@ -3623,7 +3623,7 @@ export default function App(){
               background:"rgba(252,185,0,0.06)",border:"1px solid rgba(252,185,0,0.15)",
               borderRadius:8,padding:"8px 12px",marginBottom:16,fontSize:11,color:"#888",textAlign:"center",
             }}>
-              🔒 Picks lock <strong style={{color:"#fcb900"}}>June 11 at kickoff</strong>
+              🔒 Picks lock <strong style={{color:"#fcb900"}}>Friday June 12, midnight UTC</strong>
             </div>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>{setShowPodiumReminder(false);setTab("champion");setShowAdvancedTray(false);}} style={{
@@ -4318,7 +4318,7 @@ export default function App(){
                   <div style={{display:"inline-flex",alignItems:"center",gap:8,
                     background:"rgba(96,165,250,0.1)",border:"1px solid rgba(96,165,250,0.3)",
                     borderRadius:10,padding:"8px 16px",fontSize:12,color:"#60a5fa"}}>
-                    ⏱ Locks in <strong>{champCountdown}</strong> — June 11 at tournament kickoff
+                    ⏱ Locks in <strong>{champCountdown}</strong> — midnight Friday June 13 UTC
                   </div>
                 )}
                 {champLocked && (
@@ -4518,7 +4518,7 @@ export default function App(){
                     </div>
                   </div>
                   <div style={{fontSize:11,color:"#555",flexShrink:0,textAlign:"right"}}>
-                    Locks Jun 11
+                    Locks Jun 13
                   </div>
                 </div>
               );
@@ -4599,7 +4599,7 @@ export default function App(){
             background:"rgba(252,185,0,0.06)",border:"1px solid rgba(252,185,0,0.15)",
             borderRadius:10,padding:"10px 14px",marginBottom:20,fontSize:11,color:"#777",lineHeight:1.7,
           }}>
-            🔒 Podium & top scorer picks lock at <strong style={{color:"#fcb900"}}>June 11, 2026 17:00 UTC</strong> (first kickoff).<br/>
+            🔒 Podium & top scorer picks lock at <strong style={{color:"#fcb900"}}>end of Friday June 12 (midnight UTC)</strong>.<br/>
             Max bonus: <strong style={{color:"#f59e0b"}}>100 pts</strong> if all 3 podium + top scorer correct.
             ⚽ Top scorer uses fuzzy matching — "mbappe" matches "Kylian Mbappé".
           </div>
@@ -7941,7 +7941,7 @@ export default function App(){
                 ["When do predictions lock?","15 minutes before each match kicks off. The countdown shows on each match card."],
                 ["Do I need to save manually?","Tap Save anytime for an instant save. The app also auto-saves every 30 seconds when you have unsaved changes — you'll see a green '✓ Auto-saved' toast."],
                 ["Can I change my predictions?","Yes, any time before the match locks. Edit the score — it auto-saves within 30 seconds."],
-                ["What's the podium pick?","In 👑 My Pick, choose who finishes 1st, 2nd and 3rd in the whole tournament, plus the top scorer. All picks lock June 11 at 17:00 UTC."],
+                ["What's the podium pick?","In 👑 My Pick, choose who finishes 1st, 2nd and 3rd in the whole tournament, plus the top scorer. All picks lock end of Friday June 12 (midnight UTC June 13)."],
                 ["What are the 🤖 🔍 📊 buttons on each match?","🤖 shows an AI-predicted score · 🔍 shows expert tipster consensus from BBC Sport, ESPN etc · 📊 shows Polymarket crowd odds (real money prediction market). All three are optional hints to help you decide."],
               ]
             },
