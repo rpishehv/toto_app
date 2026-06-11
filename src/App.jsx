@@ -1110,7 +1110,7 @@ function BracketMethodology({ bracketPred, bayesianPred }) {
                 {bracketPred.champion} pre-tournament championship % — stabilised across simulation runs
               </div>
               <div style={{display:"flex",gap:6,alignItems:"flex-end",height:60}}>
-                {Object.entries(bracketPred.convergenceData).map(([n,top])=>(
+                {Object.entries(bracketPred.convergenceData||{}).map(([n,top])=>(
                   <div key={n} style={{flex:1,textAlign:"center"}}>
                     <div style={{fontSize:10,color:"#a78bfa",fontWeight:700}}>{top[0]?.prob}%</div>
                     <div style={{height:Math.max(4,parseFloat(top[0]?.prob||0)*1.8),
@@ -1728,7 +1728,7 @@ export default function App(){
         if(aiContent?.commentary){ setCommentary(aiContent.commentary); setCommentaryGeneratedBy(aiContent.commentary_generated_by); }
         if(aiContent?.match_analyses) {
           const analyses = {};
-          Object.entries(aiContent.match_analyses).forEach(([id, a]) => {
+          Object.entries(aiContent.match_analyses||{}).forEach(([id, a]) => {
             analyses[id] = { text: a.text, loading: false };
           });
           setMatchAnalysis(analyses);
@@ -4293,7 +4293,7 @@ export default function App(){
                   const teamsKnown=liveHome!=="TBD"&&liveAway!=="TBD";
                   // Merge group kickoffs with admin-set KO kickoffs
                   const allKickoffs={...KICKOFFS,...Object.fromEntries(
-                    Object.entries(koKickoffs).map(([id,ms])=>{
+                    Object.entries(koKickoffs||{}).map(([id,ms])=>{
                       const ko=actualKO.find(x=>x.id===id);
                       return ko?[[`${ko.home}||${ko.away}`,ms],[`${ko.away}||${ko.home}`,ms]]:[];
                     }).flat().filter(e=>e.length)
@@ -4608,7 +4608,7 @@ export default function App(){
                           )}
                           {filtered.map(team=>{
                             const selected = podium[place.key]===team;
-                            const usedElsewhere = !selected && Object.entries(podium)
+                            const usedElsewhere = !selected && Object.entries(podium||{})
                               .some(([k,v])=>k!==place.key&&v===team);
                             return(
                               <button key={team}
@@ -5426,7 +5426,7 @@ export default function App(){
                         <div style={{fontSize:12,fontWeight:700,marginBottom:14}}>👑 Podium Picks</div>
                         {places.map(place=>{
                           const counts = placeCounts[place.key];
-                          const sorted = Object.entries(counts)
+                          const sorted = Object.entries(counts||{})
                             .filter(([t])=>t!=='?')
                             .sort((a,b)=>b[1]-a[1]).slice(0,5);
                           const unknown = counts['?']||0;
@@ -5574,7 +5574,7 @@ export default function App(){
                       ))}
                     </div>
 
-                    {Object.entries(filteredGroups).map(([groupKey, groupMatches])=>(
+                    {Object.entries(filteredGroups||{}).map(([groupKey, groupMatches])=>(
                       <div key={groupKey} style={{marginBottom:16}}>
                         <div style={{fontSize:11,color:"#555",fontWeight:700,letterSpacing:0.5,marginBottom:6,textTransform:"uppercase"}}>{groupKey}</div>
                         {(groupMatches||[]).filter(actual=>actual&&actual.id).map(actual=>{
