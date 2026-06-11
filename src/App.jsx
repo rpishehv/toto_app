@@ -6628,7 +6628,7 @@ export default function App(){
                               {formatTime(msg.created_at)}
                             </div>
                           </div>
-                          {(isMe||isAdmin)&&msg.id&&(
+                          {(isMe||adminMode)&&msg.id&&(
                             <button onClick={async()=>{
                               if(!window.confirm("Delete this message?")) return;
                               await sbDeleteMessage(msg.id);
