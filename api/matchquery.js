@@ -7,11 +7,14 @@ export default async function handler(req) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return new Response(JSON.stringify({ error: 'No API key' }), { status: 500 });
 
-  const { question, home, away, homeScore, awayScore, elapsed, stats, events } = await req.json();
+  const { question, home, away, homeScore, awayScore, elapsed, stats, events, venue, city, attendance, referee } = await req.json();
   if (!question) return new Response(JSON.stringify({ error: 'No question' }), { status: 400 });
 
   const matchContext = `
 Current match: ${home} ${homeScore ?? '-'} – ${awayScore ?? '-'} ${away} (${elapsed ? elapsed + "'" : 'Not started'})
+Venue: ${venue || 'Unknown'}${city ? ', ' + city : ''}
+Attendance: ${attendance ? attendance.toLocaleString() : 'Not yet available'}
+Referee: ${referee || 'Unknown'}
 Recent events: ${(events||[]).slice(-5).map(e=>`${e.time?.elapsed}' ${e.type} - ${e.player?.name}`).join(', ') || 'None'}
 Stats available: ${stats?.length ? 'Yes' : 'No'}
 `.trim();
@@ -34,7 +37,7 @@ Answer the question concisely (2-4 sentences). If it's about stadium attendance,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 1024,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{ role: 'user', content: prompt }],
