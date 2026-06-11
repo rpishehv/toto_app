@@ -1770,14 +1770,15 @@ export default function App(){
     // Load chat + subscribe to new messages — filter by group_code
     sbGetMessages(50, groupCode).then(msgs => {
       setChatMessages(msgs);
-      // Check for unread admin/AI messages — show modal if user hasn't been in chat tab
       const lastSeen = parseInt(localStorage.getItem(`wc26_chat_seen_${groupCode}`) || '0');
       const isAdminLike = u => ['Admin','AI Recap','🤖 AI','⚡'].includes(u);
       const unreadAdmin = msgs.filter(m =>
         isAdminLike(m.username) &&
-        new Date(m.created_at).getTime() > lastSeen &&
-        m.username !== userName
+        new Date(m.created_at).getTime() > lastSeen
       );
+      console.log('[Modal] groupCode:', groupCode, 'lastSeen:', lastSeen, 'msgs:', msgs.length,
+        'adminMsgs:', msgs.filter(m=>isAdminLike(m.username)).length,
+        'unread:', unreadAdmin.length);
       if (unreadAdmin.length > 0) {
         setTimeout(() => {
           setAdminReminderMsg(unreadAdmin[unreadAdmin.length - 1]);
