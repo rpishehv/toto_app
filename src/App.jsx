@@ -1858,11 +1858,14 @@ export default function App(){
 
     // Only show KO predictions as part of total once admin has entered group results
     const groupResultsExist = actualMatches.some(m=>m.homeScore!==null);
-    const r32Open    = groupResultsExist ? knockout.filter(m=>m.round==='Round of 32'&&m.home!=='TBD'&&m.away!=='TBD') : [];
-    const r16Open    = groupResultsExist ? knockout.filter(m=>m.round==='Round of 16'&&m.home!=='TBD'&&m.away!=='TBD') : [];
-    const qfOpen     = groupResultsExist ? knockout.filter(m=>m.round==='Quarter-Finals'&&m.home!=='TBD'&&m.away!=='TBD') : [];
-    const sfOpen     = groupResultsExist ? knockout.filter(m=>m.round==='Semi-Finals'&&m.home!=='TBD'&&m.away!=='TBD') : [];
-    const finalOpen  = groupResultsExist ? knockout.filter(m=>m.round==='Final'&&m.home!=='TBD'&&m.away!=='TBD') : [];
+    const koResultsExist = actualKO.some(m=>m.homeScore!==null&&m.home!=='TBD');
+    // KO slots open for prediction only when admin has set actual KO teams
+    const actualKOTeams = new Set(actualKO.filter(m=>m.home!=='TBD'&&m.away!=='TBD').map(m=>m.id));
+    const r32Open    = groupResultsExist ? knockout.filter(m=>m.round==='Round of 32'&&actualKOTeams.has(m.id)) : [];
+    const r16Open    = groupResultsExist ? knockout.filter(m=>m.round==='Round of 16'&&actualKOTeams.has(m.id)) : [];
+    const qfOpen     = groupResultsExist ? knockout.filter(m=>m.round==='Quarter-Finals'&&actualKOTeams.has(m.id)) : [];
+    const sfOpen     = groupResultsExist ? knockout.filter(m=>m.round==='Semi-Finals'&&actualKOTeams.has(m.id)) : [];
+    const finalOpen  = groupResultsExist ? knockout.filter(m=>m.round==='Final'&&actualKOTeams.has(m.id)) : [];
 
     const koDone = knockout.filter(m=>
       m.homeScore!==null&&m.awayScore!==null&&m.home!=='TBD'
@@ -5144,8 +5147,8 @@ export default function App(){
         {/* ── STATS ── */}
         {tab==="stats"&&(()=>{
           // ── Personal stats ──────────────────────────────────────────────
-          const playedMatches = actualMatches.filter(m=>m.homeScore!==null);
-          const playedKO = actualKO.filter(m=>m.homeScore!==null&&m.home!=="TBD");
+          const playedMatches = actualMatches.filter(m=>m.homeScore!==null && m.home && m.away);
+          const playedKO = actualKO.filter(m=>m.homeScore!==null&&m.home!=="TBD"&&m.home&&m.away);
           const allPlayed = [...playedMatches, ...playedKO];
           console.log('[Stats] actualMatches with scores:', playedMatches.length, 'allPlayed:', allPlayed.length, 'allPlayerPreds keys:', Object.keys(allPlayerPreds).length, 'myPreds with scores:', [...matches,...knockout].filter(m=>m.homeScore!==null).length);
 
@@ -5545,7 +5548,7 @@ export default function App(){
                 // Group completed matches by round/group
                 const groups = {};
                 allPlayed.forEach(m => {
-                  const key = m.round || ('Group ' + m.group) || 'Other';
+                  const key = m.round ? m.round : m.group ? ('Group ' + m.group) : 'Other';
                   if (!groups[key]) groups[key] = [];
                   groups[key].push(m);
                 });
