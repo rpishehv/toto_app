@@ -5147,6 +5147,7 @@ export default function App(){
           const playedMatches = actualMatches.filter(m=>m.homeScore!==null);
           const playedKO = actualKO.filter(m=>m.homeScore!==null&&m.home!=="TBD");
           const allPlayed = [...playedMatches, ...playedKO];
+          console.log('[Stats] actualMatches with scores:', playedMatches.length, 'allPlayed:', allPlayed.length, 'allPlayerPreds keys:', Object.keys(allPlayerPreds).length, 'myPreds with scores:', [...matches,...knockout].filter(m=>m.homeScore!==null).length);
 
           const myResults = allPlayed.map(actual=>{
             const pred = [...matches,...knockout].find(m=>m.id===actual.id);
