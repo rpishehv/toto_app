@@ -53,7 +53,7 @@ const FIFA_RANKINGS = {
   'DR Congo':36,'Bosnia-Herzegovina':37,'Tunisia':38,'Paraguay':39,'Saudi Arabia':40,
   'Czechia':41,'Panama':42,'Iraq':43,'Qatar':44,'New Zealand':45,
   'South Africa':46,'Uzbekistan':47,'Cape Verde':48,'Jordan':49,'Haiti':50,
-  'Curacao':51,'Croatia':14,'Belgium':7,
+  'Curacao':51,
 };
 
 const FLAGS = {
