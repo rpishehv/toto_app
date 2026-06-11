@@ -1772,6 +1772,11 @@ export default function App(){
       setChatMessages(msgs);
       const lastSeen = parseInt(localStorage.getItem(`wc26_chat_seen_${groupCode}`) || '0');
       const isAdminLike = u => ['Admin','AI Recap','🤖 AI','⚡'].includes(u);
+
+      // Restore unread badge count from messages newer than lastSeen
+      const unreadCount = msgs.filter(m => new Date(m.created_at).getTime() > lastSeen).length;
+      if (unreadCount > 0) setChatUnread(unreadCount);
+
       const unreadAdmin = msgs.filter(m =>
         isAdminLike(m.username) &&
         new Date(m.created_at).getTime() > lastSeen
@@ -1783,7 +1788,7 @@ export default function App(){
         setTimeout(() => {
           setAdminReminderMsg(unreadAdmin[unreadAdmin.length - 1]);
           setShowAdminReminderModal(true);
-        }, 2000);
+        }, 4000);
       }
     });
     const chatSub = supabase
@@ -3661,7 +3666,7 @@ export default function App(){
       )}
 
       {/* Admin/AI reminder modal */}
-      {showAdminReminderModal&&adminReminderMsg&&!showPredReminder&&!showPodiumReminder&&(
+      {showAdminReminderModal&&adminReminderMsg&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",
           display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}}>
           <div style={{background:"#141922",border:"1px solid rgba(96,165,250,0.3)",
