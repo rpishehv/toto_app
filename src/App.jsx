@@ -448,6 +448,7 @@ function calcStandings(teams,matches){
   const tbl=Object.fromEntries(teams.map(t=>[t,{p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0}]));
   for(const m of matches){
     if(m.homeScore===null||m.awayScore===null)continue;
+    if(!tbl[m.home]||!tbl[m.away])continue; // skip matches with unknown teams
     const h=m.homeScore,a=m.awayScore;
     tbl[m.home].p++;tbl[m.away].p++;
     tbl[m.home].gf+=h;tbl[m.home].ga+=a;tbl[m.away].gf+=a;tbl[m.away].ga+=h;
