@@ -301,6 +301,7 @@ export async function sbSaveAIContent(bracket, commentary, bracketGeneratedBy, c
     commentary: commentary || null,
     bracket_generated_by: bracketGeneratedBy || null,
     commentary_generated_by: commentaryGeneratedBy || null,
+    commentary_generated_at: commentary ? new Date().toISOString() : null,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'group_code' })
   if (error) console.error('sbSaveAIContent error:', error.message)
