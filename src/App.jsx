@@ -1809,10 +1809,10 @@ export default function App(){
     // A KO match is open once both teams are known (not TBD)
     const groupDone = matches.filter(m=>m.homeScore!==null&&m.awayScore!==null).length;
 
-    const r32Open    = knockout.filter(m=>m.round==='R32'&&m.home!=='TBD'&&m.away!=='TBD');
-    const r16Open    = knockout.filter(m=>m.round==='R16'&&m.home!=='TBD'&&m.away!=='TBD');
-    const qfOpen     = knockout.filter(m=>m.round==='QF'&&m.home!=='TBD'&&m.away!=='TBD');
-    const sfOpen     = knockout.filter(m=>m.round==='SF'&&m.home!=='TBD'&&m.away!=='TBD');
+    const r32Open    = knockout.filter(m=>m.round==='Round of 32'&&m.home!=='TBD'&&m.away!=='TBD');
+    const r16Open    = knockout.filter(m=>m.round==='Round of 16'&&m.home!=='TBD'&&m.away!=='TBD');
+    const qfOpen     = knockout.filter(m=>m.round==='Quarter-Finals'&&m.home!=='TBD'&&m.away!=='TBD');
+    const sfOpen     = knockout.filter(m=>m.round==='Semi-Finals'&&m.home!=='TBD'&&m.away!=='TBD');
     const finalOpen  = knockout.filter(m=>m.round==='Final'&&m.home!=='TBD'&&m.away!=='TBD');
 
     const koDone = knockout.filter(m=>
@@ -1826,11 +1826,11 @@ export default function App(){
 
     // Stage label for display
     let stage = 'Group Stage';
-    if (finalOpen.length > 0)   stage = 'Final';
-    else if (sfOpen.length > 0) stage = 'Semi-Finals';
-    else if (qfOpen.length > 0) stage = 'Quarter-Finals';
-    else if (r16Open.length > 0) stage = 'Round of 16';
-    else if (r32Open.length > 0) stage = 'Round of 32';
+    if (finalOpen.length > 0)        stage = 'Final';
+    else if (sfOpen.length > 0)      stage = 'Semi-Finals';
+    else if (qfOpen.length > 0)      stage = 'Quarter-Finals';
+    else if (r16Open.length > 0)     stage = 'Round of 16';
+    else if (r32Open.length > 0)     stage = 'Round of 32';
 
     setPredictionCount({done, total, stage});
   },[matches,knockout]);
