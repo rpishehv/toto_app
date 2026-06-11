@@ -1701,7 +1701,7 @@ export default function App(){
         if (validSession?.username) {
           const lb=await sbGetLeaderboard(gc); if(lb) setLeaderboard(lb);
         }
-        const actual=await sbGetActualResults();
+        const actual=await sbGetActualResults(groupCode);
         if(actual?.matches?.length)       setActualMatches(actual.matches);
         if(actual?.knockout?.length)       setActualKO(actual.knockout);
         if(actual?.actual_podium)    setActualPodium(p=>({...p,...actual.actual_podium}));
@@ -2018,7 +2018,7 @@ export default function App(){
     setActualMatches(blankMatches);
     setActualKO(blankKO);
     setActualPodium(blankPodium);
-    await sbSaveActualResults(blankMatches, blankKO, blankPodium, koKickoffs);
+    await sbSaveActualResults(blankMatches, blankKO, blankPodium, koKickoffs, {}, groupCode);
     const lb=await sbGetLeaderboard(groupCode);
     for(const e of lb){
       const p=await sbGetPrediction(e.username, groupCode);
@@ -2085,7 +2085,7 @@ export default function App(){
       }
     }
     setLivePredictions(newPreds);
-    await sbSaveActualResults(actualMatches, actualKO, actualPodium, koKickoffs, newPreds);
+    await sbSaveActualResults(actualMatches, actualKO, actualPodium, koKickoffs, newPreds, groupCode);
     setOddsGenStatus({
       ok: done > 0,
       msg: done > 0
@@ -2211,7 +2211,7 @@ export default function App(){
       await new Promise(r => setTimeout(r, 800));
     }
     setLivePredictions(newPreds);
-    await sbSaveActualResults(actualMatches, actualKO, actualPodium, koKickoffs, newPreds);
+    await sbSaveActualResults(actualMatches, actualKO, actualPodium, koKickoffs, newPreds, groupCode);
     setExpertsGenStatus({
       ok: done > 0,
       msg: done > 0
@@ -2259,7 +2259,7 @@ export default function App(){
       }
     }
     setLivePredictions(newPreds);
-    await sbSaveActualResults(actualMatches, actualKO, actualPodium, koKickoffs, newPreds);
+    await sbSaveActualResults(actualMatches, actualKO, actualPodium, koKickoffs, newPreds, groupCode);
     setAiGenStatus({
       ok: failed === 0,
       msg: `✅ Generated ${done} KO insights${failed > 0 ? ` (${failed} failed)` : ""}. Tap 🤖 on any KO match to see the analysis.`
@@ -2938,7 +2938,7 @@ export default function App(){
   // Step 1: show confirmation dialog
   const adminSaveWithConfirm = async () => {
     try {
-      const prev = await sbGetActualResults() || {};
+      const prev = await sbGetActualResults(groupCode) || {};
       const changes = buildChangeDiff(
         prev.matches||[], actualMatches,
         prev.knockout||[], actualKO,
@@ -2979,7 +2979,7 @@ export default function App(){
       const newHistory = [snapshot, ...saveHistory].slice(0, MAX_HISTORY);
       setSaveHistory(newHistory);
       await sbAddSaveHistory(snapshot.label, snapshot.matches, snapshot.knockout, snapshot.actualPodium||snapshot.actual_podium, snapshot.koKickoffs||snapshot.ko_kickoffs);
-      await sbSaveActualResults(actualMatches, actualKO, newPodium, koKickoffs, livePredictions);
+      await sbSaveActualResults(actualMatches, actualKO, newPodium, koKickoffs, livePredictions, groupCode);
 
       // Recalculate leaderboard for ALL groups — batched for performance
       const allGroupCodes = await sbGetAllGroupCodes();
@@ -3031,7 +3031,7 @@ export default function App(){
     setActualKO(snapshot.knockout);
     setActualPodium(snapshot.actual_podium || snapshot.actualPodium || {});
     if(snapshot.ko_kickoffs || snapshot.koKickoffs) setKoKickoffs(snapshot.ko_kickoffs || snapshot.koKickoffs);
-    await sbSaveActualResults(snapshot.matches, snapshot.knockout, snapshot.actual_podium || snapshot.actualPodium || {}, snapshot.ko_kickoffs || snapshot.koKickoffs || {}, livePredictions);
+    await sbSaveActualResults(snapshot.matches, snapshot.knockout, snapshot.actual_podium || snapshot.actualPodium || {}, snapshot.ko_kickoffs || snapshot.koKickoffs || {}, livePredictions, groupCode);
     const snapMatches = snapshot.matches;
     const snapKO = snapshot.knockout;
     const snapPodium = snapshot.actual_podium || snapshot.actualPodium || {};
@@ -3264,7 +3264,7 @@ export default function App(){
   }, [adminMode, userName, matches, leaderboard]);
 
   const saveActualResults=async(newMatches, newKO)=>{
-    await sbSaveActualResults(newMatches||actualMatches, newKO||actualKO, actualPodium);
+    await sbSaveActualResults(newMatches||actualMatches, newKO||actualKO, actualPodium, koKickoffs, livePredictions, groupCode);
     const lb=await sbGetLeaderboard(groupCode);
     const prevTop3 = leaderboard.slice(0,3).map(e=>e.username);
     for(const e of lb){
