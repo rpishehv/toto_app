@@ -1778,6 +1778,8 @@ export default function App(){
         m.username !== userName
       );
       console.log('[AdminModal] msgs:', msgs.length, 'lastSeen:', lastSeen, 'unreadAdmin:', unreadAdmin.length, unreadAdmin.map(m=>({u:m.username,t:m.created_at})));
+      console.log('[AdminModal] all usernames:', [...new Set(msgs.map(m=>m.username))]);
+      console.log('[AdminModal] admin-like msgs:', msgs.filter(m=>m.username?.toLowerCase().includes('admin')||m.username?.toLowerCase().includes('recap')||m.username?.toLowerCase().includes('ai')));
       if (unreadAdmin.length > 0) {
         setTimeout(() => {
           setAdminReminderMsg(unreadAdmin[unreadAdmin.length - 1]);
