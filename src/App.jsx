@@ -4492,6 +4492,37 @@ export default function App(){
                   )}
                 </div>
               ))}
+
+            {/* Incomplete picks warning */}
+            {!champLocked&&(()=>{
+              const missing = [];
+              if(!podium.first)   missing.push('🥇 Champion');
+              if(!podium.second)  missing.push('🥈 Runner-up');
+              if(!podium.third)   missing.push('🥉 3rd place');
+              if(!podium.topScorer||(podium.topScorer||'').trim().length<3) missing.push('⚽ Top scorer');
+              if(missing.length===0||missing.length===4) return null; // all done or all empty — no partial warning needed
+              return(
+                <div style={{
+                  margin:"12px 0",padding:"10px 14px",
+                  background:"rgba(252,185,0,0.07)",
+                  border:"1px solid rgba(252,185,0,0.25)",
+                  borderRadius:8,display:"flex",alignItems:"center",gap:10,
+                }}>
+                  <span style={{fontSize:16,flexShrink:0}}>⚠️</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12,color:"#fcb900",fontWeight:700,marginBottom:2}}>
+                      {missing.length} pick{missing.length!==1?'s':''} still missing
+                    </div>
+                    <div style={{fontSize:11,color:"#666"}}>
+                      {missing.join(' · ')}
+                    </div>
+                  </div>
+                  <div style={{fontSize:11,color:"#555",flexShrink:0,textAlign:"right"}}>
+                    Locks Jun 11
+                  </div>
+                </div>
+              );
+            })()}
             </div>
           );
         })()}
@@ -5359,6 +5390,122 @@ export default function App(){
                     </div>}
                   </div>
                 </div>);
+              })()}
+
+              {/* ── Match Results Breakdown ── */}
+              {allPlayed.length>0&&(()=>{
+                const [openMatch, setOpenMatch] = React.useState(null);
+                const [filterGroup, setFilterGroup] = React.useState('All');
+
+                // Group completed matches by round/group
+                const groups = {};
+                allPlayed.forEach(m => {
+                  const key = m.round || ('Group ' + m.group) || 'Other';
+                  if (!groups[key]) groups[key] = [];
+                  groups[key].push(m);
+                });
+
+                const filterOptions = ['All', ...Object.keys(groups)];
+                const filteredGroups = filterGroup === 'All'
+                  ? groups
+                  : { [filterGroup]: groups[filterGroup] || [] };
+
+                return(
+                  <div style={{marginTop:20}}>
+                    <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,letterSpacing:1,color:"#fcb900",marginBottom:8}}>
+                      📋 Match Results — Everyone's Picks
+                    </div>
+
+                    {/* Filter bar */}
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+                      {filterOptions.map(opt=>(
+                        <button key={opt} onClick={()=>setFilterGroup(opt)} style={{
+                          padding:"4px 10px",borderRadius:6,border:"1px solid",cursor:"pointer",
+                          fontFamily:"inherit",fontSize:10,fontWeight:600,
+                          background:filterGroup===opt?"rgba(252,185,0,0.15)":"rgba(255,255,255,0.04)",
+                          borderColor:filterGroup===opt?"rgba(252,185,0,0.4)":"rgba(255,255,255,0.08)",
+                          color:filterGroup===opt?"#fcb900":"#555",
+                        }}>{opt}</button>
+                      ))}
+                    </div>
+
+                    {Object.entries(filteredGroups).map(([groupKey, groupMatches])=>(
+                      <div key={groupKey} style={{marginBottom:16}}>
+                        <div style={{fontSize:11,color:"#555",fontWeight:700,letterSpacing:0.5,marginBottom:6,textTransform:"uppercase"}}>{groupKey}</div>
+                        {groupMatches.map(actual=>{
+                          const isOpen = openMatch === actual.id;
+                          const playerRows = leaderboard.map(e=>{
+                            const playerPreds = e.username===userName
+                              ? [...matches,...knockout]
+                              : (livePredictions[e.username]||[]);
+                            const pred = playerPreds.find?.(m=>m.id===actual.id);
+                            const result = pred ? calcMatchPoints(pred, actual) : null;
+                            return { username:e.username, pred, result };
+                          }).filter(r=>r.pred&&r.pred.homeScore!==null);
+
+                          // Summary counts for collapsed view
+                          const exactCount = playerRows.filter(r=>r.result?.points===6).length;
+                          const anyPts = playerRows.filter(r=>(r.result?.points||0)>0).length;
+
+                          return(
+                            <div key={actual.id} style={{
+                              marginBottom:6,borderRadius:8,overflow:"hidden",
+                              border:"1px solid rgba(255,255,255,0.08)",
+                            }}>
+                              {/* Collapsed header — always visible, tap to expand */}
+                              <button onClick={()=>setOpenMatch(isOpen?null:actual.id)} style={{
+                                width:"100%",display:"flex",alignItems:"center",gap:8,
+                                padding:"8px 12px",background:"rgba(255,255,255,0.03)",
+                                border:"none",cursor:"pointer",fontFamily:"inherit",textAlign:"left",
+                              }}>
+                                <span style={{fontSize:12}}>{FLAGS[actual.home]||"🏳️"}</span>
+                                <span style={{fontSize:11,fontWeight:700,color:"#ddd",flex:1}}>
+                                  {actual.home} <span style={{color:"#fcb900",fontFamily:"monospace"}}>{actual.homeScore}–{actual.awayScore}</span> {actual.away}
+                                </span>
+                                <span style={{fontSize:12}}>{FLAGS[actual.away]||"🏳️"}</span>
+                                {exactCount>0&&<span style={{fontSize:10,color:"#22c55e",marginLeft:4}}>⭐{exactCount}</span>}
+                                {anyPts>0&&<span style={{fontSize:10,color:"#555"}}>{anyPts}/{playerRows.length} pts</span>}
+                                <span style={{fontSize:12,color:"#444",marginLeft:4}}>{isOpen?"▲":"▼"}</span>
+                              </button>
+
+                              {/* Expanded player breakdown */}
+                              {isOpen&&playerRows.map(row=>{
+                                const pts = row.result?.points||0;
+                                const ptColor = pts===6?"#22c55e":pts===4?"#fcb900":pts===2?"#60a5fa":"#555";
+                                const ptLabel = pts===6?"⭐ Exact":pts===4?"📐 GD":pts===2?"✓ Outcome":"✗ Wrong";
+                                const isMe = row.username===userName;
+                                return(
+                                  <div key={row.username} style={{
+                                    display:"flex",alignItems:"center",gap:8,
+                                    padding:"6px 12px",
+                                    borderTop:"1px solid rgba(255,255,255,0.04)",
+                                    background:isMe?"rgba(252,185,0,0.04)":undefined,
+                                  }}>
+                                    <div style={{
+                                      width:22,height:22,borderRadius:"50%",flexShrink:0,
+                                      background:"rgba(255,255,255,0.06)",
+                                      display:"flex",alignItems:"center",justifyContent:"center",
+                                      fontSize:9,color:"#555",fontWeight:700,
+                                    }}>{row.username.slice(0,2).toUpperCase()}</div>
+                                    <div style={{flex:1,fontSize:11,color:isMe?"#fcb900":"#888",fontWeight:isMe?700:400}}>
+                                      {row.username}{isMe?" (you)":""}
+                                    </div>
+                                    <div style={{fontFamily:"monospace",fontSize:12,color:"#aaa",minWidth:28,textAlign:"center"}}>
+                                      {row.pred.homeScore}–{row.pred.awayScore}
+                                    </div>
+                                    <div style={{fontSize:10,color:ptColor,minWidth:70,textAlign:"right",fontWeight:pts>0?700:400}}>
+                                      {ptLabel}{pts>0?` +${pts}pts`:""}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                );
               })()}
 
             </div>
