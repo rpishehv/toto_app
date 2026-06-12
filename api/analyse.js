@@ -71,19 +71,23 @@ Write a sharp, exciting live match analysis in exactly 3 sentences:
 Keep it punchy, specific to THIS match, reference win likelihood naturally (e.g. "Mexico look odds-on to hold on", "South Africa need a miracle"), and under 90 words total. No headers, just flowing analysis.`;
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-haiku-4-5-20251001', // faster model for live analysis
         max_tokens: 200,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
+    clearTimeout(timeout);
 
     if (!response.ok) {
       const err = await response.text();

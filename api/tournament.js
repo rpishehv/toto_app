@@ -1,7 +1,7 @@
 // api/tournament.js — Vercel serverless function
 // Generates AI tournament bracket prediction and what-if scenarios
 
-export const config = { runtime: 'edge' };
+export const config = { runtime: 'nodejs', maxDuration: 60 };
 
 export default async function handler(req) {
   if (req.method !== 'POST') {
@@ -176,7 +176,7 @@ export default async function handler(req) {
       return simMatch(bracket[0], bracket[1]);
     }
 
-    const N = 5000;
+    const N = 5000; // restored — Node.js runtime has 60s limit vs edge 30s
     const champCount  = {};
     const finalCount  = {};
     const allTeams    = [...new Set(Object.values(GROUPS).flat())];
