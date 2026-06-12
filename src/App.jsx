@@ -2321,40 +2321,40 @@ export default function App(){
   };
 
   // ── Live Match Functions ────────────────────────────────────────────────────
-  const fetchLiveMatches = async () => {
-    if (refreshCooldown > 0) { console.log('[Live] blocked by cooldown'); return; }
+  const fetchLiveMatches = async (includeToday=false) => {
+    if (refreshCooldown > 0) { return; }
     setLiveLoading(true);
     setLiveError(null);
     try {
-      const [liveRes, todayRes] = await Promise.all([
-        fetch('/api/live?type=live'),
-        fetch('/api/live?type=today'),
-      ]);
-      const [liveData, todayData] = await Promise.all([liveRes.json(), todayRes.json()]);
+      // Only fetch today on first load or manual refresh — saves 1 request per auto-refresh
+      const fetches = [fetch('/api/live?type=live')];
+      if (includeToday || todayMatches.length === 0) fetches.push(fetch('/api/live?type=today'));
+      const responses = await Promise.all(fetches);
+      const jsons = await Promise.all(responses.map(r => r.json()));
+      const liveData = jsons[0];
+      const todayData = jsons[1];
 
-      if (liveData._unavailable) {
-      }
       if (liveData.error) {
         const isSeasonError = liveData.error.toLowerCase().includes('internal') ||
           liveData.error.toLowerCase().includes('season') ||
           liveData.error.toLowerCase().includes('2026');
         if (isSeasonError) {
           setLiveMatches([]);
-          setTodayMatches([]);
+          if (todayData) setTodayMatches([]);
           setLiveLastUpdated(new Date());
-          setRefreshCooldown(120);
+          setRefreshCooldown(900);
           setLiveLoading(false);
           return;
         }
         throw new Error(liveData.tip ? `${liveData.error} — ${liveData.tip}` : liveData.error);
       }
       setLiveMatches(liveData.response || []);
-      setTodayMatches(todayData.response || []);
+      if (todayData) setTodayMatches(todayData.response || []);
       setLiveLastUpdated(new Date());
-      setRefreshCooldown(120);
-      // Re-fetch fixture details if a match is selected
+      setRefreshCooldown(900);
+      // Re-fetch fixture details if selected — force to get latest events
       if (selectedFixture?.fixture?.id) {
-        fetchFixtureDetails(selectedFixture.fixture.id);
+        fetchFixtureDetails(selectedFixture.fixture.id, true);
       }
     } catch(e) {
       setLiveError(e.message);
@@ -2371,25 +2371,38 @@ export default function App(){
     return ()=>clearInterval(timer);
   },[refreshCooldown]);
 
-  const fetchFixtureDetails = async (fixtureId) => {
+  const fixtureCache = React.useRef({});
+
+  const fetchFixtureDetails = async (fixtureId, force=false) => {
+    // Use cache if available and not forced (saves 4 API calls per re-tap)
+    if (!force && fixtureCache.current[fixtureId]) {
+      const cached = fixtureCache.current[fixtureId];
+      setFixtureStats(cached.stats);
+      setFixtureEvents(cached.events);
+      setFixtureLineups(cached.lineups);
+      setFixturePlayers(cached.players);
+      return;
+    }
     setFixtureStats(null);
     setFixtureEvents([]);
     setFixtureLineups([]);
     setFixturePlayers([]);
     try {
-      const [statsRes, eventsRes, lineupsRes, playersRes] = await Promise.all([
-        fetch(`/api/live?type=stats&fixtureId=${fixtureId}`),
-        fetch(`/api/live?type=events&fixtureId=${fixtureId}`),
-        fetch(`/api/live?type=lineups&fixtureId=${fixtureId}`),
-        fetch(`/api/live?type=players&fixtureId=${fixtureId}`),
-      ]);
-      const [stats, events, lineups, players] = await Promise.all([
-        statsRes.json(), eventsRes.json(), lineupsRes.json(), playersRes.json()
-      ]);
-      setFixtureStats(stats.response || []);
-      setFixtureEvents(events.response || []);
-      setFixtureLineups(lineups.response || []);
-      setFixturePlayers(players.response || []);
+      // Single batched request instead of 4 separate calls
+      const res = await fetch(`/api/live?type=fixture&fixtureId=${fixtureId}`);
+      const data = await res.json();
+      setFixtureStats(data.stats || []);
+      setFixtureEvents(data.events || []);
+      setFixtureLineups(data.lineups || []);
+      setFixturePlayers(data.players || []);
+      // Cache for 5 minutes
+      fixtureCache.current[fixtureId] = {
+        stats: data.stats || [],
+        events: data.events || [],
+        lineups: data.lineups || [],
+        players: data.players || [],
+        ts: Date.now(),
+      };
     } catch(e) {
       console.error('Fixture details error:', e);
     }
@@ -2941,7 +2954,7 @@ export default function App(){
   useEffect(()=>{
     if(tab!=="live") return;
     if(refreshCooldown > 0) return;
-    fetchLiveMatches();
+    fetchLiveMatches(true); // include today on tab open
   },[tab]);
 
   const buildChangeDiff = (prevMatches, newMatches, prevKO, newKO, prevPodium, newPodium) => {
@@ -5719,7 +5732,7 @@ export default function App(){
                 Updated {liveLastUpdated.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}
               </span>
             )}
-            <button onClick={()=>{setRefreshCooldown(0); fetchLiveMatches();}} disabled={liveLoading} style={{
+            <button onClick={()=>{setRefreshCooldown(0); fetchLiveMatches(true);}} disabled={liveLoading} style={{
               marginLeft:"auto",padding:"6px 14px",
               background:liveLoading?"rgba(255,255,255,0.03)":"rgba(239,68,68,0.1)",
               border:`1px solid ${liveLoading?"rgba(255,255,255,0.06)":"rgba(239,68,68,0.25)"}`,

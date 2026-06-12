@@ -27,6 +27,23 @@ export default async function handler(req) {
   } else if (type === 'today') {
     const today = new Date().toISOString().split('T')[0];
     endpoint = `${BASE}/fixtures?date=${today}&league=${LEAGUE}&season=${SEASON}`;
+  } else if (type === 'fixture' && fixtureId) {
+    // Batch all fixture details in one call — saves 3 API requests
+    const [statsRes, eventsRes, lineupsRes, playersRes] = await Promise.all([
+      fetch(`${BASE}/fixtures/statistics?fixture=${fixtureId}`, { headers }),
+      fetch(`${BASE}/fixtures/events?fixture=${fixtureId}`, { headers }),
+      fetch(`${BASE}/fixtures/lineups?fixture=${fixtureId}`, { headers }),
+      fetch(`${BASE}/fixtures/players?fixture=${fixtureId}`, { headers }),
+    ]);
+    const [stats, events, lineups, players] = await Promise.all([
+      statsRes.json(), eventsRes.json(), lineupsRes.json(), playersRes.json()
+    ]);
+    return new Response(JSON.stringify({
+      stats: stats.response || [],
+      events: events.response || [],
+      lineups: lineups.response || [],
+      players: players.response || [],
+    }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' } });
   } else if (type === 'players' && fixtureId) {
     endpoint = `${BASE}/fixtures/players?fixture=${fixtureId}`;
   } else if (type === 'lineups' && fixtureId) {
