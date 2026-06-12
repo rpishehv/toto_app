@@ -294,28 +294,29 @@ export async function sbGetAIContent(groupCode='default') {
   return data || null
 }
 
+// Helper: merge-update ai_content without wiping other columns
+async function sbMergeAIContent(fields, groupCode='default') {
+  // First try update
+  const { data, error } = await supabase.from('ai_content')
+    .update(fields).eq('group_code', groupCode).select();
+  if (error) { console.error('sbMergeAIContent update error:', error.message); return; }
+  // If no row was updated, insert
+  if (!data || data.length === 0) {
+    const { error: insertErr } = await supabase.from('ai_content')
+      .insert({ group_code: groupCode, ...fields });
+    if (insertErr) console.error('sbMergeAIContent insert error:', insertErr.message);
+  }
+}
+
 export async function sbSaveAIContent(bracket, commentary, bracketGeneratedBy, commentaryGeneratedBy, groupCode='default') {
-  // Use update not upsert to avoid wiping news/analytics columns
-  const { error } = await supabase.from('ai_content').update({
+  await sbMergeAIContent({
     bracket: bracket || null,
     commentary: commentary || null,
     bracket_generated_by: bracketGeneratedBy || null,
     commentary_generated_by: commentaryGeneratedBy || null,
     commentary_generated_at: commentary ? new Date().toISOString() : null,
     updated_at: new Date().toISOString(),
-  }).eq('group_code', groupCode)
-  if (error) {
-    // Row might not exist yet — insert it
-    await supabase.from('ai_content').insert({
-      group_code: groupCode,
-      bracket: bracket || null,
-      commentary: commentary || null,
-      bracket_generated_by: bracketGeneratedBy || null,
-      commentary_generated_by: commentaryGeneratedBy || null,
-      commentary_generated_at: commentary ? new Date().toISOString() : null,
-      updated_at: new Date().toISOString(),
-    })
-  }
+  }, groupCode);
 }
 
 // ─── ANALYTICS ───────────────────────────────────────────────────────────────
@@ -328,19 +329,11 @@ export async function sbGetAnalytics(groupCode='default') {
 }
 
 export async function sbSaveAnalytics(analysis, username, groupCode='default') {
-  const { error } = await supabase.from('ai_content').update({
+  await sbMergeAIContent({
     analytics: analysis,
     analytics_generated_by: username,
     analytics_generated_at: new Date().toISOString(),
-  }).eq('group_code', groupCode)
-  if (error) {
-    await supabase.from('ai_content').insert({
-      group_code: groupCode,
-      analytics: analysis,
-      analytics_generated_by: username,
-      analytics_generated_at: new Date().toISOString(),
-    })
-  }
+  }, groupCode);
 }
 
 // ─── NEWS ─────────────────────────────────────────────────────────────────────
@@ -353,19 +346,11 @@ export async function sbGetNews(groupCode='default') {
 }
 
 export async function sbSaveNews(stories, username, groupCode='default') {
-  const { error } = await supabase.from('ai_content').update({
+  await sbMergeAIContent({
     news: stories,
     news_updated_by: username,
     news_updated_at: new Date().toISOString(),
-  }).eq('group_code', groupCode)
-  if (error) {
-    await supabase.from('ai_content').insert({
-      group_code: groupCode,
-      news: stories,
-      news_updated_by: username,
-      news_updated_at: new Date().toISOString(),
-    })
-  }
+  }, groupCode);
 }
 
 // ─── SESSION ─────────────────────────────────────────────────────────────────

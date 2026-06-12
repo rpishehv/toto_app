@@ -2148,7 +2148,6 @@ export default function App(){
       setAnalyticsGeneratedBy(userName);
       setAnalyticsGeneratedAt(new Date().toISOString());
       console.log('Analytics set:', JSON.stringify(data.analysis).slice(0, 200));
-      await supabase.from('ai_content').upsert({ group_code: groupCode }, { onConflict: 'group_code', ignoreDuplicates: true });
       await sbSaveAnalytics(data.analysis, userName, groupCode);
     } catch(e) {
       setAnalyticsError(typeof e.message === 'string' ? e.message : JSON.stringify(e));
@@ -2174,8 +2173,7 @@ export default function App(){
         setNewsStories(data.stories);
         setNewsUpdatedBy(userName);
         setNewsUpdatedAt(new Date().toISOString());
-        await supabase.from('ai_content').upsert({ group_code: groupCode }, { onConflict: 'group_code', ignoreDuplicates: true });
-        await sbSaveNews(data.stories, userName, groupCode);
+          await sbSaveNews(data.stories, userName, groupCode);
         // Persist cooldown expiry in localStorage
         const expiresAt = Date.now() + NEWS_COOLDOWN_SECS * 1000;
         localStorage.setItem('news_cooldown_expires', String(expiresAt));
@@ -2459,9 +2457,8 @@ export default function App(){
         const existing = await sbGetAIContent(groupCode);
         const analyses = existing?.match_analyses || {};
         analyses[id] = { text: data.analysis||data.error, home: homeName, away: awayName, ts: Date.now() };
-        await supabase.from('ai_content').upsert({ group_code: groupCode }, { onConflict: 'group_code', ignoreDuplicates: true });
-        const { error: updateErr } = await supabase.from('ai_content').update({ match_analyses: analyses }).eq('group_code', groupCode);
-        if (updateErr) await supabase.from('ai_content').insert({ group_code: groupCode, match_analyses: analyses });
+        const { data: upData } = await supabase.from('ai_content').update({ match_analyses: analyses }).eq('group_code', groupCode).select();
+        if (!upData?.length) await supabase.from('ai_content').insert({ group_code: groupCode, match_analyses: analyses });
       } catch(e) { /* non-critical */ }
     } catch(e) {
       setMatchAnalysis(prev => ({...prev, [id]: {text:`Error: ${e.message}`, loading:false}}));
@@ -2481,7 +2478,6 @@ export default function App(){
       setBracketPred(data);
       setBracketGeneratedBy(userName);
       // Ensure ai_content row exists then save
-      await supabase.from('ai_content').upsert({ group_code: groupCode }, { onConflict: 'group_code', ignoreDuplicates: true });
       await sbSaveAIContent(data, commentary, userName, commentaryGeneratedBy, groupCode);
     } catch(e) { console.error('Bracket error:', e); }
     setBracketLoading(false);
@@ -2536,7 +2532,6 @@ export default function App(){
       setCommentary(data.commentary);
       setCommentaryGeneratedBy(userName);
       // Save to Supabase — real-time pushes to all users
-      await supabase.from('ai_content').upsert({ group_code: groupCode }, { onConflict: 'group_code', ignoreDuplicates: true });
       await sbSaveAIContent(bracketPred, data.commentary, bracketGeneratedBy, userName, groupCode);
     } catch(e) { console.error('Commentary error:', e); }
     setCommentaryLoading(false);
