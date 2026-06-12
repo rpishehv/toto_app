@@ -5856,18 +5856,22 @@ export default function App(){
                       const key1=`${homeName}||${awayName}`, key2=`${awayName}||${homeName}`;
                       const currentScore={homeScore:score?.home??0, awayScore:score?.away??0};
                       // Gather all user predictions for this match
+                      const normHome = TEAM_ALIASES[homeName]||homeName;
+                      const normAway = TEAM_ALIASES[awayName]||awayName;
                       const matchPreds = Object.entries({...allPlayerPreds, ...Object.fromEntries(Object.entries(livePredictions).filter(([,v])=>v?.username&&Array.isArray(v?.matches)))})
                         .filter(([k,v])=>k && typeof v==='object'&&v!==null&&!Array.isArray(v)&&v.username&&Array.isArray(v.matches))
                         .map(([,v])=>v)
                         .filter(p=>{
                           const m=p.matches?.find(m=>
+                            (m.home===normHome&&m.away===normAway)||(m.home===normAway&&m.away===normHome)||
                             (m.home===homeName&&m.away===awayName)||(m.home===awayName&&m.away===homeName));
                           return m?.homeScore!==null&&m?.homeScore!==undefined;
                         })
                         .map(p=>{
                           const m=p.matches?.find(m=>
+                            (m.home===normHome&&m.away===normAway)||(m.home===normAway&&m.away===normHome)||
                             (m.home===homeName&&m.away===awayName)||(m.home===awayName&&m.away===homeName));
-                          const flipped=m?.home===awayName;
+                          const flipped=m?.home===normAway||m?.home===awayName;
                           const pred={homeScore:flipped?m.awayScore:m.homeScore, awayScore:flipped?m.homeScore:m.awayScore};
                           const pts=score?.home!=null?calcMatchPoints(pred,currentScore):null;
                           return{username:p.username||'?', pred, pts, points:pts?.points??0};
