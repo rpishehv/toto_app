@@ -1556,6 +1556,7 @@ export default function App(){
   const [simAnalysisLoading,setSimAnalysisLoading]=useState(false);
   const [bracketPred,setBracketPred]=useState(null);
   const [bracketLoading,setBracketLoading]=useState(false);
+  const [bracketError,setBracketError]=useState(null);
   const [bayesianPred,setBayesianPred]=useState(null);
   const [bayesianLoading,setBayesianLoading]=useState(false);
   const [bracketGeneratedBy,setBracketGeneratedBy]=useState(null);
@@ -2473,18 +2474,25 @@ export default function App(){
   // ── AI Tournament Features ─────────────────────────────────────────────────
   const generateBracket = async () => {
     setBracketLoading(true);
+    setBracketError(null);
     try {
       const res = await fetch('/api/tournament', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ type:'bracket' }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      console.log('[Bracket] raw response:', text.slice(0,300));
+      let data;
+      try { data = JSON.parse(text); } catch(e) { throw new Error(`Non-JSON response: ${text.slice(0,200)}`); }
       if (data.error) throw new Error(data.error);
+      if (!data.champion) throw new Error('No champion in response — bracket may have timed out');
       setBracketPred(data);
       setBracketGeneratedBy(userName);
-      // Ensure ai_content row exists then save
       await sbSaveAIContent(data, commentary, userName, commentaryGeneratedBy, groupCode);
-    } catch(e) { console.error('Bracket error:', e); }
+    } catch(e) {
+      console.error('Bracket error:', e);
+      setBracketError(e.message);
+    }
     setBracketLoading(false);
   };
 
@@ -6926,6 +6934,7 @@ export default function App(){
               color:"#a78bfa",fontSize:13,fontWeight:700,
               cursor:bracketLoading?"wait":"pointer",fontFamily:"inherit",
             }}>{bracketLoading?"⏳ Predicting tournament…":bracketPred?"🔄 Regenerate AI Bracket":"🔮 Generate AI Tournament Prediction"}</button>
+            {bracketError&&<div style={{fontSize:11,color:"#ef4444",marginTop:6,padding:"6px 10px",background:"rgba(239,68,68,0.08)",borderRadius:6}}>❌ {bracketError}</div>}
 
             {/* Live update button — always visible, grayed out until matches played */}
             {(()=>{
