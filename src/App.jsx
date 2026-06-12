@@ -2442,9 +2442,9 @@ export default function App(){
       (m.home===normHome&&m.away===normAway)||(m.home===normAway&&m.away===normHome)||
       (m.home===homeName&&m.away===awayName)||(m.home===awayName&&m.away===homeName)
     );
-    const userPred = pred?.homeScore!==null ? {
-      home: pred.home===normHome||pred.home===homeName ? pred.homeScore : pred.awayScore,
-      away: pred.home===normHome||pred.home===homeName ? pred.awayScore : pred.homeScore,
+    const userPred = (pred && pred.homeScore!==null && pred.homeScore!==undefined) ? {
+      home: (pred.home===normHome||pred.home===homeName) ? pred.homeScore : pred.awayScore,
+      away: (pred.home===normHome||pred.home===homeName) ? pred.awayScore : pred.homeScore,
     } : null;
     try {
       const res = await fetch('/api/analyse', {
