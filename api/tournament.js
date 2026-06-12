@@ -1,7 +1,7 @@
 // api/tournament.js — Vercel serverless function
 // Generates AI tournament bracket prediction and what-if scenarios
 
-export const config = { runtime: 'nodejs', maxDuration: 60 };
+export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
   if (req.method !== 'POST') {
@@ -176,14 +176,14 @@ export default async function handler(req) {
       return simMatch(bracket[0], bracket[1]);
     }
 
-    const N = 5000; // restored — Node.js runtime has 60s limit vs edge 30s
+    const N = 3000; // edge runtime safe limit (30s)
     const champCount  = {};
     const finalCount  = {};
     const allTeams    = [...new Set(Object.values(GROUPS).flat())];
     allTeams.forEach(t => { champCount[t]=0; finalCount[t]=0; });
 
     // Track convergence snapshots
-    const convergenceChecks = new Set([500, 1000, 2000, 5000]);
+    const convergenceChecks = new Set([500, 1000, 2000, 3000]);
     const convergenceData = {};
     const runningChamp = {};
     allTeams.forEach(t => runningChamp[t]=0);
@@ -242,7 +242,7 @@ Convergence snapshots (top team probability as simulations accumulated):
 - After 500 runs: ${convergenceData[500]?.[0]?.team} ${convergenceData[500]?.[0]?.prob}%
 - After 1,000 runs: ${convergenceData[1000]?.[0]?.team} ${convergenceData[1000]?.[0]?.prob}%
 - After 2,000 runs: ${convergenceData[2000]?.[0]?.team} ${convergenceData[2000]?.[0]?.prob}%
-- After 5,000 runs: ${convergenceData[5000]?.[0]?.team} ${convergenceData[5000]?.[0]?.prob}%
+- After 3,000 runs: ${convergenceData[3000]?.[0]?.team} ${convergenceData[3000]?.[0]?.prob}%
 
 Model inputs used:
 - Team strength = 0.6×Elo + 0.4×squadRating
