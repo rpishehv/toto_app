@@ -2465,7 +2465,11 @@ export default function App(){
         const analyses = existing?.match_analyses || {};
         analyses[id] = { text: data.analysis||data.error, home: homeName, away: awayName, ts: Date.now() };
         const { data: upData } = await supabase.from('ai_content').update({ match_analyses: analyses }).eq('group_code', groupCode).select();
-        if (!upData?.length) await supabase.from('ai_content').insert({ group_code: groupCode, match_analyses: analyses });
+        if (!upData?.length) {
+          // Only insert if truly no row exists
+          const { data: existing2 } = await supabase.from('ai_content').select('group_code').eq('group_code', groupCode).maybeSingle();
+          if (!existing2) await supabase.from('ai_content').insert({ group_code: groupCode, match_analyses: analyses });
+        }
       } catch(e) { /* non-critical */ }
     } catch(e) {
       setMatchAnalysis(prev => ({...prev, [id]: {text:`Error: ${e.message}`, loading:false}}));

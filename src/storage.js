@@ -301,10 +301,17 @@ async function sbMergeAIContent(fields, groupCode='default') {
     .update(fields).eq('group_code', groupCode);
   if (!error) { console.log('[sbMergeAIContent] update success'); return; }
   console.error('[sbMergeAIContent] update error:', error.message);
-  const { error: insertErr } = await supabase.from('ai_content')
-    .insert({ group_code: groupCode, ...fields });
-  if (insertErr) console.error('[sbMergeAIContent] insert error:', insertErr.message);
-  else console.log('[sbMergeAIContent] insert success');
+  // Only insert if row truly doesn't exist
+  const { data: existing } = await supabase.from('ai_content')
+    .select('group_code').eq('group_code', groupCode).maybeSingle();
+  if (!existing) {
+    const { error: insertErr } = await supabase.from('ai_content')
+      .insert({ group_code: groupCode, ...fields });
+    if (insertErr) console.error('[sbMergeAIContent] insert error:', insertErr.message);
+    else console.log('[sbMergeAIContent] insert success');
+  } else {
+    console.log('[sbMergeAIContent] row exists, update was silent no-op');
+  }
 }
 
 export async function sbSaveAIContent(bracket, commentary, bracketGeneratedBy, commentaryGeneratedBy, groupCode='default') {
