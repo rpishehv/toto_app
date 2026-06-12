@@ -297,21 +297,16 @@ export async function sbGetAIContent(groupCode='default') {
 // Helper: merge-update ai_content without wiping other columns
 async function sbMergeAIContent(fields, groupCode='default') {
   console.log('[sbMergeAIContent] saving fields:', Object.keys(fields), 'for group:', groupCode);
+  // Ensure row exists first
+  await supabase.from('ai_content')
+    .insert({ group_code: groupCode })
+    .select()
+    .then(() => {}); // ignore conflict error — row already exists is fine
+  // Now update
   const { error } = await supabase.from('ai_content')
     .update(fields).eq('group_code', groupCode);
-  if (!error) { console.log('[sbMergeAIContent] update success'); return; }
-  console.error('[sbMergeAIContent] update error:', error.message);
-  // Only insert if row truly doesn't exist
-  const { data: existing } = await supabase.from('ai_content')
-    .select('group_code').eq('group_code', groupCode).maybeSingle();
-  if (!existing) {
-    const { error: insertErr } = await supabase.from('ai_content')
-      .insert({ group_code: groupCode, ...fields });
-    if (insertErr) console.error('[sbMergeAIContent] insert error:', insertErr.message);
-    else console.log('[sbMergeAIContent] insert success');
-  } else {
-    console.log('[sbMergeAIContent] row exists, update was silent no-op');
-  }
+  if (error) console.error('[sbMergeAIContent] update error:', error.message);
+  else console.log('[sbMergeAIContent] update success');
 }
 
 export async function sbSaveAIContent(bracket, commentary, bracketGeneratedBy, commentaryGeneratedBy, groupCode='default') {

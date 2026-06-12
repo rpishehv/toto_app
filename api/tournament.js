@@ -21,6 +21,8 @@ export default async function handler(req) {
   const { type, groups, leaderboard, actualResults, whatIfTeam, whatIfPlace } = body;
 
   let prompt = '';
+  let _champProbs = null;
+  let _convergenceData = null;
 
   if (type === 'bracket') {
 
@@ -225,6 +227,8 @@ export default async function handler(req) {
       .map(t => ({ team: t, prob: (champCount[t]/N*100).toFixed(1), finalProb: (finalCount[t]/N*100).toFixed(1) }))
       .sort((a,b) => parseFloat(b.prob)-parseFloat(a.prob))
       .slice(0,16);
+    _champProbs = champProbs;
+    _convergenceData = convergenceData;
 
     const predicted1st = champProbs[0].team;
     const predicted2nd = champProbs[1].team;
@@ -497,8 +501,8 @@ Respond ONLY with JSON:
     }
 
     // Inject simulation data server-side (not via Claude to avoid JSON corruption)
-    result.simulationData = champProbs.slice(0, 16);
-    result.convergenceData = convergenceData;
+    if (_champProbs) result.simulationData = _champProbs;
+    if (_convergenceData) result.convergenceData = _convergenceData;
 
     return new Response(JSON.stringify(result), {
       status: 200, headers: { 'Content-Type': 'application/json' },
