@@ -1,0 +1,32 @@
+name: Auto-sync match results
+
+on:
+  schedule:
+    # Every 2 hours, noon–midnight PT (= 19:00–07:00 UTC)
+    # PT is UTC-7 (PDT summer), so noon PT = 19:00 UTC, midnight PT = 07:00 UTC
+    - cron: '0 19 * * *'  # noon PT
+    - cron: '0 21 * * *'  # 2pm PT
+    - cron: '0 23 * * *'  # 4pm PT
+    - cron: '0 1  * * *'  # 6pm PT
+    - cron: '0 3  * * *'  # 8pm PT
+    - cron: '0 5  * * *'  # 10pm PT
+    - cron: '0 7  * * *'  # midnight PT
+  workflow_dispatch:       # allow manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync match results
+        run: |
+          response=$(curl -s -w "\n%{http_code}" \
+            -H "x-sync-secret: ${{ secrets.SYNC_SECRET }}" \
+            "https://toto-app-oqdi.vercel.app/api/autosync")
+          body=$(echo "$response" | head -1)
+          code=$(echo "$response" | tail -1)
+          echo "Status: $code"
+          echo "Response: $body"
+          if [ "$code" != "200" ]; then
+            echo "Sync failed with status $code"
+            exit 1
+          fi
