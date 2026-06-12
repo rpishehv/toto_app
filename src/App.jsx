@@ -7805,6 +7805,14 @@ export default function App(){
               </div>
 
               {/* User Management */}
+                {adminPinError&&<div style={{
+                  position:"sticky",top:0,zIndex:100,
+                  padding:"10px 14px",borderRadius:8,marginBottom:10,
+                  background:adminPinError.startsWith("✅")?"rgba(34,197,94,0.12)":"rgba(239,68,68,0.12)",
+                  border:`1px solid ${adminPinError.startsWith("✅")?"rgba(34,197,94,0.3)":"rgba(239,68,68,0.3)"}`,
+                  fontSize:12,fontWeight:600,
+                  color:adminPinError.startsWith("✅")?"#22c55e":"#ef4444",
+                }}>{adminPinError}</div>}
               <div style={{marginBottom:24}}>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"#555",letterSpacing:1,marginBottom:10}}>
                   User Management
