@@ -2155,6 +2155,11 @@ export default function App(){
     setAnalyticsLoading(false);
   };
 
+  const forceRefreshNews = async () => {
+    localStorage.removeItem('news_cooldown_expires');
+    setNewsCooldown(0);
+    await fetchNews();
+  };
   const fetchNews = async () => {
     if(newsFetching||newsCooldown>0) return;
     setNewsFetching(true);
@@ -7380,6 +7385,13 @@ export default function App(){
                   cursor:syncing?"wait":"pointer",fontFamily:"inherit",
                   opacity:syncing?0.7:1,
                 }}>{syncing?"⏳ Syncing…":"🔄 Sync Live Feed"}</button>
+                <button onClick={forceRefreshNews} disabled={newsFetching} style={{
+                  padding:"10px 18px",
+                  background:newsFetching?"rgba(252,185,0,0.05)":"rgba(252,185,0,0.1)",
+                  border:"1px solid rgba(252,185,0,0.3)",borderRadius:8,
+                  color:"#fcb900",fontSize:13,fontWeight:700,
+                  cursor:newsFetching?"wait":"pointer",fontFamily:"inherit",
+                }}>{newsFetching?"⏳ Fetching…":"📰 Force Refresh News"}</button>
                 <button onClick={()=>setShowResetConfirm(true)} style={{
                   padding:"10px 16px",background:"rgba(239,68,68,0.1)",
                   border:"1px solid rgba(239,68,68,0.3)",borderRadius:8,
