@@ -277,9 +277,9 @@ Respond ONLY with a JSON object:
   "runnerUp": "${predicted2nd}",
   "champion": "${predicted1st}",
   "topScorer": "${topScorerTeam}",
-  "reasoning": "2-3 sentence explanation referencing the simulation probabilities and model inputs",
-  "methodologySummary": "2 sentence explanation of the pipeline: player ratings → Elo blend → Dixon-Coles Poisson → Monte Carlo",
-  "convergenceSummary": "1 sentence describing how the champion probability stabilised across simulation runs",
+  "reasoning": "2-3 sentence explanation. No apostrophes or special characters. Plain text only.",
+  "methodologySummary": "2 sentence plain text explanation of the pipeline. No special characters.",
+  "convergenceSummary": "1 sentence plain text about convergence.",
   "simulationData": ${JSON.stringify(champProbs.slice(0,16))},
   "convergenceData": ${JSON.stringify(convergenceData)}
 }`;
@@ -474,9 +474,33 @@ Respond ONLY with JSON:
 
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) {
-      return new Response(JSON.stringify({ error: 'Could not parse response', raw: text }), { status: 500 });
+      return new Response(JSON.stringify({ error: 'Could not parse response', raw: text.slice(0,200) }), { status: 500 });
     }
-    const result = JSON.parse(match[0]);
+
+    let result;
+    try {
+      result = JSON.parse(match[0]);
+    } catch(parseErr) {
+      // Try to repair common JSON issues — truncated strings, trailing commas
+      let repaired = match[0]
+        .replace(/,\s*([}\]])/g, '$1')           // trailing commas
+        .replace(/([^\\])"([^"]*?)$/gm, '$1"$2"') // unclosed strings at line end
+        .replace(/\n/g, ' ');                      // collapse newlines
+      // Try to find the last complete key-value pair and close the object
+      try {
+        result = JSON.parse(repaired);
+      } catch(e2) {
+        // Last resort — truncate at last valid closing brace
+        const lastBrace = repaired.lastIndexOf('"}');
+        if (lastBrace > 0) {
+          try { result = JSON.parse(repaired.slice(0, lastBrace+2) + '}'); } catch {}
+        }
+        if (!result) {
+          return new Response(JSON.stringify({ error: `JSON parse failed: ${parseErr.message}`, raw: match[0].slice(0,300) }), { status: 500 });
+        }
+      }
+    }
+
     return new Response(JSON.stringify(result), {
       status: 200, headers: { 'Content-Type': 'application/json' },
     });
