@@ -295,16 +295,27 @@ export async function sbGetAIContent(groupCode='default') {
 }
 
 export async function sbSaveAIContent(bracket, commentary, bracketGeneratedBy, commentaryGeneratedBy, groupCode='default') {
-  const { error } = await supabase.from('ai_content').upsert({
-    group_code: groupCode,
+  // Use update not upsert to avoid wiping news/analytics columns
+  const { error } = await supabase.from('ai_content').update({
     bracket: bracket || null,
     commentary: commentary || null,
     bracket_generated_by: bracketGeneratedBy || null,
     commentary_generated_by: commentaryGeneratedBy || null,
     commentary_generated_at: commentary ? new Date().toISOString() : null,
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'group_code' })
-  if (error) console.error('sbSaveAIContent error:', error.message)
+  }).eq('group_code', groupCode)
+  if (error) {
+    // Row might not exist yet — insert it
+    await supabase.from('ai_content').insert({
+      group_code: groupCode,
+      bracket: bracket || null,
+      commentary: commentary || null,
+      bracket_generated_by: bracketGeneratedBy || null,
+      commentary_generated_by: commentaryGeneratedBy || null,
+      commentary_generated_at: commentary ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    })
+  }
 }
 
 // ─── ANALYTICS ───────────────────────────────────────────────────────────────
@@ -317,12 +328,19 @@ export async function sbGetAnalytics(groupCode='default') {
 }
 
 export async function sbSaveAnalytics(analysis, username, groupCode='default') {
-  await supabase.from('ai_content').upsert({
-    group_code: groupCode,
+  const { error } = await supabase.from('ai_content').update({
     analytics: analysis,
     analytics_generated_by: username,
     analytics_generated_at: new Date().toISOString(),
-  }, { onConflict: 'group_code' })
+  }).eq('group_code', groupCode)
+  if (error) {
+    await supabase.from('ai_content').insert({
+      group_code: groupCode,
+      analytics: analysis,
+      analytics_generated_by: username,
+      analytics_generated_at: new Date().toISOString(),
+    })
+  }
 }
 
 // ─── NEWS ─────────────────────────────────────────────────────────────────────
@@ -335,12 +353,19 @@ export async function sbGetNews(groupCode='default') {
 }
 
 export async function sbSaveNews(stories, username, groupCode='default') {
-  await supabase.from('ai_content').upsert({
-    group_code: groupCode,
+  const { error } = await supabase.from('ai_content').update({
     news: stories,
     news_updated_by: username,
     news_updated_at: new Date().toISOString(),
-  }, { onConflict: 'group_code' })
+  }).eq('group_code', groupCode)
+  if (error) {
+    await supabase.from('ai_content').insert({
+      group_code: groupCode,
+      news: stories,
+      news_updated_by: username,
+      news_updated_at: new Date().toISOString(),
+    })
+  }
 }
 
 // ─── SESSION ─────────────────────────────────────────────────────────────────

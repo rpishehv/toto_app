@@ -2457,7 +2457,8 @@ export default function App(){
         const existing = await sbGetAIContent(groupCode);
         const analyses = existing?.match_analyses || {};
         analyses[id] = { text: data.analysis||data.error, home: homeName, away: awayName, ts: Date.now() };
-        await supabase.from('ai_content').upsert({ group_code: groupCode, match_analyses: analyses }, { onConflict: 'group_code' });
+        const { error: updateErr } = await supabase.from('ai_content').update({ match_analyses: analyses }).eq('group_code', groupCode);
+        if (updateErr) await supabase.from('ai_content').insert({ group_code: groupCode, match_analyses: analyses });
       } catch(e) { /* non-critical */ }
     } catch(e) {
       setMatchAnalysis(prev => ({...prev, [id]: {text:`Error: ${e.message}`, loading:false}}));
