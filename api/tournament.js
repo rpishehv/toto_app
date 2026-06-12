@@ -267,7 +267,7 @@ Group J: Argentina, Austria, Algeria, Jordan
 Group K: Portugal, Colombia, Uzbekistan, DR Congo
 Group L: England, Croatia, Panama, Ghana
 
-Respond ONLY with a JSON object:
+Respond ONLY with a JSON object. Use only simple ASCII characters in text fields - no apostrophes, quotes, arrows, or special characters:
 {
   "groupWinners": {"A":"team","B":"team","C":"team","D":"team","E":"team","F":"team","G":"team","H":"team","I":"team","J":"team","K":"team","L":"team"},
   "groupRunnersUp": {"A":"team","B":"team","C":"team","D":"team","E":"team","F":"team","G":"team","H":"team","I":"team","J":"team","K":"team","L":"team"},
@@ -277,11 +277,9 @@ Respond ONLY with a JSON object:
   "runnerUp": "${predicted2nd}",
   "champion": "${predicted1st}",
   "topScorer": "${topScorerTeam}",
-  "reasoning": "2-3 sentence explanation. No apostrophes or special characters. Plain text only.",
-  "methodologySummary": "2 sentence plain text explanation of the pipeline. No special characters.",
-  "convergenceSummary": "1 sentence plain text about convergence.",
-  "simulationData": ${JSON.stringify(champProbs.slice(0,16))},
-  "convergenceData": ${JSON.stringify(convergenceData)}
+  "reasoning": "2-3 sentences on why this champion was predicted based on Elo ratings and simulation results.",
+  "methodologySummary": "2 sentences explaining the Monte Carlo simulation approach used.",
+  "convergenceSummary": "1 sentence on how stable the championship probability was across runs."
 }`;
 
 
@@ -483,14 +481,11 @@ Respond ONLY with JSON:
     } catch(parseErr) {
       // Try to repair common JSON issues — truncated strings, trailing commas
       let repaired = match[0]
-        .replace(/,\s*([}\]])/g, '$1')           // trailing commas
-        .replace(/([^\\])"([^"]*?)$/gm, '$1"$2"') // unclosed strings at line end
-        .replace(/\n/g, ' ');                      // collapse newlines
-      // Try to find the last complete key-value pair and close the object
+        .replace(/,\s*([}\]])/g, '$1')
+        .replace(/\n/g, ' ');
       try {
         result = JSON.parse(repaired);
       } catch(e2) {
-        // Last resort — truncate at last valid closing brace
         const lastBrace = repaired.lastIndexOf('"}');
         if (lastBrace > 0) {
           try { result = JSON.parse(repaired.slice(0, lastBrace+2) + '}'); } catch {}
@@ -500,6 +495,10 @@ Respond ONLY with JSON:
         }
       }
     }
+
+    // Inject simulation data server-side (not via Claude to avoid JSON corruption)
+    result.simulationData = champProbs.slice(0, 16);
+    result.convergenceData = convergenceData;
 
     return new Response(JSON.stringify(result), {
       status: 200, headers: { 'Content-Type': 'application/json' },
