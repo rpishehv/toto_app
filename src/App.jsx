@@ -1746,7 +1746,8 @@ export default function App(){
         }
         // Load news
         const newsData = await sbGetNews(gc);
-        if(newsData?.news){ setNewsStories(newsData.news); setNewsUpdatedBy(newsData.news_updated_by); setNewsUpdatedAt(newsData.news_updated_at); }
+        console.log('[News load] groupCode:', gc, 'has news:', !!newsData?.news, 'count:', newsData?.news?.length);
+        if(newsData?.news?.length){ setNewsStories(newsData.news); setNewsUpdatedBy(newsData.news_updated_by); setNewsUpdatedAt(newsData.news_updated_at); }
         // Load analytics
         const analyticsData = await sbGetAnalytics(gc);
         if(analyticsData?.analytics){ setGroupAnalytics(analyticsData.analytics); setAnalyticsGeneratedBy(analyticsData.analytics_generated_by); setAnalyticsGeneratedAt(analyticsData.analytics_generated_at); }
@@ -1798,7 +1799,7 @@ export default function App(){
         const d = payload.new;
         if(d.bracket)    { setBracketPred(d.bracket);   setBracketGeneratedBy(d.bracket_generated_by); }
         if(d.commentary) { setCommentary(d.commentary); setCommentaryGeneratedBy(d.commentary_generated_by); setCommentaryGeneratedAt(d.commentary_generated_at||null); }
-        if(d.news)       { setNewsStories(d.news);      setNewsUpdatedBy(d.news_updated_by); setNewsUpdatedAt(d.news_updated_at); }
+        if(d.news?.length){ setNewsStories(d.news);      setNewsUpdatedBy(d.news_updated_by); setNewsUpdatedAt(d.news_updated_at); }
         if(d.analytics)  { setGroupAnalytics(d.analytics); setAnalyticsGeneratedBy(d.analytics_generated_by); setAnalyticsGeneratedAt(d.analytics_generated_at); }
       })
       .subscribe();

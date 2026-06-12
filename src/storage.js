@@ -296,16 +296,15 @@ export async function sbGetAIContent(groupCode='default') {
 
 // Helper: merge-update ai_content without wiping other columns
 async function sbMergeAIContent(fields, groupCode='default') {
-  // First try update
-  const { data, error } = await supabase.from('ai_content')
-    .update(fields).eq('group_code', groupCode).select();
-  if (error) { console.error('sbMergeAIContent update error:', error.message); return; }
-  // If no row was updated, insert
-  if (!data || data.length === 0) {
-    const { error: insertErr } = await supabase.from('ai_content')
-      .insert({ group_code: groupCode, ...fields });
-    if (insertErr) console.error('sbMergeAIContent insert error:', insertErr.message);
-  }
+  console.log('[sbMergeAIContent] saving fields:', Object.keys(fields), 'for group:', groupCode);
+  const { error } = await supabase.from('ai_content')
+    .update(fields).eq('group_code', groupCode);
+  if (!error) { console.log('[sbMergeAIContent] update success'); return; }
+  console.error('[sbMergeAIContent] update error:', error.message);
+  const { error: insertErr } = await supabase.from('ai_content')
+    .insert({ group_code: groupCode, ...fields });
+  if (insertErr) console.error('[sbMergeAIContent] insert error:', insertErr.message);
+  else console.log('[sbMergeAIContent] insert success');
 }
 
 export async function sbSaveAIContent(bracket, commentary, bracketGeneratedBy, commentaryGeneratedBy, groupCode='default') {
@@ -346,6 +345,7 @@ export async function sbGetNews(groupCode='default') {
 }
 
 export async function sbSaveNews(stories, username, groupCode='default') {
+  console.log('[sbSaveNews] saving', stories?.length, 'stories for group:', groupCode);
   await sbMergeAIContent({
     news: stories,
     news_updated_by: username,
