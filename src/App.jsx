@@ -5837,7 +5837,7 @@ export default function App(){
                       const key1=`${homeName}||${awayName}`, key2=`${awayName}||${homeName}`;
                       const currentScore={homeScore:score?.home??0, awayScore:score?.away??0};
                       // Gather all user predictions for this match
-                      const matchPreds = Object.entries(livePredictions)
+                      const matchPreds = Object.entries({...allPlayerPreds, ...Object.fromEntries(Object.entries(livePredictions).filter(([,v])=>v?.username&&Array.isArray(v?.matches)))})
                         .filter(([k,v])=>k && typeof v==='object'&&v!==null&&!Array.isArray(v)&&v.username&&Array.isArray(v.matches))
                         .map(([,v])=>v)
                         .filter(p=>{
@@ -6113,12 +6113,12 @@ export default function App(){
                     background:finished?"rgba(34,197,94,0.04)":"rgba(255,255,255,0.03)",
                     border:`1px solid ${finished?"rgba(34,197,94,0.15)":"rgba(255,255,255,0.06)"}`,
                   }}>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:12,fontWeight:600}}>
-                        {FLAGS[home?.name]||"🏳️"} {home?.name}
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                        {FLAGS[home?.name]||FLAGS[TEAM_ALIASES[home?.name]]||"🏳️"} {TEAM_ALIASES[home?.name]||home?.name}
                       </div>
-                      <div style={{fontSize:12,fontWeight:600,marginTop:4}}>
-                        {FLAGS[away?.name]||"🏳️"} {away?.name}
+                      <div style={{fontSize:12,fontWeight:600,marginTop:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                        {FLAGS[away?.name]||FLAGS[TEAM_ALIASES[away?.name]]||"🏳️"} {TEAM_ALIASES[away?.name]||away?.name}
                       </div>
                     </div>
                     <div style={{textAlign:"center"}}>
