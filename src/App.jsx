@@ -2436,12 +2436,15 @@ export default function App(){
     setMatchAnalysis(prev => ({...prev, [id]: {text:null, loading:true}}));
     const homeName = fixture.teams?.home?.name;
     const awayName = fixture.teams?.away?.name;
+    const normHome = TEAM_ALIASES[homeName]||homeName;
+    const normAway = TEAM_ALIASES[awayName]||awayName;
     const pred = matches.find(m =>
+      (m.home===normHome&&m.away===normAway)||(m.home===normAway&&m.away===normHome)||
       (m.home===homeName&&m.away===awayName)||(m.home===awayName&&m.away===homeName)
     );
     const userPred = pred?.homeScore!==null ? {
-      home: pred.home===homeName ? pred.homeScore : pred.awayScore,
-      away: pred.home===homeName ? pred.awayScore : pred.homeScore,
+      home: pred.home===normHome||pred.home===homeName ? pred.homeScore : pred.awayScore,
+      away: pred.home===normHome||pred.home===homeName ? pred.awayScore : pred.homeScore,
     } : null;
     try {
       const res = await fetch('/api/analyse', {
@@ -2458,6 +2461,7 @@ export default function App(){
         }),
       });
       const data = await res.json();
+      console.log('[analyseMatch] response:', data.analysis ? 'got analysis' : data.error || 'no analysis');
       setMatchAnalysis(prev => ({...prev, [id]: {text: data.analysis||data.error, loading:false}}));
       // Persist to Supabase ai_content
       try {
