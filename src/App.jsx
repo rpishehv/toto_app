@@ -82,6 +82,14 @@ const FLAGS = {
   // Group L
   England:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",Croatia:"🇭🇷",Panama:"🇵🇦",Ghana:"🇬🇭",
   TBD:"🏳️",
+  // API-Football name aliases
+  "Czech Republic":"🇨🇿","Korea Republic":"🇰🇷","IR Iran":"🇮🇷",
+  "Bosnia and Herzegovina":"🇧🇦","Bosnia & Herzegovina":"🇧🇦",
+  "Côte d'Ivoire":"🇨🇮","Cote d'Ivoire":"🇨🇮","Ivory Coast":"🇨🇮",
+  "United States":"🇺🇸","Türkiye":"🇹🇷","Congo DR":"🇨🇩",
+  "Curaçao":"🇨🇼","Serbia":"🇷🇸","Colombia":"🇨🇴",
+  "Saudi Arabia":"🇸🇦","New Zealand":"🇳🇿","Cape Verde":"🇨🇻",
+  "DR Congo":"🇨🇩","South Korea":"🇰🇷",
 };
 
 // Normalise team names from openfootball to match our app's names
@@ -6127,7 +6135,7 @@ export default function App(){
                           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#fcb900"}}>
                             {kickoff?.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}
                           </div>
-                          <div style={{fontSize:10,color:"#555"}}>KO</div>
+                          <div style={{fontSize:10,color:"#555"}}>Kickoff</div>
                         </>
                       )}
                     </div>
