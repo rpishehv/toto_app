@@ -5949,17 +5949,20 @@ export default function App(){
 
                       {/* 🎲 Scoreline Predictor */}
                       {(()=>{
-                        const normH = TEAM_ALIASES[homeName]||homeName;
-                        const normA = TEAM_ALIASES[awayName]||awayName;
+                        const _homeName = home?.name;
+                        const _awayName = away?.name;
+                        if (!_homeName||!_awayName) return null;
+                        const normH = TEAM_ALIASES[_homeName]||_homeName;
+                        const normA = TEAM_ALIASES[_awayName]||_awayName;
                         const counts = {};
                         let total = 0;
                         Object.values({...allPlayerPreds}).forEach(p => {
                           const m = p.matches?.find(m =>
                             (m.home===normH&&m.away===normA)||(m.home===normA&&m.away===normH)||
-                            (m.home===homeName&&m.away===awayName)||(m.home===awayName&&m.away===homeName)
+                            (m.home===_homeName&&m.away===_awayName)||(m.home===_awayName&&m.away===_homeName)
                           );
                           if (!m||m.homeScore===null||m.homeScore===undefined) return;
-                          const flipped = m.home===normA||m.home===awayName;
+                          const flipped = m.home===normA||m.home===_awayName;
                           const key = flipped ? `${m.awayScore}-${m.homeScore}` : `${m.homeScore}-${m.awayScore}`;
                           counts[key] = (counts[key]||0) + 1;
                           total++;
@@ -6034,38 +6037,42 @@ export default function App(){
                       const aBlocked=getStat(as_,'Blocked Shots');
                       const aInsideBox=getStat(as_,'Shots insidebox');
                       const aOutsideBox=getStat(as_,'Shots outsidebox');
-                      const totalShots = hOnTarget+hOffTarget+hBlocked+aOnTarget+aOffTarget+aBlocked;
+                      // Use total shots as fallback so map always shows if any shots exist
+                      const hTotal=getStat(hs,'Total Shots');
+                      const aTotal=getStat(as_,'Total Shots');
+                      const totalShots = hTotal + aTotal;
                       if (!totalShots) return null;
 
                       // Generate deterministic shot positions based on counts
                       const seededPos = (seed, count, isHome, zone) => {
                         const positions = [];
                         for (let i=0; i<count; i++) {
-                          const s  = ((seed*31 + i*17 + zone*7) % 30 + 30) % 30;
-                          const s2 = ((seed*13 + i*23 + zone*11) % 50 + 50) % 50;
+                          const s1 = ((seed * 1664525 + i * 1013904223) & 0x7fffffff) % 100;
+                          const s2 = ((seed * 22695477 + i * 1234567891) & 0x7fffffff) % 100;
                           if (zone === 'inside') {
-                            // Home attacks right penalty box (x 83-98), away attacks left (x 2-17)
                             positions.push({
-                              x: isHome ? 83 + (s % 13) : 4 + (s % 13),
-                              y: 15 + s2,
+                              x: isHome ? 84 + (s1 % 12) : 4 + (s1 % 12),
+                              y: 14 + (s2 % 26),
                             });
                           } else {
-                            // Outside box shots — home from right-centre, away from left-centre
                             positions.push({
-                              x: isHome ? 68 + (s % 14) : 18 + (s % 14),
-                              y: 10 + s2,
+                              x: isHome ? 65 + (s1 % 18) : 17 + (s1 % 18),
+                              y: 8 + (s2 % 38),
                             });
                           }
                         }
                         return positions;
                       };
 
-                      const hShotsOn = seededPos(1, hOnTarget, true, 'inside');
-                      const hShotsOff = seededPos(2, Math.min(hOffTarget,5), true, 'inside');
-                      const hOutside = seededPos(3, Math.min(hOutsideBox,3), true, 'outside');
-                      const aShotsOn = seededPos(4, aOnTarget, false, 'inside');
-                      const aShotsOff = seededPos(5, Math.min(aOffTarget,5), false, 'inside');
-                      const aOutside = seededPos(6, Math.min(aOutsideBox,3), false, 'outside');
+                      // Fallback: if insidebox not available, use total shots
+                      const hInside = hInsideBox || hTotal;
+                      const aInside = aInsideBox || aTotal;
+                      const hShotsOn  = seededPos(1, Math.min(hOnTarget, 8),  true,  'inside');
+                      const hShotsOff = seededPos(2, Math.min(Math.max(hOffTarget, hInside-hOnTarget), 6), true, 'inside');
+                      const hOutside  = seededPos(3, Math.min(hOutsideBox, 4), true,  'outside');
+                      const aShotsOn  = seededPos(4, Math.min(aOnTarget, 8),  false, 'inside');
+                      const aShotsOff = seededPos(5, Math.min(Math.max(aOffTarget, aInside-aOnTarget), 6), false,'inside');
+                      const aOutside  = seededPos(6, Math.min(aOutsideBox, 4), false, 'outside');
 
                       return(
                         <div style={{marginBottom:14}}>
