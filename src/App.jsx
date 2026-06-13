@@ -3617,20 +3617,20 @@ export default function App(){
   }
 
   const TABS_MAIN=[
-    {id:"groups",   label:"⚽", full:"⚽ Groups"},
-    {id:"knockout", label:"🏆", full:"🏆 Knockout"},
-    {id:"champion", label:"👑", full:"👑 My Pick"},
-    {id:"help",     label:"❓", full:"❓ Help"},
+    {id:"groups",      label:"⚽", full:"⚽ Groups"},
+    {id:"knockout",    label:"🏆", full:"🏆 Knockout"},
+    {id:"champion",    label:"👑", full:"👑 My Pick"},
+    {id:"leaderboard", label:"🥇", full:"🥇 Board"},
+    {id:"help",        label:"❓", full:"❓ Help"},
   ];
   const TABS_ADVANCED=[
-    {id:"leaderboard", label:"🥇", full:"🥇 Board"},
-    {id:"chat",        label:"💬", full:"💬 Chat"},
-    {id:"live",        label:"🔴", full:"🔴 Live"},
-    {id:"news",        label:"📰", full:"📰 News"},
-    {id:"stats",       label:"📈", full:"📈 Stats"},
-    {id:"scoring",     label:"📊", full:"📊 Scoring"},
-    {id:"ai",          label:"🤖", full:"🤖 AI"},
-    {id:"admin",       label:"🔧", full:"🔧 Admin", restricted:true},
+    {id:"chat",    label:"💬", full:"💬 Chat"},
+    {id:"live",    label:"🔴", full:"🔴 Live"},
+    {id:"news",    label:"📰", full:"📰 News"},
+    {id:"stats",   label:"📈", full:"📈 Stats"},
+    {id:"scoring", label:"📊", full:"📊 Scoring"},
+    {id:"ai",      label:"🤖", full:"🤖 AI"},
+    {id:"admin",   label:"🔧", full:"🔧 Admin", restricted:true},
   ];
   const TABS=[...TABS_MAIN,...TABS_ADVANCED];
   const advancedTabActive = TABS_ADVANCED.some(t=>t.id===tab);
@@ -4132,7 +4132,7 @@ export default function App(){
                 }}>
                 <span style={{fontSize:18,lineHeight:1}}>{t.label}</span>
                 <span style={{fontSize:11,fontWeight:isActive?700:400,
-                  color:isActive?"#fcb900":"#666",letterSpacing:0.3}}>{name}</span>
+                  color:isActive?"#fcb900":"var(--color-text-secondary)",letterSpacing:0.3}}>{name}</span>
               </button>
             );
           })}
@@ -4158,7 +4158,7 @@ export default function App(){
                   }}>{trayOpen?"▲":"▼"}</span>
                 </span>
                 <span style={{fontSize:11,fontWeight:400,
-                  color:advancedTabActive?"#60a5fa":trayOpen?"#60a5fa":"#666",letterSpacing:0.3}}>
+                  color:advancedTabActive?"#60a5fa":trayOpen?"#60a5fa":"var(--color-text-secondary)",letterSpacing:0.3}}>
                   {trayOpen?"Less":"More"}
                 </span>
                 {hasUnread&&!advancedTabActive&&(
@@ -4179,7 +4179,7 @@ export default function App(){
           <div style={{borderTop:"1px solid rgba(255,255,255,0.06)",
             background:"rgba(96,165,250,0.03)"}}>
             <div style={{padding:"3px 6px 4px",
-              fontSize:9,color:"#666",textAlign:"center",
+              fontSize:9,color:"var(--color-text-secondary)",textAlign:"center",
               letterSpacing:0.8,textTransform:"uppercase",fontWeight:600}}>
               Advanced
             </div>
@@ -4201,7 +4201,7 @@ export default function App(){
                     }}>
                     <span style={{fontSize:14,lineHeight:1}}>{t.label}</span>
                     <span style={{fontSize:10,fontWeight:isActive?700:400,
-                      color:isActive?"#60a5fa":t.restricted?"#6b5a4a":"#666",letterSpacing:0.2}}>
+                      color:isActive?"#60a5fa":t.restricted?"#6b5a4a":"var(--color-text-secondary)",letterSpacing:0.2}}>
                       {name}
                     </span>
                     {t.id==="chat"&&chatUnread>0&&!isActive&&(
