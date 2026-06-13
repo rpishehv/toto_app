@@ -4130,7 +4130,7 @@ export default function App(){
                   cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",
                   display:"flex",flexDirection:"column",alignItems:"center",gap:1,
                 }}>
-                <span style={{fontSize:18,lineHeight:1}}>{t.label}</span>
+                <span style={{fontSize:22,lineHeight:1}}>{t.label}</span>
                 <span style={{fontSize:11,fontWeight:isActive?700:400,
                   color:isActive?"#fcb900":"var(--color-text-secondary)",letterSpacing:0.3}}>{name}</span>
               </button>
@@ -4199,7 +4199,7 @@ export default function App(){
                       display:"flex",flexDirection:"column",alignItems:"center",gap:0,
                       position:"relative",
                     }}>
-                    <span style={{fontSize:14,lineHeight:1}}>{t.label}</span>
+                    <span style={{fontSize:17,lineHeight:1}}>{t.label}</span>
                     <span style={{fontSize:10,fontWeight:isActive?700:400,
                       color:isActive?"#60a5fa":t.restricted?"#6b5a4a":"var(--color-text-secondary)",letterSpacing:0.2}}>
                       {name}
