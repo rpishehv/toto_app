@@ -6041,17 +6041,19 @@ export default function App(){
                       const seededPos = (seed, count, isHome, zone) => {
                         const positions = [];
                         for (let i=0; i<count; i++) {
-                          const s = (seed*31 + i*17 + zone*7) % 100;
-                          const s2 = (seed*13 + i*23 + zone*11) % 100;
+                          const s  = ((seed*31 + i*17 + zone*7) % 30 + 30) % 30;
+                          const s2 = ((seed*13 + i*23 + zone*11) % 50 + 50) % 50;
                           if (zone === 'inside') {
+                            // Home attacks right penalty box (x 83-98), away attacks left (x 2-17)
                             positions.push({
-                              x: isHome ? 20+((s%30)) : 50+((s%30)),
-                              y: 25+((s2%50)),
+                              x: isHome ? 83 + (s % 13) : 4 + (s % 13),
+                              y: 15 + s2,
                             });
                           } else {
+                            // Outside box shots — home from right-centre, away from left-centre
                             positions.push({
-                              x: isHome ? 5+((s%15)) : 80+((s%15)),
-                              y: 15+((s2%70)),
+                              x: isHome ? 68 + (s % 14) : 18 + (s % 14),
+                              y: 10 + s2,
                             });
                           }
                         }
