@@ -1668,7 +1668,7 @@ export default function App(){
   const [adminPinError,setAdminPinError]=useState("");
   const [deleteConfirmUser,setDeleteConfirmUser]=useState(null);
   const [chatReminderSent,setChatReminderSent]=useState(false);
-  const [showAdvancedTray,setShowAdvancedTray]=useState(false);
+  const [showAdvancedTray,setShowAdvancedTray]=useState(true);
   // Agentic features — track which reminders have already fired
   const firedRemindersRef = React.useRef(new Set());
   const [adminActiveGroup,setAdminActiveGroup]=useState("A");
@@ -6278,6 +6278,83 @@ export default function App(){
               })}
             </div>
           )}
+
+          {/* ── Next 7 days schedule ── */}
+          {(()=>{
+            const now = Date.now();
+            const weekMs = 7 * 24 * 60 * 60 * 1000;
+            const upcoming = ALL_MATCHES
+              .filter(m => {
+                const ko = KICKOFFS[m.id] || KICKOFFS[`${m.home}||${m.away}`];
+                return ko && ko > now && ko < now + weekMs;
+              })
+              .sort((a,b) => {
+                const ka = KICKOFFS[a.id]||KICKOFFS[`${a.home}||${a.away}`]||0;
+                const kb = KICKOFFS[b.id]||KICKOFFS[`${b.home}||${b.away}`]||0;
+                return ka - kb;
+              });
+            if (!upcoming.length) return null;
+
+            // Group by day
+            const byDay = {};
+            upcoming.forEach(m => {
+              const ko = KICKOFFS[m.id]||KICKOFFS[`${m.home}||${m.away}`];
+              const day = new Date(ko).toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
+              if (!byDay[day]) byDay[day] = [];
+              byDay[day].push({...m, ko});
+            });
+
+            return(
+              <div style={{marginTop:16}}>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,
+                  letterSpacing:1,color:"#fcb900",marginBottom:10}}>
+                  📅 Next 7 Days
+                </div>
+                {Object.entries(byDay).map(([day, dayMatches])=>(
+                  <div key={day} style={{marginBottom:12}}>
+                    <div style={{fontSize:10,color:"#555",fontWeight:700,
+                      letterSpacing:0.5,marginBottom:6,textTransform:"uppercase"}}>{day}</div>
+                    {dayMatches.map(m=>{
+                      const koTime = new Date(m.ko).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+                      const myPred = matches.find(p =>
+                        (p.home===m.home&&p.away===m.away)||(p.home===m.away&&p.away===m.home)
+                      );
+                      const hasPred = myPred?.homeScore!==null && myPred?.homeScore!==undefined;
+                      return(
+                        <div key={m.id} style={{
+                          display:"flex",alignItems:"center",gap:8,
+                          padding:"7px 10px",borderRadius:8,marginBottom:4,
+                          background:"rgba(255,255,255,0.03)",
+                          border:"1px solid rgba(255,255,255,0.06)",
+                        }}>
+                          <span style={{fontSize:13,flexShrink:0}}>{FLAGS[m.home]||"🏳️"}</span>
+                          <span style={{fontSize:11,flex:1,color:"#ccc",fontWeight:500,
+                            whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                            {m.home}
+                          </span>
+                          <div style={{textAlign:"center",flexShrink:0}}>
+                            <div style={{fontSize:10,color:"#fcb900",fontWeight:700}}>{koTime}</div>
+                            {hasPred&&(
+                              <div style={{fontSize:9,color:"#555",marginTop:1}}>
+                                {myPred.home===m.home?myPred.homeScore:myPred.awayScore}
+                                –
+                                {myPred.home===m.home?myPred.awayScore:myPred.homeScore}
+                              </div>
+                            )}
+                          </div>
+                          <span style={{fontSize:11,flex:1,color:"#ccc",fontWeight:500,
+                            textAlign:"right",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                            {m.away}
+                          </span>
+                          <span style={{fontSize:13,flexShrink:0}}>{FLAGS[m.away]||"🏳️"}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
 
           {!liveLoading&&liveMatches.length===0&&todayMatches.length===0&&(()=>{
             const score = getSimScore(simMinute);
