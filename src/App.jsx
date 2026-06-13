@@ -4131,8 +4131,8 @@ export default function App(){
                   display:"flex",flexDirection:"column",alignItems:"center",gap:1,
                 }}>
                 <span style={{fontSize:18,lineHeight:1}}>{t.label}</span>
-                <span style={{fontSize:10,fontWeight:isActive?700:400,
-                  color:isActive?"#fcb900":"#444",letterSpacing:0.3}}>{name}</span>
+                <span style={{fontSize:11,fontWeight:isActive?700:400,
+                  color:isActive?"#fcb900":"#666",letterSpacing:0.3}}>{name}</span>
               </button>
             );
           })}
