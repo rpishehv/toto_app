@@ -4157,8 +4157,8 @@ export default function App(){
                     color:trayOpen?"#60a5fa":"#444",lineHeight:1,
                   }}>{trayOpen?"▲":"▼"}</span>
                 </span>
-                <span style={{fontSize:10,fontWeight:400,
-                  color:advancedTabActive?"#60a5fa":trayOpen?"#60a5fa":"#444",letterSpacing:0.3}}>
+                <span style={{fontSize:11,fontWeight:400,
+                  color:advancedTabActive?"#60a5fa":trayOpen?"#60a5fa":"#666",letterSpacing:0.3}}>
                   {trayOpen?"Less":"More"}
                 </span>
                 {hasUnread&&!advancedTabActive&&(
@@ -4179,7 +4179,7 @@ export default function App(){
           <div style={{borderTop:"1px solid rgba(255,255,255,0.06)",
             background:"rgba(96,165,250,0.03)"}}>
             <div style={{padding:"3px 6px 4px",
-              fontSize:8,color:"#333",textAlign:"center",
+              fontSize:9,color:"#666",textAlign:"center",
               letterSpacing:0.8,textTransform:"uppercase",fontWeight:600}}>
               Advanced
             </div>
@@ -4200,8 +4200,8 @@ export default function App(){
                       position:"relative",
                     }}>
                     <span style={{fontSize:14,lineHeight:1}}>{t.label}</span>
-                    <span style={{fontSize:8,fontWeight:isActive?700:400,
-                      color:isActive?"#60a5fa":t.restricted?"#6b5a4a":"#444",letterSpacing:0.2}}>
+                    <span style={{fontSize:10,fontWeight:isActive?700:400,
+                      color:isActive?"#60a5fa":t.restricted?"#6b5a4a":"#666",letterSpacing:0.2}}>
                       {name}
                     </span>
                     {t.id==="chat"&&chatUnread>0&&!isActive&&(
