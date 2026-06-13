@@ -345,7 +345,7 @@ function timeUntilLock(match, kickoffs) {
 }
 
 // Champion pick locks at kickoff of first match — June 11, 2026 17:00 UTC
-const CHAMPION_LOCK_DATE = new Date("2026-06-13T00:00:00Z").getTime(); // End of Friday June 12
+const CHAMPION_LOCK_DATE = new Date("2026-06-20T00:00:00Z").getTime(); // End of Friday June 19
 function isChampionLocked(nowMs = Date.now()) { return nowMs >= CHAMPION_LOCK_DATE; }
 function timeUntilChampionLock(nowMs = Date.now()) {
   const diff = CHAMPION_LOCK_DATE - nowMs;
@@ -3776,7 +3776,7 @@ export default function App(){
               background:"rgba(252,185,0,0.06)",border:"1px solid rgba(252,185,0,0.15)",
               borderRadius:8,padding:"8px 12px",marginBottom:16,fontSize:11,color:"#888",textAlign:"center",
             }}>
-              🔒 Picks lock <strong style={{color:"#fcb900"}}>Friday June 12, midnight UTC</strong>
+              🔒 Picks lock <strong style={{color:"#fcb900"}}>Friday June 19, midnight UTC</strong>
             </div>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>{setShowPodiumReminder(false);setTab("champion");setShowAdvancedTray(false);}} style={{
@@ -4514,7 +4514,7 @@ export default function App(){
                   <div style={{display:"inline-flex",alignItems:"center",gap:8,
                     background:"rgba(96,165,250,0.1)",border:"1px solid rgba(96,165,250,0.3)",
                     borderRadius:10,padding:"8px 16px",fontSize:12,color:"#60a5fa"}}>
-                    ⏱ Locks in <strong>{champCountdown}</strong> — midnight Friday June 13 UTC
+                    ⏱ Locks in <strong>{champCountdown}</strong> — midnight Friday June 20 UTC
                   </div>
                 )}
                 {champLocked && (
@@ -4714,7 +4714,7 @@ export default function App(){
                     </div>
                   </div>
                   <div style={{fontSize:11,color:"#555",flexShrink:0,textAlign:"right"}}>
-                    Locks Jun 13
+                    Locks Jun 19
                   </div>
                 </div>
               );
@@ -4795,7 +4795,7 @@ export default function App(){
             background:"rgba(252,185,0,0.06)",border:"1px solid rgba(252,185,0,0.15)",
             borderRadius:10,padding:"10px 14px",marginBottom:20,fontSize:11,color:"#777",lineHeight:1.7,
           }}>
-            🔒 Podium & top scorer picks lock at <strong style={{color:"#fcb900"}}>end of Friday June 12 (midnight UTC)</strong>.<br/>
+            🔒 Podium & top scorer picks lock at <strong style={{color:"#fcb900"}}>end of Friday June 19 (midnight UTC)</strong>.<br/>
             Max bonus: <strong style={{color:"#f59e0b"}}>100 pts</strong> if all 3 podium + top scorer correct.
             ⚽ Top scorer uses fuzzy matching — "mbappe" matches "Kylian Mbappé".
           </div>
@@ -5872,9 +5872,9 @@ export default function App(){
                       if(!homeName||!awayName) return null;
                       const key1=`${homeName}||${awayName}`, key2=`${awayName}||${homeName}`;
                       const currentScore={homeScore:score?.home??0, awayScore:score?.away??0};
-                      // Gather all user predictions for this match
                       const normHome = TEAM_ALIASES[homeName]||homeName;
                       const normAway = TEAM_ALIASES[awayName]||awayName;
+                      console.log('[Social panel] home:', homeName, 'normHome:', normHome, 'allPlayerPreds keys:', Object.keys(allPlayerPreds).length);
                       const matchPreds = Object.entries({...allPlayerPreds, ...Object.fromEntries(Object.entries(livePredictions).filter(([,v])=>v?.username&&Array.isArray(v?.matches)))})
                         .filter(([k,v])=>k && typeof v==='object'&&v!==null&&!Array.isArray(v)&&v.username&&Array.isArray(v.matches))
                         .map(([,v])=>v)
