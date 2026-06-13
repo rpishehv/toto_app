@@ -4903,7 +4903,7 @@ export default function App(){
                     background:isMe?"rgba(252,185,0,0.07)":"rgba(255,255,255,0.03)",
                     border:`1px solid ${isMe?"rgba(252,185,0,0.25)":"rgba(255,255,255,0.06)"}`}}>
                     <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,width:28,textAlign:"center",
-                      color:i===0?"#fcb900":i===1?"#c0c0c0":i===2?"#cd7f32":"#333"}}>{medal||i+1}</span>
+                      color:i===0?"#fcb900":i===1?"#c0c0c0":i===2?"#cd7f32":"#555"}}>{medal||i+1}</span>
                     <div style={{flex:1}}>
                       <div style={{fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:6}}>
                         {entry.username}{isMe&&<span style={{color:"#fcb900",fontSize:10}}>(you)</span>}
