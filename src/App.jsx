@@ -5946,6 +5946,63 @@ export default function App(){
 
                     {fixtureEvents.length>0&&<div style={{marginBottom:14}}>
                         <div style={{fontSize:11,fontWeight:700,color:"#fcb900",marginBottom:8}}>📋 Match Events</div>
+
+                      {/* 🎲 Scoreline Predictor */}
+                      {(()=>{
+                        const normH = TEAM_ALIASES[homeName]||homeName;
+                        const normA = TEAM_ALIASES[awayName]||awayName;
+                        const counts = {};
+                        let total = 0;
+                        Object.values({...allPlayerPreds}).forEach(p => {
+                          const m = p.matches?.find(m =>
+                            (m.home===normH&&m.away===normA)||(m.home===normA&&m.away===normH)||
+                            (m.home===homeName&&m.away===awayName)||(m.home===awayName&&m.away===homeName)
+                          );
+                          if (!m||m.homeScore===null||m.homeScore===undefined) return;
+                          const flipped = m.home===normA||m.home===awayName;
+                          const key = flipped ? `${m.awayScore}-${m.homeScore}` : `${m.homeScore}-${m.awayScore}`;
+                          counts[key] = (counts[key]||0) + 1;
+                          total++;
+                        });
+                        if (!total) return null;
+                        const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+                        const currentKey = score?.home!=null ? `${score.home}-${score.away}` : null;
+                        return(
+                          <div style={{marginBottom:14}}>
+                            <div style={{fontSize:11,fontWeight:700,color:"#a78bfa",marginBottom:8}}>
+                              🎲 Group Predictions
+                            </div>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                              {sorted.map(([key,cnt])=>{
+                                const pct = Math.round(cnt/total*100);
+                                const isCurrent = key===currentKey;
+                                return(
+                                  <div key={key} style={{
+                                    padding:"5px 10px",borderRadius:8,
+                                    background:isCurrent?"rgba(34,197,94,0.15)":"rgba(255,255,255,0.04)",
+                                    border:`1px solid ${isCurrent?"rgba(34,197,94,0.4)":"rgba(255,255,255,0.08)"}`,
+                                    textAlign:"center",minWidth:52,
+                                  }}>
+                                    <div style={{fontSize:14,fontWeight:700,
+                                      color:isCurrent?"#22c55e":"#ddd",fontFamily:"monospace"}}>
+                                      {key}
+                                    </div>
+                                    <div style={{fontSize:10,color:isCurrent?"#22c55e":"#555",marginTop:1}}>
+                                      {cnt} · {pct}%
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {currentKey&&counts[currentKey]&&(
+                              <div style={{fontSize:10,color:"#22c55e",marginTop:6}}>
+                                ✓ {counts[currentKey]} player{counts[currentKey]>1?'s':''} predicted this exact score
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
                         {fixtureEvents.map((ev,i)=>{
                           const isHome=ev.team?.id===home?.id;
                           const icon=ev.type==="Goal"?"⚽":ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):"🔄";
@@ -6061,6 +6118,99 @@ export default function App(){
                     {fixtureStats?.length>=2&&(()=>{
                       const hs=fixtureStats[0]?.statistics||[], as_=fixtureStats[1]?.statistics||[];
                       const keys=["Ball Possession","Total Shots","Shots on Goal","Corner Kicks","Fouls","Yellow Cards"];
+
+                    {/* 🏃 Player Heatmap */}
+                    {fixturePlayers?.length>=2&&fixtureLineups?.length>=2&&(()=>{
+                      const homePlayers = fixturePlayers[0]?.players||[];
+                      const awayPlayers = fixturePlayers[1]?.players||[];
+                      const hl = fixtureLineups[0];
+                      const al = fixtureLineups[1];
+                      if (!homePlayers.length) return null;
+
+                      // Formation positions helper (reuse from FormationPitch)
+                      const getPositions = (formation) => {
+                        const lines = (formation||'4-3-3').split('-').map(Number);
+                        const positions = [];
+                        let row = 90;
+                        const step = 80/(lines.length+1);
+                        lines.forEach(count => {
+                          row -= step;
+                          for (let i=0; i<count; i++) {
+                            positions.push({x: row, y: (100/(count+1))*(i+1)});
+                          }
+                        });
+                        return positions;
+                      };
+
+                      const getActivity = (p) => {
+                        const s = p.statistics?.[0]||{};
+                        return (s.shots?.total||0)*3 + (s.passes?.key||0)*2 +
+                               (s.tackles?.total||0)*1.5 + (s.dribbles?.success||0)*2 +
+                               (s.duels?.won||0)*0.5;
+                      };
+
+                      const hStarting = homePlayers.filter(p=>p.statistics?.[0]?.games?.minutes>0).slice(0,11);
+                      const aStarting = awayPlayers.filter(p=>p.statistics?.[0]?.games?.minutes>0).slice(0,11);
+                      const hPos = getPositions(hl?.formation);
+                      const aPos = getPositions(al?.formation);
+                      const maxActivity = Math.max(1, ...[...hStarting,...aStarting].map(getActivity));
+
+                      return(
+                        <div style={{marginBottom:14}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"#fb923c",marginBottom:8}}>
+                            🏃 Player Activity
+                            <span style={{fontSize:9,color:"#555",fontWeight:400,marginLeft:6}}>size = involvement</span>
+                          </div>
+                          <div style={{position:"relative",width:"100%",paddingBottom:"52%",
+                            background:"rgba(34,197,94,0.07)",borderRadius:8,
+                            border:"1px solid rgba(255,255,255,0.08)",overflow:"hidden"}}>
+                            <svg style={{position:"absolute",inset:0,width:"100%",height:"100%"}} viewBox="0 0 100 52" preserveAspectRatio="none">
+                              <line x1="50" y1="0" x2="50" y2="52" stroke="rgba(255,255,255,0.1)" strokeWidth="0.4"/>
+                              <rect x="1" y="15" width="16" height="24" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.4"/>
+                              <rect x="83" y="15" width="16" height="24" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.4"/>
+                              <circle cx="50" cy="26" r="9" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.4"/>
+                              {/* Goalkeeper */}
+                              <circle cx="4" cy="26" r="2.5" fill="#fcb900" opacity="0.8"/>
+                              <circle cx="96" cy="26" r="2.5" fill="#60a5fa" opacity="0.8"/>
+                              {/* Home outfield */}
+                              {hStarting.slice(1).map((p,i)=>{
+                                const pos = hPos[i]||{x:50,y:50};
+                                const act = getActivity(p);
+                                const r = 1.5 + (act/maxActivity)*2.5;
+                                const opacity = 0.4 + (act/maxActivity)*0.6;
+                                const x = pos.x * 0.5; // left half
+                                const y = pos.y * 0.52;
+                                return <circle key={i} cx={x} cy={y} r={r} fill="#fcb900" opacity={opacity}/>;
+                              })}
+                              {/* Away outfield */}
+                              {aStarting.slice(1).map((p,i)=>{
+                                const pos = aPos[i]||{x:50,y:50};
+                                const act = getActivity(p);
+                                const r = 1.5 + (act/maxActivity)*2.5;
+                                const opacity = 0.4 + (act/maxActivity)*0.6;
+                                const x = 100 - (pos.x * 0.5); // right half
+                                const y = pos.y * 0.52;
+                                return <circle key={i} cx={x} cy={y} r={r} fill="#60a5fa" opacity={opacity}/>;
+                              })}
+                            </svg>
+                          </div>
+                          {/* Top active players */}
+                          <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:10,color:"#555"}}>
+                            <div>
+                              {hStarting.sort((a,b)=>getActivity(b)-getActivity(a)).slice(0,2).map(p=>(
+                                <div key={p.player?.id}>🟡 {p.player?.name?.split(' ').slice(-1)[0]}</div>
+                              ))}
+                            </div>
+                            <div style={{textAlign:"right"}}>
+                              {aStarting.sort((a,b)=>getActivity(b)-getActivity(a)).slice(0,2).map(p=>(
+                                <div key={p.player?.id}>{p.player?.name?.split(' ').slice(-1)[0]} 🔵</div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                       return(
                         <div style={{marginBottom:14}}>
                           <div style={{fontSize:11,fontWeight:700,color:"#60a5fa",marginBottom:8}}>📊 Match Stats</div>
