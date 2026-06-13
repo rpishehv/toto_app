@@ -5966,6 +5966,100 @@ export default function App(){
                       </div>}
                     {fixtureStats?.length>=2&&(()=>{
                       const hs=fixtureStats[0]?.statistics||[], as_=fixtureStats[1]?.statistics||[];
+                      const getStat=(arr,key)=>parseInt(String(arr.find(s=>s.type===key)?.value||0).replace('%',''))||0;
+                      const hOnTarget=getStat(hs,'Shots on Goal');
+                      const hOffTarget=getStat(hs,'Shots off Goal');
+                      const hBlocked=getStat(hs,'Blocked Shots');
+                      const hInsideBox=getStat(hs,'Shots insidebox');
+                      const hOutsideBox=getStat(hs,'Shots outsidebox');
+                      const aOnTarget=getStat(as_,'Shots on Goal');
+                      const aOffTarget=getStat(as_,'Shots off Goal');
+                      const aBlocked=getStat(as_,'Blocked Shots');
+                      const aInsideBox=getStat(as_,'Shots insidebox');
+                      const aOutsideBox=getStat(as_,'Shots outsidebox');
+                      const totalShots = hOnTarget+hOffTarget+hBlocked+aOnTarget+aOffTarget+aBlocked;
+                      if (!totalShots) return null;
+
+                      // Generate deterministic shot positions based on counts
+                      const seededPos = (seed, count, isHome, zone) => {
+                        const positions = [];
+                        for (let i=0; i<count; i++) {
+                          const s = (seed*31 + i*17 + zone*7) % 100;
+                          const s2 = (seed*13 + i*23 + zone*11) % 100;
+                          if (zone === 'inside') {
+                            positions.push({
+                              x: isHome ? 20+((s%30)) : 50+((s%30)),
+                              y: 25+((s2%50)),
+                            });
+                          } else {
+                            positions.push({
+                              x: isHome ? 5+((s%15)) : 80+((s%15)),
+                              y: 15+((s2%70)),
+                            });
+                          }
+                        }
+                        return positions;
+                      };
+
+                      const hShotsOn = seededPos(1, hOnTarget, true, 'inside');
+                      const hShotsOff = seededPos(2, Math.min(hOffTarget,5), true, 'inside');
+                      const hOutside = seededPos(3, Math.min(hOutsideBox,3), true, 'outside');
+                      const aShotsOn = seededPos(4, aOnTarget, false, 'inside');
+                      const aShotsOff = seededPos(5, Math.min(aOffTarget,5), false, 'inside');
+                      const aOutside = seededPos(6, Math.min(aOutsideBox,3), false, 'outside');
+
+                      return(
+                        <div style={{marginBottom:14}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"#60a5fa",marginBottom:8}}>
+                            🎯 Shot Map
+                            <span style={{fontSize:10,color:"#555",fontWeight:400,marginLeft:8}}>
+                              <span style={{color:"#fcb900"}}>●</span> {home?.name||homeName}
+                              <span style={{color:"#60a5fa",marginLeft:8}}>●</span> {away?.name||awayName}
+                            </span>
+                          </div>
+                          <div style={{position:"relative",width:"100%",paddingBottom:"52%",
+                            background:"rgba(34,197,94,0.08)",borderRadius:8,
+                            border:"1px solid rgba(255,255,255,0.08)",overflow:"hidden"}}>
+                            {/* Pitch markings */}
+                            <svg style={{position:"absolute",inset:0,width:"100%",height:"100%"}} viewBox="0 0 100 52" preserveAspectRatio="none">
+                              {/* Halfway line */}
+                              <line x1="50" y1="0" x2="50" y2="52" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5"/>
+                              {/* Left penalty box */}
+                              <rect x="0" y="14" width="16" height="24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5"/>
+                              {/* Right penalty box */}
+                              <rect x="84" y="14" width="16" height="24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5"/>
+                              {/* Left goal */}
+                              <rect x="0" y="21" width="3" height="10" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="0.5"/>
+                              {/* Right goal */}
+                              <rect x="97" y="21" width="3" height="10" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="0.5"/>
+                              {/* Centre circle */}
+                              <circle cx="50" cy="26" r="10" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5"/>
+
+                              {/* Home shots on target — filled yellow */}
+                              {hShotsOn.map((p,i)=><circle key={`hon${i}`} cx={p.x} cy={p.y} r="2.5" fill="#fcb900" opacity="0.9"/>)}
+                              {/* Home shots off target — outline yellow */}
+                              {hShotsOff.map((p,i)=><circle key={`hoff${i}`} cx={p.x} cy={p.y} r="2.5" fill="none" stroke="#fcb900" strokeWidth="0.8" opacity="0.7"/>)}
+                              {/* Home outside box — small yellow */}
+                              {hOutside.map((p,i)=><circle key={`hout${i}`} cx={p.x} cy={p.y} r="1.8" fill="none" stroke="#fcb900" strokeWidth="0.6" opacity="0.5"/>)}
+
+                              {/* Away shots on target — filled blue */}
+                              {aShotsOn.map((p,i)=><circle key={`aon${i}`} cx={p.x} cy={p.y} r="2.5" fill="#60a5fa" opacity="0.9"/>)}
+                              {/* Away shots off target — outline blue */}
+                              {aShotsOff.map((p,i)=><circle key={`aoff${i}`} cx={p.x} cy={p.y} r="2.5" fill="none" stroke="#60a5fa" strokeWidth="0.8" opacity="0.7"/>)}
+                              {/* Away outside box — small blue */}
+                              {aOutside.map((p,i)=><circle key={`aout${i}`} cx={p.x} cy={p.y} r="1.8" fill="none" stroke="#60a5fa" strokeWidth="0.6" opacity="0.5"/>)}
+                            </svg>
+                          </div>
+                          <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#555",marginTop:6}}>
+                            <span>🟡 On target: {hOnTarget} | Off: {hOffTarget} | Box: {hInsideBox}</span>
+                            <span>On: {aOnTarget} | Off: {aOffTarget} | Box: {aInsideBox} 🔵</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {fixtureStats?.length>=2&&(()=>{
+                      const hs=fixtureStats[0]?.statistics||[], as_=fixtureStats[1]?.statistics||[];
                       const keys=["Ball Possession","Total Shots","Shots on Goal","Corner Kicks","Fouls","Yellow Cards"];
                       return(
                         <div style={{marginBottom:14}}>
