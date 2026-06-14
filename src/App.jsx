@@ -3858,27 +3858,11 @@ export default function App(){
           </button>
         </div>
 
-        {/* Action row */}
-        <div style={{padding:"0 14px 8px",display:"flex",gap:6}}>
-          <button onClick={exportPredictions} style={{
-            padding:"4px 9px",background:"transparent",border:"1px solid rgba(96,165,250,0.3)",
-            borderRadius:6,color:"#60a5fa",fontSize:10,cursor:"pointer",fontFamily:"inherit",
-          }}>📦 Backup</button>
-          <button onClick={()=>setShowImport(p=>!p)} style={{
-            padding:"4px 9px",background:"transparent",border:"1px solid rgba(252,185,0,0.3)",
-            borderRadius:6,color:"#fcb900",fontSize:10,cursor:"pointer",fontFamily:"inherit",
-          }}>📥 Import</button>
-          <button onClick={()=>setShowUserResetConfirm(true)} style={{
-            padding:"4px 9px",background:"transparent",border:"1px solid rgba(251,146,60,0.3)",
-            borderRadius:6,color:"#fb923c",fontSize:10,cursor:"pointer",fontFamily:"inherit",
-          }}>🗑 Reset</button>
-          <button onClick={()=>setShowShareCard(true)} style={{
-            padding:"4px 9px",background:"transparent",border:"1px solid rgba(34,197,94,0.3)",
-            borderRadius:6,color:"#22c55e",fontSize:10,cursor:"pointer",fontFamily:"inherit",
-          }}>📤 Share</button>
+        {/* Action row — logout only, rest moved to Admin */}
+        <div style={{padding:"0 14px 8px",display:"flex",gap:6,justifyContent:"flex-end"}}>
           <button onClick={()=>{clearSession();setUserName("");setGroupCode("default");setGroupCodeInput("");setNameInput("");setPinInput("");setPinConfirm("");setPinStep("name");setPinError("");}} style={{
             padding:"4px 9px",background:"transparent",border:"1px solid rgba(255,255,255,0.10)",
-            borderRadius:6,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit",marginLeft:"auto",
+            borderRadius:6,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit",
           }}>↩ Logout</button>
         </div>
         {/* Prediction completion bar */}
@@ -4725,80 +4709,85 @@ export default function App(){
 
         {/* ── SCORING ── */}
         {tab==="scoring"&&<div>
-          <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,color:"#fcb900",marginTop:0}}>Scoring System</h2>
-
-          {/* Match scoring rules */}
-          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,letterSpacing:1,color:"#888",marginBottom:10}}>⚽ MATCH PREDICTIONS</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:8}}>
-            {[
-              {pts:6, label:"Exact Score (win)", icon:"⭐",desc:"Correct scoreline, non-draw",        color:"#22c55e",ex:"Pred 2-1 / Actual 2-1"},
-              {pts:6, label:"Exact Score (draw)",icon:"⭐",desc:"Correct draw scoreline",              color:"#22c55e",ex:"Pred 1-1 / Actual 1-1"},
-              {pts:4, label:"Correct GD",        icon:"📐",desc:"Right goal difference, wrong scores", color:"#fcb900",ex:"Pred 3-2 / Actual 2-1"},
-              {pts:2, label:"Correct Winner",    icon:"✓", desc:"Right outcome, wrong score/GD",      color:"#60a5fa",ex:"Pred 3-1 / Actual 2-1"},
-              {pts:2, label:"Draw Predicted",    icon:"✓", desc:"Draw correct, wrong score",          color:"#60a5fa",ex:"Pred 2-2 / Actual 1-1"},
-            ].map((r,i)=>(
-              <div key={i} style={{
-                background:`${r.color}0e`,border:`1px solid ${r.color}30`,
-                borderRadius:10,padding:"12px 14px",
-                display:"flex",alignItems:"center",gap:12,
-              }}>
-                <div style={{textAlign:"center",flexShrink:0,width:52}}>
-                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,color:r.color,lineHeight:1}}>{r.pts}</div>
-                  <div style={{fontSize:10,color:"#555"}}>pts</div>
+          {/* Today's / upcoming games quick predict */}
+          {(()=>{
+            const now = Date.now();
+            const tomorrow = now + 24*60*60*1000;
+            const upcomingToday = ALL_MATCHES.filter(m=>{
+              const ko = KICKOFFS[m.id]||KICKOFFS[`${m.home}||${m.away}`];
+              return ko && ko > now && ko < tomorrow;
+            }).sort((a,b)=>{
+              const ka=KICKOFFS[a.id]||KICKOFFS[`${a.home}||${a.away}`]||0;
+              const kb=KICKOFFS[b.id]||KICKOFFS[`${b.home}||${b.away}`]||0;
+              return ka-kb;
+            });
+            if (!upcomingToday.length) return null;
+            return(
+              <div style={{marginBottom:20}}>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,
+                  letterSpacing:1,color:"#fcb900",marginBottom:10}}>
+                  ⚡ Predict Today's Games
                 </div>
-                <div>
-                  <div style={{fontWeight:700,fontSize:12,marginBottom:2}}>{r.icon} {r.label}</div>
-                  <div style={{fontSize:11,color:"#555"}}>{r.desc}</div>
-                  <div style={{fontSize:10,color:"#444",fontFamily:"monospace",marginTop:3}}>{r.ex}</div>
-                </div>
+                {upcomingToday.map(m=>{
+                  const pred = matches.find(p=>p.id===m.id);
+                  const ko = KICKOFFS[m.id]||KICKOFFS[`${m.home}||${m.away}`];
+                  const koTime = ko ? new Date(ko).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}) : "";
+                  const locked = isMatchLocked(m, kickoffs);
+                  const hasPred = pred?.homeScore!==null&&pred?.homeScore!==undefined;
+                  return(
+                    <div key={m.id} style={{
+                      marginBottom:10,padding:"10px 12px",borderRadius:10,
+                      background:"rgba(255,255,255,0.03)",
+                      border:`1px solid ${locked?"rgba(255,255,255,0.05)":"rgba(252,185,0,0.15)"}`,
+                    }}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                        <span style={{fontSize:14}}>{FLAGS[m.home]||"🏳️"}</span>
+                        <span style={{flex:1,fontSize:12,fontWeight:600,color:"#ddd"}}>{m.home}</span>
+                        <span style={{fontSize:10,color:locked?"#555":"#fcb900",fontWeight:700}}>
+                          {locked?"🔒 Locked":koTime}
+                        </span>
+                        <span style={{flex:1,fontSize:12,fontWeight:600,color:"#ddd",textAlign:"right"}}>{m.away}</span>
+                        <span style={{fontSize:14}}>{FLAGS[m.away]||"🏳️"}</span>
+                      </div>
+                      {!locked&&(
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <input type="number" min="0" max="20"
+                            value={pred?.homeScore??""} placeholder="0"
+                            onChange={e=>{
+                              const v=e.target.value===''?null:parseInt(e.target.value);
+                              setMatches(prev=>prev.map(p=>p.id===m.id?{...p,homeScore:v}:p));
+                              setSaved(false);
+                            }}
+                            style={{width:48,padding:"6px",textAlign:"center",
+                              background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",
+                              borderRadius:6,color:"#fff",fontSize:16,fontFamily:"inherit"}}
+                          />
+                          <span style={{color:"#555",fontSize:14}}>–</span>
+                          <input type="number" min="0" max="20"
+                            value={pred?.awayScore??""} placeholder="0"
+                            onChange={e=>{
+                              const v=e.target.value===''?null:parseInt(e.target.value);
+                              setMatches(prev=>prev.map(p=>p.id===m.id?{...p,awayScore:v}:p));
+                              setSaved(false);
+                            }}
+                            style={{width:48,padding:"6px",textAlign:"center",
+                              background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",
+                              borderRadius:6,color:"#fff",fontSize:16,fontFamily:"inherit"}}
+                          />
+                          {hasPred&&<span style={{fontSize:11,color:"#22c55e",marginLeft:4}}>✓</span>}
+                        </div>
+                      )}
+                      {locked&&hasPred&&(
+                        <div style={{fontSize:12,color:"#555",fontFamily:"monospace"}}>
+                          Your pick: {pred.homeScore}–{pred.awayScore}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-            {/* Max per match */}
-            <div style={{
-              background:"rgba(252,185,0,0.06)",border:"1px solid rgba(252,185,0,0.15)",
-              borderRadius:10,padding:"12px 14px",display:"flex",alignItems:"center",gap:12,
-            }}>
-              <div style={{textAlign:"center",flexShrink:0,width:52}}>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,color:"#fcb900",lineHeight:1}}>6</div>
-                <div style={{fontSize:10,color:"#555"}}>max</div>
-              </div>
-              <div>
-                <div style={{fontWeight:700,fontSize:12,marginBottom:2}}>🏆 Max per match</div>
-                <div style={{fontSize:11,color:"#555"}}>Exact score = 6 pts</div>
-                <div style={{fontSize:10,color:"#444",fontFamily:"monospace",marginTop:3}}>Rules are mutually exclusive</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Podium rules */}
-          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,letterSpacing:1,color:"#888",margin:"20px 0 10px"}}>👑 PODIUM & TOP SCORER PREDICTIONS</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
-            {[
-              {pts:50, label:"1st Place",  icon:"🥇",desc:"Correct champion",          color:"#f59e0b"},
-              {pts:25, label:"2nd Place",  icon:"🥈",desc:"Correct runner-up",         color:"#c0c0c0"},
-              {pts:15, label:"3rd Place",  icon:"🥉",desc:"Correct 3rd place playoff", color:"#cd7f32"},
-              {pts:10, label:"Top Scorer", icon:"⚽",desc:"Fuzzy name match accepted",  color:"#60a5fa"},
-            ].map(r=>(
-              <div key={r.label} style={{
-                background:`${r.color}0e`,border:`1px solid ${r.color}30`,
-                borderRadius:10,padding:"14px",textAlign:"center",
-              }}>
-                <div style={{fontSize:26,marginBottom:4}}>{r.icon}</div>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:34,color:r.color,lineHeight:1}}>{r.pts}</div>
-                <div style={{fontSize:10,color:"#555",marginBottom:6}}>points</div>
-                <div style={{fontWeight:700,fontSize:12,marginBottom:2}}>{r.label}</div>
-                <div style={{fontSize:11,color:"#555"}}>{r.desc}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{
-            background:"rgba(252,185,0,0.06)",border:"1px solid rgba(252,185,0,0.15)",
-            borderRadius:10,padding:"10px 14px",marginBottom:20,fontSize:11,color:"#777",lineHeight:1.7,
-          }}>
-            🔒 Podium & top scorer picks lock at <strong style={{color:"#fcb900"}}>end of Friday June 19 (midnight UTC)</strong>.<br/>
-            Max bonus: <strong style={{color:"#f59e0b"}}>100 pts</strong> if all 3 podium + top scorer correct.
-            ⚽ Top scorer uses fuzzy matching — "mbappe" matches "Kylian Mbappé".
-          </div>
+            );
+          })()}
 
           {/* My score */}
           <div style={{background:"rgba(252,185,0,0.08)",border:"1px solid rgba(252,185,0,0.22)",
