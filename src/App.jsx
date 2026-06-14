@@ -1506,6 +1506,7 @@ export default function App(){
     if(tab!=="chat") return;
     const poll = setInterval(()=>{
       sbGetMessages(50, groupCode).then(msgs=>{
+        if(!msgs?.length) return; // don't overwrite with empty
         setChatMessages(prev=>{
           // Merge — keep optimistic ones, add any new real ones
           const realIds = new Set(msgs.map(m=>m.id));
@@ -1517,7 +1518,7 @@ export default function App(){
       });
     }, 10000);
     return ()=>clearInterval(poll);
-  },[tab]);
+  },[tab, groupCode]);
   const [userName,setUserName]=useState("");
   const [groupCode,setGroupCode]=useState("default");
   const [groupCodeInput,setGroupCodeInput]=useState("");
@@ -1806,7 +1807,7 @@ export default function App(){
 
     // Load chat + subscribe to new messages — filter by group_code
     sbGetMessages(50, groupCode).then(msgs => {
-      setChatMessages(msgs);
+      if(msgs?.length) setChatMessages(msgs);
       const lastSeen = parseInt(localStorage.getItem(`wc26_chat_seen_${groupCode}`) || '0');
       const isAdminLike = u => ['Admin','AI Recap','🤖 AI','⚡'].includes(u);
 
