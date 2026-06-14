@@ -4231,7 +4231,7 @@ export default function App(){
                   const pred = matches.find(p=>p.id===m.id);
                   const ko = KICKOFFS[m.id]||KICKOFFS[`${m.home}||${m.away}`];
                   const koTime = ko ? new Date(ko).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}) : "";
-                  const locked = isMatchLocked(m, kickoffs);
+                  const locked = isMatchLocked(m, KICKOFFS);
                   const hasPred = pred?.homeScore!==null&&pred?.homeScore!==undefined;
                   return(
                     <div key={m.id} style={{
