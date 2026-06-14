@@ -6556,6 +6556,7 @@ export default function App(){
 
                     {(()=>{
                       const nm=home?.name, am=away?.name;
+                      const pred=matches.find(m=>(m.home===nm&&m.away===am)||(m.home===am&&m.away===nm));
                       if(!pred||pred.homeScore===null) return null;
                       const result=score?.home!==null?calcMatchPoints(pred,{homeScore:score?.home,awayScore:score?.away}):null;
                       return(
