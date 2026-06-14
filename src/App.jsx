@@ -1807,6 +1807,7 @@ export default function App(){
 
     // Load chat + subscribe to new messages — filter by group_code
     sbGetMessages(50, groupCode).then(msgs => {
+      console.log('[Chat startup] loaded', msgs?.length, 'msgs for group:', groupCode);
       if(msgs?.length) setChatMessages(msgs);
       const lastSeen = parseInt(localStorage.getItem(`wc26_chat_seen_${groupCode}`) || '0');
       const isAdminLike = u => ['Admin','AI Recap','🤖 AI','⚡'].includes(u);
@@ -6894,7 +6895,7 @@ export default function App(){
                   {leaderboard.length} players
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
-                  <button onClick={()=>sbGetMessages(50, groupCode).then(msgs=>setChatMessages(msgs))} style={{
+                  <button onClick={()=>sbGetMessages(50, groupCode).then(msgs=>{console.log('[Chat reload]',msgs?.length,'msgs'); if(msgs?.length) setChatMessages(msgs);})} style={{
                     padding:"3px 8px",background:"rgba(255,255,255,0.06)",
                     border:"1px solid rgba(255,255,255,0.10)",borderRadius:6,
                     color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit",
