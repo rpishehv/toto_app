@@ -3628,7 +3628,6 @@ export default function App(){
     {id:"live",    label:"🔴", full:"🔴 Live"},
     {id:"news",    label:"📰", full:"📰 News"},
     {id:"stats",   label:"📈", full:"📈 Stats"},
-    {id:"scoring", label:"📊", full:"📊 Scoring"},
     {id:"ai",      label:"🤖", full:"🤖 AI"},
     {id:"admin",   label:"🔧", full:"🔧 Admin", restricted:true},
   ];
@@ -4183,7 +4182,7 @@ export default function App(){
                       display:"flex",flexDirection:"column",alignItems:"center",gap:0,
                       position:"relative",
                     }}>
-                    <span style={{fontSize:17,lineHeight:1}}>{t.label}</span>
+                    <span style={{fontSize:20,lineHeight:1}}>{t.label}</span>
                     <span style={{fontSize:10,fontWeight:isActive?700:400,
                       color:isActive?"#60a5fa":t.restricted?"#6b5a4a":"var(--color-text-secondary)",letterSpacing:0.2}}>
                       {name}
@@ -4786,86 +4785,6 @@ export default function App(){
 
         {/* ── SCORING ── */}
         {tab==="scoring"&&<div>
-          {/* Today's / upcoming games quick predict */}
-          {(()=>{
-            const now = Date.now();
-            const tomorrow = now + 24*60*60*1000;
-            const upcomingToday = ALL_MATCHES.filter(m=>{
-              const ko = KICKOFFS[m.id]||KICKOFFS[`${m.home}||${m.away}`];
-              return ko && ko > now && ko < tomorrow;
-            }).sort((a,b)=>{
-              const ka=KICKOFFS[a.id]||KICKOFFS[`${a.home}||${a.away}`]||0;
-              const kb=KICKOFFS[b.id]||KICKOFFS[`${b.home}||${b.away}`]||0;
-              return ka-kb;
-            });
-            if (!upcomingToday.length) return null;
-            return(
-              <div style={{marginBottom:20}}>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,
-                  letterSpacing:1,color:"#fcb900",marginBottom:10}}>
-                  ⚡ Predict Today's Games
-                </div>
-                {upcomingToday.map(m=>{
-                  const pred = matches.find(p=>p.id===m.id);
-                  const ko = KICKOFFS[m.id]||KICKOFFS[`${m.home}||${m.away}`];
-                  const koTime = ko ? new Date(ko).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}) : "";
-                  const locked = isMatchLocked(m, kickoffs);
-                  const hasPred = pred?.homeScore!==null&&pred?.homeScore!==undefined;
-                  return(
-                    <div key={m.id} style={{
-                      marginBottom:10,padding:"10px 12px",borderRadius:10,
-                      background:"rgba(255,255,255,0.03)",
-                      border:`1px solid ${locked?"rgba(255,255,255,0.05)":"rgba(252,185,0,0.15)"}`,
-                    }}>
-                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-                        <span style={{fontSize:14}}>{FLAGS[m.home]||"🏳️"}</span>
-                        <span style={{flex:1,fontSize:12,fontWeight:600,color:"#ddd"}}>{m.home}</span>
-                        <span style={{fontSize:10,color:locked?"#555":"#fcb900",fontWeight:700}}>
-                          {locked?"🔒 Locked":koTime}
-                        </span>
-                        <span style={{flex:1,fontSize:12,fontWeight:600,color:"#ddd",textAlign:"right"}}>{m.away}</span>
-                        <span style={{fontSize:14}}>{FLAGS[m.away]||"🏳️"}</span>
-                      </div>
-                      {!locked&&(
-                        <div style={{display:"flex",alignItems:"center",gap:8}}>
-                          <input type="number" min="0" max="20"
-                            value={pred?.homeScore??""} placeholder="0"
-                            onChange={e=>{
-                              const v=e.target.value===''?null:parseInt(e.target.value);
-                              setMatches(prev=>prev.map(p=>p.id===m.id?{...p,homeScore:v}:p));
-                              setSaved(false);
-                            }}
-                            style={{width:48,padding:"6px",textAlign:"center",
-                              background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",
-                              borderRadius:6,color:"#fff",fontSize:16,fontFamily:"inherit"}}
-                          />
-                          <span style={{color:"#555",fontSize:14}}>–</span>
-                          <input type="number" min="0" max="20"
-                            value={pred?.awayScore??""} placeholder="0"
-                            onChange={e=>{
-                              const v=e.target.value===''?null:parseInt(e.target.value);
-                              setMatches(prev=>prev.map(p=>p.id===m.id?{...p,awayScore:v}:p));
-                              setSaved(false);
-                            }}
-                            style={{width:48,padding:"6px",textAlign:"center",
-                              background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",
-                              borderRadius:6,color:"#fff",fontSize:16,fontFamily:"inherit"}}
-                          />
-                          {hasPred&&<span style={{fontSize:11,color:"#22c55e",marginLeft:4}}>✓</span>}
-                        </div>
-                      )}
-                      {locked&&hasPred&&(
-                        <div style={{fontSize:12,color:"#555",fontFamily:"monospace"}}>
-                          Your pick: {pred.homeScore}–{pred.awayScore}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-
           {/* My score */}
           <div style={{background:"rgba(252,185,0,0.08)",border:"1px solid rgba(252,185,0,0.22)",
             borderRadius:12,padding:"16px 20px",marginBottom:16,
@@ -8625,6 +8544,36 @@ export default function App(){
         {/* ── HELP ── */}
         {tab==="help"&&<div>
           <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,color:"#fcb900",marginTop:0}}>Help & FAQ</h2>
+
+          {/* Scoring rules */}
+          <div style={{marginBottom:20}}>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:1,color:"#888",marginBottom:10}}>📋 Scoring Rules</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+              {[
+                {pts:6, label:"Exact Score",   icon:"⭐", color:"#22c55e", ex:"Pred 2-1 / Act 2-1"},
+                {pts:4, label:"Correct GD",    icon:"📐", color:"#fcb900", ex:"Pred 3-2 / Act 2-1"},
+                {pts:2, label:"Correct Winner",icon:"✓",  color:"#60a5fa", ex:"Pred 3-1 / Act 2-1"},
+                {pts:50,label:"1st Place",     icon:"🥇", color:"#f59e0b", ex:"Tournament winner"},
+                {pts:25,label:"2nd Place",     icon:"🥈", color:"#c0c0c0", ex:"Runner-up"},
+                {pts:15,label:"3rd Place",     icon:"🥉", color:"#cd7f32", ex:"3rd place playoff"},
+                {pts:10,label:"Top Scorer",    icon:"⚽", color:"#60a5fa", ex:"Fuzzy name match"},
+              ].map((r,i)=>(
+                <div key={i} style={{
+                  background:`${r.color}0e`,border:`1px solid ${r.color}25`,
+                  borderRadius:8,padding:"8px 10px",display:"flex",alignItems:"center",gap:8,
+                }}>
+                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:r.color,lineHeight:1,minWidth:28,textAlign:"center"}}>{r.pts}</div>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:11}}>{r.icon} {r.label}</div>
+                    <div style={{fontSize:10,color:"#555",marginTop:1}}>{r.ex}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{fontSize:10,color:"#555",padding:"6px 10px",background:"rgba(252,185,0,0.05)",borderRadius:6}}>
+              🔒 Podium & top scorer lock end of Friday June 19 · Max bonus: 100 pts
+            </div>
+          </div>
 
           {[
             {
