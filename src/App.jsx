@@ -1592,6 +1592,9 @@ export default function App(){
   const [showStandings,setShowStandings]=useState(false);
   // Chat
   const [chatMessages,setChatMessages]=useState([]);
+  useEffect(()=>{
+    console.log('[ChatMessages changed]', chatMessages.length, 'msgs');
+  },[chatMessages]);
   const [chatInput,setChatInput]=useState("");
   const [isRecording,setIsRecording]=useState(false);
   const [mediaRecorder,setMediaRecorder]=useState(null);
