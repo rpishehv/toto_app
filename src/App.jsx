@@ -1504,6 +1504,20 @@ export default function App(){
   // Poll chat messages every 10s while on chat tab
   useEffect(()=>{
     if(tab!=="chat") return;
+    // Restore from cache immediately while fresh load happens
+    try {
+      const cached = sessionStorage.getItem(`wc26_chat_${groupCode}`);
+      if(cached) {
+        const msgs = JSON.parse(cached);
+        if(msgs?.length) setChatMessages(msgs);
+      }
+    } catch{}
+    // Fresh load
+    sbGetMessages(50, groupCode).then(msgs=>{
+      if(!msgs?.length) return;
+      setChatMessages(msgs);
+      try { sessionStorage.setItem(`wc26_chat_${groupCode}`, JSON.stringify(msgs)); } catch{}
+    });
     const poll = setInterval(()=>{
       sbGetMessages(50, groupCode).then(msgs=>{
         if(!msgs?.length) return; // don't overwrite with empty
@@ -1808,7 +1822,10 @@ export default function App(){
     // Load chat + subscribe to new messages — filter by group_code
     sbGetMessages(50, groupCode).then(msgs => {
       console.log('[Chat startup] loaded', msgs?.length, 'msgs for group:', groupCode);
-      if(msgs?.length) setChatMessages(msgs);
+      if(msgs?.length) {
+        setChatMessages(msgs);
+        try { sessionStorage.setItem(`wc26_chat_${groupCode}`, JSON.stringify(msgs)); } catch{}
+      }
       const lastSeen = parseInt(localStorage.getItem(`wc26_chat_seen_${groupCode}`) || '0');
       const isAdminLike = u => ['Admin','AI Recap','🤖 AI','⚡'].includes(u);
 
@@ -1839,7 +1856,9 @@ export default function App(){
               m.message === payload.new.message)
           );
           if (filtered.some(m => m.id === payload.new.id)) return filtered;
-          return [...filtered, payload.new];
+          const updated = [...filtered, payload.new];
+          try { sessionStorage.setItem(`wc26_chat_${groupCode}`, JSON.stringify(updated)); } catch{}
+          return updated;
         });
         setChatUnread(u => u + 1);
         setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
