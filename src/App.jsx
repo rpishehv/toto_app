@@ -6153,6 +6153,7 @@ export default function App(){
                     {fixtureStats?.length>=2&&(()=>{
                       const hs=fixtureStats[0]?.statistics||[], as_=fixtureStats[1]?.statistics||[];
                       const getStat=(arr,key)=>parseInt(String(arr.find(s=>s.type===key)?.value||0).replace('%',''))||0;
+                      const hOnTarget=getStat(hs,'Shots on Goal');
                       const hOffTarget=getStat(hs,'Shots off Goal');
                       const hBlocked=getStat(hs,'Blocked Shots');
                       const hInsideBox=getStat(hs,'Shots insidebox');
