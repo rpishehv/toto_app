@@ -6421,6 +6421,7 @@ export default function App(){
                     {/* ── 1. Passing Accuracy ── */}
                     {fixtureStats?.length>=2&&(()=>{
                       const hs2=fixtureStats[0]?.statistics||[], as2=fixtureStats[1]?.statistics||[];
+                      if(!hs2.length&&!as2.length) return null;
                       const getStat2=(arr,key)=>parseInt(String(arr.find(s=>s.type===key)?.value||0).replace('%',''))||0;
                       const hAcc=getStat2(hs2,'Passes %'), aAcc=getStat2(as2,'Passes %');
                       const hTotal=getStat2(hs2,'Total passes'), aTotal=getStat2(as2,'Total passes');
@@ -6493,10 +6494,11 @@ export default function App(){
                     })()}
 
                     {/* ── 6. Who Benefits? ── */}
-                    {score?.home!=null&&leaderboard?.length>0&&(()=>{
-                      const normH=TEAM_ALIASES[home?.name]||home?.name;
-                      const normA=TEAM_ALIASES[away?.name]||away?.name;
-                      const curScore={homeScore:score?.home??0,awayScore:score?.away??0};
+                    {score?.home!==null&&score?.home!==undefined&&leaderboard?.length>0&&(()=>{
+                      const normH=TEAM_ALIASES[home?.name]||home?.name||'';
+                      const normA=TEAM_ALIASES[away?.name]||away?.name||'';
+                      if(!normH||!normA) return null;
+                      const curScore={homeScore:score.home,awayScore:score.away};
                       const impacts=leaderboard.slice(0,10).map(e=>{
                         const isMe=e.username===userName;
                         const preds=isMe?[...matches,...knockout]:(allPlayerPreds[e.username]?.matches||[]);
