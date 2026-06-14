@@ -25,8 +25,29 @@ export default async function handler(req) {
   } else if (type === 'live') {
     endpoint = `${BASE}/fixtures?live=all&league=${LEAGUE}&season=${SEASON}`;
   } else if (type === 'today') {
-    const today = new Date().toISOString().split('T')[0];
-    endpoint = `${BASE}/fixtures?date=${today}&league=${LEAGUE}&season=${SEASON}`;
+    // Use PT timezone (UTC-7 PDT / UTC-8 PST) — WC2026 games in North America
+    const nowPT = new Date(Date.now() - 7 * 60 * 60 * 1000); // PDT offset
+    const today = nowPT.toISOString().split('T')[0];
+    // Also fetch tomorrow in case late PT games cross UTC midnight
+    const tomorrowPT = new Date(Date.now() - 7 * 60 * 60 * 1000 + 24 * 60 * 60 * 1000);
+    const tomorrow = tomorrowPT.toISOString().split('T')[0];
+    // Fetch both dates and merge
+    const [todayRes, tomorrowRes] = await Promise.all([
+      fetch(`${BASE}/fixtures?date=${today}&league=${LEAGUE}&season=${SEASON}`, { headers }),
+      fetch(`${BASE}/fixtures?date=${tomorrow}&league=${LEAGUE}&season=${SEASON}`, { headers }),
+    ]);
+    const [todayData, tomorrowData] = await Promise.all([todayRes.json(), tomorrowRes.json()]);
+    const combined = [...(todayData.response||[]), ...(tomorrowData.response||[])];
+    // Filter to PT day window: midnight PT to midnight PT
+    const ptDayStart = new Date(today + 'T07:00:00Z').getTime(); // midnight PT = 07:00 UTC
+    const ptDayEnd = ptDayStart + 24 * 60 * 60 * 1000;
+    const filtered = combined.filter(f => {
+      const ko = new Date(f.fixture?.date).getTime();
+      return ko >= ptDayStart && ko < ptDayEnd;
+    });
+    return new Response(JSON.stringify({ response: filtered, results: filtered.length }), {
+      status: 200, headers: { 'Content-Type': 'application/json' }
+    });
   } else if (type === 'fixture' && fixtureId) {
     // Batch all fixture details in one call — saves 3 API requests
     const [statsRes, eventsRes, lineupsRes, playersRes] = await Promise.all([

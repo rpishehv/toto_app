@@ -4248,7 +4248,7 @@ export default function App(){
               <div style={{marginBottom:16}}>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,
                   letterSpacing:1,color:"#fcb900",marginBottom:10}}>
-                  ⚡ Predict Today's Games
+                  ⚡ Upcoming — Enter Your Picks
                 </div>
                 {upcomingToday.map(m=>{
                   const pred = matches.find(p=>p.id===m.id);
