@@ -6417,9 +6417,143 @@ export default function App(){
                         </div>
                       );
                     })()}
+
+                    {/* ── 1. Passing Accuracy ── */}
+                    {fixtureStats?.length>=2&&(()=>{
+                      const hs2=fixtureStats[0]?.statistics||[], as2=fixtureStats[1]?.statistics||[];
+                      const getStat2=(arr,key)=>parseInt(String(arr.find(s=>s.type===key)?.value||0).replace('%',''))||0;
+                      const hAcc=getStat2(hs2,'Passes %'), aAcc=getStat2(as2,'Passes %');
+                      const hTotal=getStat2(hs2,'Total passes'), aTotal=getStat2(as2,'Total passes');
+                      if(!hAcc&&!aAcc) return null;
+                      return(
+                        <div style={{marginBottom:14}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"#34d399",marginBottom:8}}>🎯 Passing Accuracy</div>
+                          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                            <div style={{textAlign:"center",flexShrink:0}}>
+                              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,
+                                color:hAcc>=aAcc?"#fcb900":"#666",lineHeight:1}}>{hAcc}%</div>
+                              <div style={{fontSize:9,color:"#555"}}>{hTotal}</div>
+                            </div>
+                            <div style={{flex:1}}>
+                              <div style={{height:5,borderRadius:3,overflow:"hidden",
+                                background:"rgba(255,255,255,0.06)",display:"flex"}}>
+                                <div style={{width:`${hAcc/(hAcc+aAcc||1)*100}%`,background:"#fcb900"}}/>
+                                <div style={{flex:1,background:"#60a5fa"}}/>
+                              </div>
+                              <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#555",marginTop:2}}>
+                                <span>{FLAGS[home?.name]||"🏳️"}</span>
+                                <span>{FLAGS[away?.name]||"🏳️"}</span>
+                              </div>
+                            </div>
+                            <div style={{textAlign:"center",flexShrink:0}}>
+                              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,
+                                color:aAcc>hAcc?"#60a5fa":"#666",lineHeight:1}}>{aAcc}%</div>
+                              <div style={{fontSize:9,color:"#555"}}>{aTotal}</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── 4. Work Rate ── */}
+                    {fixturePlayers?.length>=2&&(()=>{
+                      const sumP=(players,key1,key2)=>(players||[]).reduce((acc,p)=>{
+                        const s=p.statistics?.[0]||{};
+                        const v=key2?s[key1]?.[key2]:s[key1];
+                        return acc+(typeof v==='number'?v:0);
+                      },0);
+                      const hP=fixturePlayers[0]?.players||[], aP=fixturePlayers[1]?.players||[];
+                      const hPasses=sumP(hP,'passes','total'), aPasses=sumP(aP,'passes','total');
+                      const hDuels=sumP(hP,'duels','total'), aDuels=sumP(aP,'duels','total');
+                      if(!hPasses&&!aPasses) return null;
+                      const hDist=+(hPasses*0.06+hDuels*0.12).toFixed(1);
+                      const aDist=+(aPasses*0.06+aDuels*0.12).toFixed(1);
+                      const maxD=Math.max(hDist,aDist,1);
+                      const elapsed=f?.fixture?.status?.elapsed||90;
+                      return(
+                        <div style={{marginBottom:14}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"#fb923c",marginBottom:8}}>
+                            🏃 Work Rate
+                            <span style={{fontSize:9,color:"#555",fontWeight:400,marginLeft:6}}>est. km · {elapsed}'</span>
+                          </div>
+                          {[{name:home?.name,dist:hDist,color:"#fcb900"},{name:away?.name,dist:aDist,color:"#60a5fa"}].map((t,i)=>(
+                            <div key={i} style={{marginBottom:6}}>
+                              <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
+                                <span style={{color:"#888"}}>{FLAGS[t.name]||"🏳️"} {TEAM_ALIASES[t.name]||t.name}</span>
+                                <span style={{color:t.color,fontWeight:700}}>{t.dist} km</span>
+                              </div>
+                              <div style={{height:5,borderRadius:3,background:"rgba(255,255,255,0.06)"}}>
+                                <div style={{height:"100%",borderRadius:3,background:t.color,
+                                  width:`${(t.dist/maxD)*100}%`}}/>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── 6. Who Benefits? ── */}
+                    {score?.home!=null&&leaderboard?.length>0&&(()=>{
+                      const normH=TEAM_ALIASES[home?.name]||home?.name;
+                      const normA=TEAM_ALIASES[away?.name]||away?.name;
+                      const curScore={homeScore:score?.home??0,awayScore:score?.away??0};
+                      const impacts=leaderboard.slice(0,10).map(e=>{
+                        const isMe=e.username===userName;
+                        const preds=isMe?[...matches,...knockout]:(allPlayerPreds[e.username]?.matches||[]);
+                        const pred=preds.find(m=>
+                          (m.home===normH&&m.away===normA)||(m.home===normA&&m.away===normH)||
+                          (m.home===home?.name&&m.away===away?.name)||(m.home===away?.name&&m.away===home?.name)
+                        );
+                        if(!pred||pred.homeScore===null) return null;
+                        const fl=pred.home===normA||pred.home===away?.name;
+                        const p={homeScore:fl?pred.awayScore:pred.homeScore,awayScore:fl?pred.homeScore:pred.awayScore};
+                        const pts=calcMatchPoints(p,curScore)?.points||0;
+                        return {username:e.username,pts,isMe,cur:e.points||0};
+                      }).filter(Boolean);
+                      if(!impacts.length) return null;
+                      const sorted=[...impacts].sort((a,b)=>(b.cur+b.pts)-(a.cur+a.pts));
+                      const rankNow={};
+                      [...leaderboard].sort((a,b)=>(b.points||0)-(a.points||0)).forEach((e,i)=>rankNow[e.username]=i+1);
+                      const rankAfter={};
+                      sorted.forEach((e,i)=>rankAfter[e.username]=i+1);
+                      return(
+                        <div style={{marginBottom:14}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"#f472b6",marginBottom:8}}>
+                            🔮 If this score holds…
+                          </div>
+                          {sorted.slice(0,6).map((e,i)=>{
+                            const before=rankNow[e.username]||99;
+                            const after=rankAfter[e.username]||i+1;
+                            const delta=before-after;
+                            return(
+                              <div key={e.username} style={{
+                                display:"flex",alignItems:"center",gap:8,
+                                padding:"5px 8px",borderRadius:6,marginBottom:3,
+                                background:e.isMe?"rgba(252,185,0,0.06)":"rgba(255,255,255,0.02)",
+                                border:`1px solid ${e.isMe?"rgba(252,185,0,0.2)":"rgba(255,255,255,0.05)"}`,
+                              }}>
+                                <span style={{fontSize:10,color:"#555",width:18,flexShrink:0}}>#{after}</span>
+                                <span style={{fontSize:11,flex:1,fontWeight:e.isMe?700:400,
+                                  color:e.isMe?"#fcb900":"#ccc",
+                                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                  {e.username}{e.isMe?" (you)":""}
+                                </span>
+                                <span style={{fontSize:10,color:e.pts>0?"#22c55e":"#555",flexShrink:0}}>
+                                  {e.pts>0?`+${e.pts}pts`:"0pts"}
+                                </span>
+                                <span style={{fontSize:11,fontWeight:700,flexShrink:0,width:20,textAlign:"center",
+                                  color:delta>0?"#22c55e":delta<0?"#ef4444":"#555"}}>
+                                  {delta>0?`↑${delta}`:delta<0?`↓${Math.abs(delta)}`:"–"}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+
                     {(()=>{
                       const nm=home?.name, am=away?.name;
-                      const pred=matches.find(m=>(m.home===nm&&m.away===am)||(m.home===am&&m.away===nm));
                       if(!pred||pred.homeScore===null) return null;
                       const result=score?.home!==null?calcMatchPoints(pred,{homeScore:score?.home,awayScore:score?.away}):null;
                       return(
