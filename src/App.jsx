@@ -1592,9 +1592,6 @@ export default function App(){
   const [showStandings,setShowStandings]=useState(false);
   // Chat
   const [chatMessages,setChatMessages]=useState([]);
-  useEffect(()=>{
-    console.log('[ChatMessages changed]', chatMessages.length, 'msgs');
-  },[chatMessages]);
   const [chatInput,setChatInput]=useState("");
   const [isRecording,setIsRecording]=useState(false);
   const [mediaRecorder,setMediaRecorder]=useState(null);
@@ -1604,6 +1601,11 @@ export default function App(){
   const [showAdminReminderModal,setShowAdminReminderModal]=useState(false);
   const [adminReminderMsg,setAdminReminderMsg]=useState(null);
   const chatBottomRef=React.useRef(null);
+  useEffect(()=>{
+    if(tab==="chat" && chatMessages.length > 0) {
+      setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'auto'}), 50);
+    }
+  },[chatMessages.length, tab]);
   // Analytics
   const [groupAnalytics,setGroupAnalytics]=useState(null);
   const [analyticsGeneratedBy,setAnalyticsGeneratedBy]=useState(null);
@@ -1808,7 +1810,6 @@ export default function App(){
 
     // Load chat + subscribe to new messages — filter by group_code
     sbGetMessages(50, groupCode).then(msgs => {
-      console.log('[Chat startup] loaded', msgs?.length, 'msgs for group:', groupCode);
       if(msgs?.length) setChatMessages(msgs);
       const lastSeen = parseInt(localStorage.getItem(`wc26_chat_seen_${groupCode}`) || '0');
       const isAdminLike = u => ['Admin','AI Recap','🤖 AI','⚡'].includes(u);
@@ -1842,7 +1843,12 @@ export default function App(){
           if (filtered.some(m => m.id === payload.new.id)) return filtered;
           return [...filtered, payload.new];
         });
-        setChatUnread(u => u + 1);
+        // Only increment unread for other people's messages
+        if (payload.new.username !== userName) {
+          setChatUnread(u => u + 1);
+        }
+        // Always scroll to bottom when new message arrives
+        setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 150);
         setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
       })
       .subscribe();
