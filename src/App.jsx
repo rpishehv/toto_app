@@ -4109,13 +4109,13 @@ export default function App(){
                 style={{
                   flex:1,padding:"6px 4px",background:"transparent",border:"none",
                   borderBottom:`2px solid ${isActive?"#fcb900":"transparent"}`,
-                  color:isActive?"#fcb900":"#555",
+                  color:isActive?"#fcb900":"#ccc",
                   cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",
                   display:"flex",flexDirection:"column",alignItems:"center",gap:1,
                 }}>
-                <span style={{fontSize:22,lineHeight:1}}>{t.label}</span>
+                <span style={{fontSize:22,lineHeight:1,opacity:1}}>{t.label}</span>
                 <span style={{fontSize:11,fontWeight:isActive?700:400,
-                  color:isActive?"#fcb900":"var(--color-text-secondary)",letterSpacing:0.3}}>{name}</span>
+                  color:isActive?"#fcb900":"#fff",letterSpacing:0.3}}>{name}</span>
               </button>
             );
           })}
@@ -4182,9 +4182,9 @@ export default function App(){
                       display:"flex",flexDirection:"column",alignItems:"center",gap:0,
                       position:"relative",
                     }}>
-                    <span style={{fontSize:20,lineHeight:1}}>{t.label}</span>
+                    <span style={{fontSize:20,lineHeight:1,opacity:1}}>{t.label}</span>
                     <span style={{fontSize:10,fontWeight:isActive?700:400,
-                      color:isActive?"#60a5fa":t.restricted?"#6b5a4a":"var(--color-text-secondary)",letterSpacing:0.2}}>
+                      color:isActive?"#60a5fa":t.restricted?"#8b6a4a":"#fff",letterSpacing:0.2}}>
                       {name}
                     </span>
                     {t.id==="chat"&&chatUnread>0&&!isActive&&(
