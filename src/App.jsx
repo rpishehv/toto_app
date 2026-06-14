@@ -1507,7 +1507,6 @@ export default function App(){
     const poll = setInterval(()=>{
       sbGetMessages(50, groupCode).then(msgs=>{
         if(!msgs?.length) return;
-        console.log('[Chat poll] refreshed', msgs.length, 'msgs');
         setChatMessages(prev=>{
           const optimistic = prev.filter(m=>m.id?.startsWith('optimistic_'));
           return [...msgs, ...optimistic.filter(o=>
@@ -1855,10 +1854,8 @@ export default function App(){
             return !isOptimisticMatch;
           });
           if (filtered.some(m => m.id === payload.new.id)) {
-            console.log('[Chat dedup] real msg already exists, skipping:', payload.new.id);
-            return filtered;
+              return filtered;
           }
-          console.log('[Chat dedup] adding real msg:', payload.new.id, 'total:', filtered.length+1);
           return [...filtered, payload.new];
         });
         // Only increment unread for other people's messages
@@ -6039,7 +6036,123 @@ export default function App(){
                     {fixtureStats?.length>=2&&(()=>{
                       const hs=fixtureStats[0]?.statistics||[], as_=fixtureStats[1]?.statistics||[];
                       const getStat=(arr,key)=>parseInt(String(arr.find(s=>s.type===key)?.value||0).replace('%',''))||0;
-                      const hOnTarget=getStat(hs,'Shots on Goal');
+
+                      // ── Match Quality Score ─────────────────────────────
+                      const hShots=getStat(hs,'Total Shots'), aShots=getStat(as_,'Total Shots');
+                      const hOnT=getStat(hs,'Shots on Goal'), aOnT=getStat(as_,'Shots on Goal');
+                      const hCorners=getStat(hs,'Corner Kicks'), aCorners=getStat(as_,'Corner Kicks');
+                      const hFouls=getStat(hs,'Fouls'), aFouls=getStat(as_,'Fouls');
+                      const elapsed=f?.fixture?.status?.elapsed||1;
+                      const goals=(score?.home||0)+(score?.away||0);
+                      const totalShots=hShots+aShots;
+                      const totalOnTarget=hOnT+aOnT;
+                      const totalCorners=hCorners+aCorners;
+                      // Quality formula: shots pace + accuracy + goals + balance
+                      const shotsPer90 = (totalShots/elapsed)*90;
+                      const accuracy = totalShots>0 ? totalOnTarget/totalShots : 0;
+                      const goalBonus = Math.min(goals*1.2, 4);
+                      const balance = 1 - Math.abs((hShots-aShots)/(totalShots||1));
+                      const rawScore = (shotsPer90/30)*4 + accuracy*2 + goalBonus + balance*2;
+                      const quality = Math.min(10, Math.max(1, Math.round(rawScore*10)/10));
+                      const qualityColor = quality>=8?"#22c55e":quality>=6?"#fcb900":quality>=4?"#fb923c":"#ef4444";
+                      const qualityLabel = quality>=8?"🔥 Thriller":quality>=6?"⚡ Good Game":quality>=4?"👍 Decent":"😴 Slow";
+
+                      // ── Momentum Graph ──────────────────────────────────
+                      // Simulate 15-min momentum windows from events
+                      const windows = [0,15,30,45,60,75,90];
+                      const getMomentum = (events, teamName, from, to) => {
+                        return events.filter(e=>{
+                          const min = e.time?.elapsed||0;
+                          return min>=from && min<to && (
+                            e.team?.name===teamName ||
+                            TEAM_ALIASES[e.team?.name]===teamName
+                          ) && ['Goal','Card','subst','Var'].includes(e.type);
+                        }).length;
+                      };
+                      // Use fixtureEvents for momentum
+                      const homeName_ = fixtureLineups[0]?.team?.name||home?.name||'';
+                      const awayName_ = fixtureLineups[1]?.team?.name||away?.name||'';
+                      const momentumData = windows.slice(0,-1).map((w,i)=>{
+                        const to = windows[i+1];
+                        // Use shot-based proxy if no events
+                        const hMom = getMomentum(fixtureEvents, homeName_, w, to);
+                        const aMom = getMomentum(fixtureEvents, awayName_, w, to);
+                        // Normalize to -1 (away dominant) to +1 (home dominant)
+                        const total = hMom+aMom;
+                        const val = total===0 ? 0 : (hMom-aMom)/Math.max(total,1);
+                        return { label:`${w}'`, val, hMom, aMom };
+                      });
+
+                      const graphH = 48;
+                      const graphW = 100;
+                      const barW = graphW/momentumData.length - 2;
+
+                      return(
+                        <div style={{marginBottom:14}}>
+                          {/* Match Quality */}
+                          <div style={{display:"flex",alignItems:"center",gap:12,
+                            padding:"10px 12px",borderRadius:8,marginBottom:10,
+                            background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)"}}>
+                            <div style={{textAlign:"center",flexShrink:0}}>
+                              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,
+                                color:qualityColor,lineHeight:1}}>{quality}</div>
+                              <div style={{fontSize:9,color:"#555",marginTop:1}}>/10</div>
+                            </div>
+                            <div>
+                              <div style={{fontSize:11,fontWeight:700,color:qualityColor}}>{qualityLabel}</div>
+                              <div style={{fontSize:10,color:"#555",marginTop:2}}>
+                                Match quality · {totalShots} shots · {totalOnTarget} on target · {totalCorners} corners
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Momentum Graph */}
+                          <div style={{marginBottom:6}}>
+                            <div style={{fontSize:11,fontWeight:700,color:"#a78bfa",marginBottom:6}}>
+                              📈 Momentum
+                              <span style={{fontSize:9,color:"#555",fontWeight:400,marginLeft:8}}>
+                                🟡 {TEAM_ALIASES[homeName_]||homeName_} &nbsp; 🔵 {TEAM_ALIASES[awayName_]||awayName_}
+                              </span>
+                            </div>
+                            <div style={{position:"relative",borderRadius:6,overflow:"hidden",
+                              background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)"}}>
+                              <svg width="100%" height={graphH+20} viewBox={`0 0 ${graphW} ${graphH+20}`} preserveAspectRatio="none">
+                                {/* Centre line */}
+                                <line x1="0" y1={graphH/2+2} x2={graphW} y2={graphH/2+2}
+                                  stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" strokeDasharray="2,2"/>
+                                {momentumData.map((d,i)=>{
+                                  const x = i*(graphW/momentumData.length)+1;
+                                  const midY = graphH/2+2;
+                                  const barHeight = Math.abs(d.val)*(graphH/2-2);
+                                  const isHome = d.val>0;
+                                  const isNeutral = d.val===0;
+                                  return(
+                                    <g key={i}>
+                                      {!isNeutral&&<rect
+                                        x={x} y={isHome ? midY-barHeight : midY}
+                                        width={barW} height={barHeight}
+                                        fill={isHome?"#fcb900":"#60a5fa"} opacity="0.7" rx="1"
+                                      />}
+                                      <text x={x+barW/2} y={graphH+14} textAnchor="middle"
+                                        fill="#555" fontSize="4">{d.label}</text>
+                                    </g>
+                                  );
+                                })}
+                              </svg>
+                            </div>
+                            <div style={{display:"flex",justifyContent:"space-between",
+                              fontSize:9,color:"#555",marginTop:3,padding:"0 2px"}}>
+                              <span>← {TEAM_ALIASES[homeName_]||homeName_} dominant</span>
+                              <span>{TEAM_ALIASES[awayName_]||awayName_} dominant →</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {fixtureStats?.length>=2&&(()=>{
+                      const hs=fixtureStats[0]?.statistics||[], as_=fixtureStats[1]?.statistics||[];
+                      const getStat=(arr,key)=>parseInt(String(arr.find(s=>s.type===key)?.value||0).replace('%',''))||0;
                       const hOffTarget=getStat(hs,'Shots off Goal');
                       const hBlocked=getStat(hs,'Blocked Shots');
                       const hInsideBox=getStat(hs,'Shots insidebox');
@@ -7043,28 +7156,13 @@ export default function App(){
                           {(isMe||adminMode)&&msg.id&&(
                             <button onClick={async(e)=>{
                               e.stopPropagation();
-                              // Double-tap to delete — first tap shows warning, second confirms
-                              const btn = e.currentTarget;
-                              if(btn.dataset.confirming==="1") {
-                                await sbDeleteMessage(msg.id);
-                                setChatMessages(prev=>prev.filter(m=>m.id!==msg.id));
-                              } else {
-                                btn.dataset.confirming="1";
-                                btn.style.color="#ef4444";
-                                btn.style.opacity="1";
-                                btn.title="Tap again to confirm delete";
-                                setTimeout(()=>{
-                                  btn.dataset.confirming="0";
-                                  btn.style.color="#333";
-                                  btn.style.opacity="0.5";
-                                  btn.title="";
-                                }, 2500);
-                              }
+                                              await sbDeleteMessage(msg.id);
+                                              setChatMessages(prev=>prev.filter(m=>m.id!==msg.id));
                             }} style={{
                               padding:"3px 6px",background:"transparent",border:"none",
-                              color:"#333",fontSize:12,cursor:"pointer",
-                              opacity:0.5,flexShrink:0,
-                            }} title="">🗑</button>
+                              color:"#555",fontSize:12,cursor:"pointer",
+                              opacity:0.6,flexShrink:0,
+                            }}>🗑</button>
                           )}
                         </div>
                       </div>
