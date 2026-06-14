@@ -6373,9 +6373,9 @@ export default function App(){
                         </div>
                       );
                     })()}
-                    {fixturePlayers.length>=2&&(()=>{
+                    {fixturePlayers?.length>=2&&(()=>{
                       const all=fixturePlayers.flatMap(team=>(team.players||[]).map(p=>({
-                        ...p.player,...p.statistics?.[0],teamFlag:FLAGS[team.team?.name]||"🏳️"
+                        ...(p.player||{}), ...(p.statistics?.[0]||{}), teamFlag:FLAGS[team.team?.name]||"🏳️"
                       }))).filter(p=>p.games?.rating&&p.games?.minutes>0);
                       if(!all.length) return null;
                       const sorted=[...all].sort((a,b)=>parseFloat(b.games?.rating||0)-parseFloat(a.games?.rating||0));
