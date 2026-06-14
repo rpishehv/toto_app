@@ -1518,7 +1518,7 @@ export default function App(){
       });
     }, 10000);
     return ()=>clearInterval(poll);
-  },[tab, groupCode]);
+  },[tab]); // groupCode captured via closure — don't add to deps to avoid TDZ
   const [userName,setUserName]=useState("");
   const [groupCode,setGroupCode]=useState("default");
   const [groupCodeInput,setGroupCodeInput]=useState("");
