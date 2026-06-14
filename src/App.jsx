@@ -1504,35 +1504,19 @@ export default function App(){
   // Poll chat messages every 10s while on chat tab
   useEffect(()=>{
     if(tab!=="chat") return;
-    // Restore from cache immediately while fresh load happens
-    try {
-      const cached = sessionStorage.getItem(`wc26_chat_${groupCode}`);
-      if(cached) {
-        const msgs = JSON.parse(cached);
-        if(msgs?.length) setChatMessages(msgs);
-      }
-    } catch{}
-    // Fresh load
-    sbGetMessages(50, groupCode).then(msgs=>{
-      if(!msgs?.length) return;
-      setChatMessages(msgs);
-      try { sessionStorage.setItem(`wc26_chat_${groupCode}`, JSON.stringify(msgs)); } catch{}
-    });
     const poll = setInterval(()=>{
       sbGetMessages(50, groupCode).then(msgs=>{
-        if(!msgs?.length) return; // don't overwrite with empty
+        if(!msgs?.length) return;
         setChatMessages(prev=>{
-          // Merge — keep optimistic ones, add any new real ones
-          const realIds = new Set(msgs.map(m=>m.id));
           const optimistic = prev.filter(m=>m.id?.startsWith('optimistic_'));
           return [...msgs, ...optimistic.filter(o=>
             !msgs.some(m=>m.username===o.username&&m.message===o.message)
           )];
         });
       });
-    }, 10000);
+    }, 30000); // poll every 30s — realtime handles new messages
     return ()=>clearInterval(poll);
-  },[tab]); // groupCode captured via closure — don't add to deps to avoid TDZ
+  },[tab]);
   const [userName,setUserName]=useState("");
   const [groupCode,setGroupCode]=useState("default");
   const [groupCodeInput,setGroupCodeInput]=useState("");
@@ -1822,10 +1806,7 @@ export default function App(){
     // Load chat + subscribe to new messages — filter by group_code
     sbGetMessages(50, groupCode).then(msgs => {
       console.log('[Chat startup] loaded', msgs?.length, 'msgs for group:', groupCode);
-      if(msgs?.length) {
-        setChatMessages(msgs);
-        try { sessionStorage.setItem(`wc26_chat_${groupCode}`, JSON.stringify(msgs)); } catch{}
-      }
+      if(msgs?.length) setChatMessages(msgs);
       const lastSeen = parseInt(localStorage.getItem(`wc26_chat_seen_${groupCode}`) || '0');
       const isAdminLike = u => ['Admin','AI Recap','🤖 AI','⚡'].includes(u);
 
@@ -1856,9 +1837,7 @@ export default function App(){
               m.message === payload.new.message)
           );
           if (filtered.some(m => m.id === payload.new.id)) return filtered;
-          const updated = [...filtered, payload.new];
-          try { sessionStorage.setItem(`wc26_chat_${groupCode}`, JSON.stringify(updated)); } catch{}
-          return updated;
+          return [...filtered, payload.new];
         });
         setChatUnread(u => u + 1);
         setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
