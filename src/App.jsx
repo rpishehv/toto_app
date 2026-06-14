@@ -1507,6 +1507,7 @@ export default function App(){
     const poll = setInterval(()=>{
       sbGetMessages(50, groupCode).then(msgs=>{
         if(!msgs?.length) return;
+        console.log('[Chat poll] refreshed', msgs.length, 'msgs');
         setChatMessages(prev=>{
           const optimistic = prev.filter(m=>m.id?.startsWith('optimistic_'));
           return [...msgs, ...optimistic.filter(o=>
@@ -1602,19 +1603,15 @@ export default function App(){
   const [adminReminderMsg,setAdminReminderMsg]=useState(null);
   const chatBottomRef=React.useRef(null);
   const chatScrollRef=React.useRef(null);
-  const wasAtBottomRef=React.useRef(true);
 
-  // Track if user is at bottom before re-renders
-  const handleChatScroll = React.useCallback(()=>{
+  // After every render while on chat tab, if near bottom stay at bottom
+  useEffect(()=>{
+    if(tab!=="chat") return;
     const el = chatScrollRef.current;
     if(!el) return;
-    wasAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
-  },[]);
-
-  // After any render, if we were at bottom, stay at bottom
-  useEffect(()=>{
-    if(tab==="chat" && wasAtBottomRef.current) {
-      chatBottomRef.current?.scrollIntoView({behavior:'auto'});
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if(distFromBottom < 100) {
+      el.scrollTop = el.scrollHeight;
     }
   });
   // Analytics
@@ -1850,12 +1847,18 @@ export default function App(){
         filter:`group_code=eq.${groupCode}` }, payload=>{
         if(payload.new.group_code !== groupCode) return;
         setChatMessages(prev => {
-          const filtered = prev.filter(m =>
-            !(m.id?.startsWith('optimistic_') &&
+          const filtered = prev.filter(m => {
+            const isOptimisticMatch = m.id?.startsWith('optimistic_') &&
               m.username === payload.new.username &&
-              m.message === payload.new.message)
-          );
-          if (filtered.some(m => m.id === payload.new.id)) return filtered;
+              m.message === payload.new.message;
+            if(isOptimisticMatch) console.log('[Chat dedup] removing optimistic, adding real id:', payload.new.id);
+            return !isOptimisticMatch;
+          });
+          if (filtered.some(m => m.id === payload.new.id)) {
+            console.log('[Chat dedup] real msg already exists, skipping:', payload.new.id);
+            return filtered;
+          }
+          console.log('[Chat dedup] adding real msg:', payload.new.id, 'total:', filtered.length+1);
           return [...filtered, payload.new];
         });
         // Only increment unread for other people's messages
@@ -6930,7 +6933,7 @@ export default function App(){
               </div>
 
               {/* Messages */}
-              <div ref={chatScrollRef} onScroll={handleChatScroll}
+              <div ref={chatScrollRef}
                 style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",
                 padding:"4px 0",scrollbarWidth:"thin"}}>
                 {chatMessages.length===0&&(
@@ -6983,6 +6986,7 @@ export default function App(){
                         <div style={{
                           fontSize:12,color:"#ccc",lineHeight:1.6,
                           whiteSpace:"pre-wrap",wordBreak:"break-word",
+                          maxHeight:200,overflowY:"auto",
                         }}>
                           {msg.message?.replace(/^🌅 Daily Recap\n/,"")}
                         </div>

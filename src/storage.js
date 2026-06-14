@@ -240,13 +240,13 @@ export async function sbAddSaveHistory(label, matches, knockout, actualPodium, k
 
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
 
-export async function sbGetMessages(limit=50, groupCode='default') {
+export async function sbGetMessages(limit=200, groupCode='default') {
   const { data, error } = await supabase
     .from('chat_messages').select('*')
     .eq('group_code', groupCode)
-    .order('created_at', { ascending: true }).limit(limit)
+    .order('created_at', { ascending: false }).limit(limit)
   if (error) console.error('sbGetMessages error:', error.message)
-  return data || []
+  return (data || []).reverse() // reverse so oldest first for display
 }
 
 export async function sbSendMessage(username, message, groupCode='default') {
