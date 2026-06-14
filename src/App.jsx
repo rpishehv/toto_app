@@ -7012,15 +7012,30 @@ export default function App(){
                             </div>
                           </div>
                           {(isMe||adminMode)&&msg.id&&(
-                            <button onClick={async()=>{
-                              if(!window.confirm("Delete this message?")) return;
-                              await sbDeleteMessage(msg.id);
-                              setChatMessages(prev=>prev.filter(m=>m.id!==msg.id));
+                            <button onClick={async(e)=>{
+                              e.stopPropagation();
+                              // Double-tap to delete — first tap shows warning, second confirms
+                              const btn = e.currentTarget;
+                              if(btn.dataset.confirming==="1") {
+                                await sbDeleteMessage(msg.id);
+                                setChatMessages(prev=>prev.filter(m=>m.id!==msg.id));
+                              } else {
+                                btn.dataset.confirming="1";
+                                btn.style.color="#ef4444";
+                                btn.style.opacity="1";
+                                btn.title="Tap again to confirm delete";
+                                setTimeout(()=>{
+                                  btn.dataset.confirming="0";
+                                  btn.style.color="#333";
+                                  btn.style.opacity="0.5";
+                                  btn.title="";
+                                }, 2500);
+                              }
                             }} style={{
                               padding:"3px 6px",background:"transparent",border:"none",
                               color:"#333",fontSize:12,cursor:"pointer",
                               opacity:0.5,flexShrink:0,
-                            }}>🗑</button>
+                            }} title="">🗑</button>
                           )}
                         </div>
                       </div>
