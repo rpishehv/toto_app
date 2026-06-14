@@ -4208,7 +4208,85 @@ export default function App(){
 
         {/* ── GROUPS ── */}
         {tab==="groups"&&<div>
-          <ScoringBar/>
+          {/* Today's / upcoming games quick predict */}
+          {(()=>{
+            const now = Date.now();
+            const tomorrow = now + 24*60*60*1000;
+            const upcomingToday = ALL_MATCHES.filter(m=>{
+              const ko = KICKOFFS[m.id]||KICKOFFS[`${m.home}||${m.away}`];
+              return ko && ko > now && ko < tomorrow;
+            }).sort((a,b)=>{
+              const ka=KICKOFFS[a.id]||KICKOFFS[`${a.home}||${a.away}`]||0;
+              const kb=KICKOFFS[b.id]||KICKOFFS[`${b.home}||${b.away}`]||0;
+              return ka-kb;
+            });
+            if (!upcomingToday.length) return null;
+            return(
+              <div style={{marginBottom:16}}>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,
+                  letterSpacing:1,color:"#fcb900",marginBottom:10}}>
+                  ⚡ Predict Today's Games
+                </div>
+                {upcomingToday.map(m=>{
+                  const pred = matches.find(p=>p.id===m.id);
+                  const ko = KICKOFFS[m.id]||KICKOFFS[`${m.home}||${m.away}`];
+                  const koTime = ko ? new Date(ko).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}) : "";
+                  const locked = isMatchLocked(m, kickoffs);
+                  const hasPred = pred?.homeScore!==null&&pred?.homeScore!==undefined;
+                  return(
+                    <div key={m.id} style={{
+                      marginBottom:8,padding:"10px 12px",borderRadius:10,
+                      background:"rgba(255,255,255,0.03)",
+                      border:`1px solid ${locked?"rgba(255,255,255,0.05)":"rgba(252,185,0,0.15)"}`,
+                    }}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:locked?0:8}}>
+                        <span style={{fontSize:14}}>{FLAGS[m.home]||"🏳️"}</span>
+                        <span style={{flex:1,fontSize:12,fontWeight:600,color:"#ddd"}}>{m.home}</span>
+                        <span style={{fontSize:10,color:locked?"#555":"#fcb900",fontWeight:700}}>
+                          {locked?"🔒":koTime}
+                        </span>
+                        <span style={{flex:1,fontSize:12,fontWeight:600,color:"#ddd",textAlign:"right"}}>{m.away}</span>
+                        <span style={{fontSize:14}}>{FLAGS[m.away]||"🏳️"}</span>
+                      </div>
+                      {!locked&&(
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <input type="number" min="0" max="20"
+                            value={pred?.homeScore??""} placeholder="–"
+                            onChange={e=>{
+                              const v=e.target.value===''?null:parseInt(e.target.value);
+                              setMatches(prev=>prev.map(p=>p.id===m.id?{...p,homeScore:v}:p));
+                              setSaved(false);
+                            }}
+                            style={{width:48,padding:"6px",textAlign:"center",
+                              background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",
+                              borderRadius:6,color:"#fff",fontSize:16,fontFamily:"inherit"}}
+                          />
+                          <span style={{color:"#555",fontSize:14,flex:1,textAlign:"center"}}>–</span>
+                          <input type="number" min="0" max="20"
+                            value={pred?.awayScore??""} placeholder="–"
+                            onChange={e=>{
+                              const v=e.target.value===''?null:parseInt(e.target.value);
+                              setMatches(prev=>prev.map(p=>p.id===m.id?{...p,awayScore:v}:p));
+                              setSaved(false);
+                            }}
+                            style={{width:48,padding:"6px",textAlign:"center",
+                              background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",
+                              borderRadius:6,color:"#fff",fontSize:16,fontFamily:"inherit"}}
+                          />
+                          {hasPred&&<span style={{fontSize:11,color:"#22c55e",marginLeft:4}}>✓</span>}
+                        </div>
+                      )}
+                      {locked&&hasPred&&(
+                        <div style={{fontSize:11,color:"#555",marginTop:4,fontFamily:"monospace"}}>
+                          Your pick: {pred.homeScore}–{pred.awayScore}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
           {/* Live sync status */}
           <div style={{marginBottom:12}}><AdminPill/></div>
 
@@ -4286,7 +4364,6 @@ export default function App(){
 
         {/* ── KNOCKOUT ── */}
         {tab==="knockout"&&<div>
-          <ScoringBar/>
           <div style={{marginBottom:18}}><AdminPill/></div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
             <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,color:"#fcb900",margin:0}}>Knockout Predictions</h2>
