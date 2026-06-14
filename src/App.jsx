@@ -1601,11 +1601,22 @@ export default function App(){
   const [showAdminReminderModal,setShowAdminReminderModal]=useState(false);
   const [adminReminderMsg,setAdminReminderMsg]=useState(null);
   const chatBottomRef=React.useRef(null);
+  const chatScrollRef=React.useRef(null);
+  const wasAtBottomRef=React.useRef(true);
+
+  // Track if user is at bottom before re-renders
+  const handleChatScroll = React.useCallback(()=>{
+    const el = chatScrollRef.current;
+    if(!el) return;
+    wasAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+  },[]);
+
+  // After any render, if we were at bottom, stay at bottom
   useEffect(()=>{
-    if(tab==="chat" && chatMessages.length > 0) {
-      setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'auto'}), 50);
+    if(tab==="chat" && wasAtBottomRef.current) {
+      chatBottomRef.current?.scrollIntoView({behavior:'auto'});
     }
-  },[chatMessages.length, tab]);
+  });
   // Analytics
   const [groupAnalytics,setGroupAnalytics]=useState(null);
   const [analyticsGeneratedBy,setAnalyticsGeneratedBy]=useState(null);
@@ -1810,7 +1821,11 @@ export default function App(){
 
     // Load chat + subscribe to new messages — filter by group_code
     sbGetMessages(50, groupCode).then(msgs => {
-      if(msgs?.length) setChatMessages(msgs);
+      if(msgs?.length) {
+        setChatMessages(msgs);
+        // Scroll to bottom on initial load only
+        setTimeout(()=>chatBottomRef.current?.scrollIntoView({behavior:'auto'}), 100);
+      }
       const lastSeen = parseInt(localStorage.getItem(`wc26_chat_seen_${groupCode}`) || '0');
       const isAdminLike = u => ['Admin','AI Recap','🤖 AI','⚡'].includes(u);
 
@@ -6915,7 +6930,8 @@ export default function App(){
               </div>
 
               {/* Messages */}
-              <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",
+              <div ref={chatScrollRef} onScroll={handleChatScroll}
+                style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",
                 padding:"4px 0",scrollbarWidth:"thin"}}>
                 {chatMessages.length===0&&(
                   <div style={{textAlign:"center",padding:"40px 20px",color:"#333"}}>
