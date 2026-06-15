@@ -15,6 +15,8 @@ const ALIASES = {
   'Türkiye':               'Turkey',
   'Curaçao':               'Curacao',
   'South Africa':          'South Africa',
+  'Cape Verde Islands':    'Cape Verde',
+  'Cabo Verde':            'Cape Verde',
 }
 
 function normalise(name) {

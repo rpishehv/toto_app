@@ -18,6 +18,7 @@ const ALIASES = {
   "Côte d'Ivoire":'Ivory Coast',"Cote d'Ivoire":'Ivory Coast',
   'IR Iran':'Iran','Congo DR':'DR Congo','Türkiye':'Turkey',
   "Curaçao":'Curacao',
+  'Cape Verde Islands':'Cape Verde','Cabo Verde':'Cape Verde',
 };
 const norm = n => ALIASES[n] || n;
 
