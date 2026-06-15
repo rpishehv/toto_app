@@ -108,6 +108,7 @@ const TEAM_ALIASES = {
   "Curacao": "Curacao",
   "Curaçao": "Curacao",
   "Cabo Verde": "Cape Verde",
+  "Cape Verde Islands": "Cape Verde",
 };
 function normalise(name) { return TEAM_ALIASES[name] || name; }
 
