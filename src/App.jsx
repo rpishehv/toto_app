@@ -4431,9 +4431,7 @@ export default function App(){
               );
             };
 
-            // Only show bracket if we have at least some KO data
-            if(!actualKO.some(m=>m.home&&m.home!=='TBD')) return null;
-
+            // Show bracket always — TBD slots show as empty
             return(
               <div style={{marginBottom:20}}>
                 <div style={{fontSize:13,fontWeight:700,color:"#fcb900",marginBottom:8,
