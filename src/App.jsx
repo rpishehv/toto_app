@@ -1540,8 +1540,7 @@ export default function App(){
   const [highlights,setHighlights]=useState(null);
   const [hlLoading,setHlLoading]=useState(false);
   const [hlVideo,setHlVideo]=useState(null);
-
-  // Clear highlights when fixture changes
+  // Clear fixture-specific state when selected fixture changes
   useEffect(()=>{ setHighlights(null); setHlVideo(null); },[selectedFixture?.fixture?.id]);
   const [fixtureStats,setFixtureStats]=useState(null);
   const [fixtureEvents,setFixtureEvents]=useState([]);
