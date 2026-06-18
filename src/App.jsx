@@ -8029,6 +8029,16 @@ export default function App(){
                   color:"#fcb900",fontSize:13,fontWeight:700,
                   cursor:newsFetching?"wait":"pointer",fontFamily:"inherit",
                 }}>{newsFetching?"⏳ Fetching…":"📰 Force Refresh News"}</button>
+                <button onClick={async()=>{
+                  setAnalyticsGeneratedAt(null);
+                  await generateGroupAnalytics();
+                }} disabled={analyticsLoading} style={{
+                  padding:"10px 18px",
+                  background:analyticsLoading?"rgba(139,92,246,0.05)":"rgba(139,92,246,0.1)",
+                  border:"1px solid rgba(139,92,246,0.3)",borderRadius:8,
+                  color:"#a78bfa",fontSize:13,fontWeight:700,
+                  cursor:analyticsLoading?"wait":"pointer",fontFamily:"inherit",
+                }}>{analyticsLoading?"⏳ Analysing…":"🔍 Force Regenerate Analytics"}</button>
                 <button onClick={()=>setShowResetConfirm(true)} style={{
                   padding:"10px 16px",background:"rgba(239,68,68,0.1)",
                   border:"1px solid rgba(239,68,68,0.3)",borderRadius:8,
