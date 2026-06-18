@@ -4263,55 +4263,18 @@ export default function App(){
                   const koTime = ko ? new Date(ko).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}) : "";
                   const locked = isMatchLocked(m, KICKOFFS);
                   const hasPred = pred?.homeScore!==null&&pred?.homeScore!==undefined;
+                  const aiPred = getAIPrediction(m.home, m.away, livePredictions);
+                  const expertData = EXPERT_PREDICTIONS[`${m.home}||${m.away}`]||EXPERT_PREDICTIONS[`${m.away}||${m.home}`];
                   return(
-                    <div key={m.id} style={{
-                      marginBottom:8,padding:"10px 12px",borderRadius:10,
-                      background:"rgba(255,255,255,0.03)",
-                      border:`1px solid ${locked?"rgba(255,255,255,0.05)":"rgba(252,185,0,0.15)"}`,
-                    }}>
-                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:locked?0:8}}>
-                        <span style={{fontSize:14}}>{FLAGS[m.home]||"🏳️"}</span>
-                        <span style={{flex:1,fontSize:12,fontWeight:600,color:"#ddd"}}>{m.home}</span>
-                        <span style={{fontSize:10,color:locked?"#555":"#fcb900",fontWeight:700}}>
-                          {locked?"🔒":koTime}
-                        </span>
-                        <span style={{flex:1,fontSize:12,fontWeight:600,color:"#ddd",textAlign:"right"}}>{m.away}</span>
-                        <span style={{fontSize:14}}>{FLAGS[m.away]||"🏳️"}</span>
-                      </div>
-                      {!locked&&(
-                        <div style={{display:"flex",alignItems:"center",gap:8}}>
-                          <input type="number" min="0" max="20"
-                            value={pred?.homeScore??""} placeholder="–"
-                            onChange={e=>{
-                              const v=e.target.value===''?null:parseInt(e.target.value);
-                              setMatches(prev=>prev.map(p=>p.id===m.id?{...p,homeScore:v}:p));
-                              setSaved(false);
-                            }}
-                            style={{width:48,padding:"6px",textAlign:"center",
-                              background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",
-                              borderRadius:6,color:"#fff",fontSize:16,fontFamily:"inherit"}}
-                          />
-                          <span style={{color:"#555",fontSize:14,flex:1,textAlign:"center"}}>–</span>
-                          <input type="number" min="0" max="20"
-                            value={pred?.awayScore??""} placeholder="–"
-                            onChange={e=>{
-                              const v=e.target.value===''?null:parseInt(e.target.value);
-                              setMatches(prev=>prev.map(p=>p.id===m.id?{...p,awayScore:v}:p));
-                              setSaved(false);
-                            }}
-                            style={{width:48,padding:"6px",textAlign:"center",
-                              background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",
-                              borderRadius:6,color:"#fff",fontSize:16,fontFamily:"inherit"}}
-                          />
-                          {hasPred&&<span style={{fontSize:11,color:"#22c55e",marginLeft:4}}>✓</span>}
-                        </div>
-                      )}
-                      {locked&&hasPred&&(
-                        <div style={{fontSize:11,color:"#555",marginTop:4,fontFamily:"monospace"}}>
-                          Your pick: {pred.homeScore}–{pred.awayScore}
-                        </div>
-                      )}
-                    </div>
+                    <MatchCard
+                      key={m.id}
+                      match={pred||m}
+                      actual={actualMatches.find(a=>a.id===m.id)||null}
+                      onUpdate={u=>{setMatches(prev=>prev.map(p=>p.id===u.id?u:p));setSaved(false);}}
+                      kickoffs={KICKOFFS}
+                      livePreds={livePredictions}
+                      userName={userName}
+                    />
                   );
                 })}
               </div>
