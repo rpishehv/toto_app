@@ -863,7 +863,11 @@ function ReactionsBar({matchId, userName, home, away}) {
   useEffect(()=>{
     if(!loaded||!matchId) return;
     loadReactions();
-    const sub = supabase.channel(`reactions_${matchId}`)
+    const channelName = `reactions_${matchId}`;
+    // Remove any existing channel with same name to avoid duplicate subscription error
+    const existing = supabase.getChannels().find(c=>c.topic===`realtime:${channelName}`);
+    if(existing) supabase.removeChannel(existing);
+    const sub = supabase.channel(channelName)
       .on('postgres_changes',{event:'*',schema:'public',table:'reactions',
         filter:`match_id=eq.${matchId}`}, loadReactions)
       .subscribe();
