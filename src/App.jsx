@@ -2568,7 +2568,9 @@ export default function App(){
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'bayesian', playedMatches, priorProbs, remainingTeams }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      console.log('[Bayesian] response status:', res.status, 'body:', text.slice(0,200));
+      const data = JSON.parse(text);
       if (data.error) throw new Error(data.error);
       setBayesianPred(data);
     } catch(e) { console.error('Bayesian error:', e); }
