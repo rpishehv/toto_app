@@ -29,8 +29,23 @@ export default async function handler(req) {
 
     // Filter out FIFA official channel (UCpcTrCXblq78GZrTUTLWeBw) — they block embedding
     const BLOCKED_CHANNELS = ['UCpcTrCXblq78GZrTUTLWeBw', 'UCSb6IXMs4TEncyKLmBLEChw'];
-    const videos = (data.items || [])
+    const candidates = (data.items || [])
       .filter(item => !BLOCKED_CHANNELS.includes(item.snippet.channelId))
+      .slice(0, 8);
+
+    // Verify embeddability via Videos API
+    const ids = candidates.map(i => i.id.videoId).join(',');
+    const verifyUrl = `https://www.googleapis.com/youtube/v3/videos?part=status&id=${ids}&key=${apiKey}`;
+    const verifyRes = await fetch(verifyUrl);
+    const verifyData = await verifyRes.json();
+    const embeddableIds = new Set(
+      (verifyData.items || [])
+        .filter(v => v.status?.embeddable)
+        .map(v => v.id)
+    );
+
+    const videos = candidates
+      .filter(item => embeddableIds.has(item.id.videoId))
       .slice(0, 5)
       .map(item => ({
         id: item.id.videoId,

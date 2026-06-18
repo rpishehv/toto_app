@@ -6163,14 +6163,23 @@ export default function App(){
                           </div>
                           {hlVideo&&(
                             <div style={{borderRadius:8,overflow:"hidden",marginBottom:8,
-                              background:"#000",aspectRatio:"16/9"}}>
+                              background:"#000",aspectRatio:"16/9",position:"relative"}}>
                               <iframe
+                                key={hlVideo}
                                 width="100%" height="100%"
                                 src={`https://www.youtube.com/embed/${hlVideo}?autoplay=0&rel=0`}
                                 frameBorder="0"
                                 allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                 allowFullScreen
-                                style={{display:"block"}}
+                                style={{display:"block",position:"absolute",inset:0}}
+                                onError={()=>{
+                                  // Skip to next embeddable video
+                                  if(highlights?.length) {
+                                    const idx = highlights.findIndex(v=>v.id===hlVideo);
+                                    const next = highlights[idx+1];
+                                    if(next) setHlVideo(next.id);
+                                  }
+                                }}
                               />
                             </div>
                           )}
