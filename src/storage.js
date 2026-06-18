@@ -295,7 +295,7 @@ export async function sbGetAIContent(groupCode='default') {
 }
 
 // Helper: merge-update ai_content without wiping other columns
-async function sbMergeAIContent(fields, groupCode='default') {
+export async function sbMergeAIContent(fields, groupCode='default') {
   console.log('[sbMergeAIContent] saving fields:', Object.keys(fields), 'for group:', groupCode);
   // Ensure row exists first
   await supabase.from('ai_content')

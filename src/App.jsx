@@ -8,7 +8,7 @@ import {
   sbGetLeaderboard, sbUpsertLeaderboard, sbGetAllGroupCodes,
   sbGetAllPredictions, sbBatchUpdateLeaderboard,
   sbGetSaveHistory, sbAddSaveHistory,
-  sbGetAIContent, sbSaveAIContent,
+  sbGetAIContent, sbSaveAIContent, sbMergeAIContent,
   sbGetAnalytics, sbSaveAnalytics,
   sbGetNews, sbSaveNews,
   sbGetMessages, sbSendMessage, sbDeleteMessage,
@@ -1748,6 +1748,7 @@ export default function App(){
         // Load shared AI content scoped to group
         const aiContent = await sbGetAIContent(gc);
         if(aiContent?.bracket)   { setBracketPred(aiContent.bracket); setBracketGeneratedBy(aiContent.bracket_generated_by); }
+        if(aiContent?.bayesian)  { setBayesianPred(aiContent.bayesian); }
         if(aiContent?.commentary){ setCommentary(aiContent.commentary); setCommentaryGeneratedBy(aiContent.commentary_generated_by); setCommentaryGeneratedAt(aiContent.commentary_generated_at||null); }
         if(aiContent?.match_analyses) {
           const analyses = {};
@@ -1810,6 +1811,7 @@ export default function App(){
         filter:`group_code=eq.${groupCode}` }, payload=>{
         const d = payload.new;
         if(d.bracket)    { setBracketPred(d.bracket);   setBracketGeneratedBy(d.bracket_generated_by); }
+        if(d.bayesian)   { setBayesianPred(d.bayesian); }
         if(d.commentary) { setCommentary(d.commentary); setCommentaryGeneratedBy(d.commentary_generated_by); setCommentaryGeneratedAt(d.commentary_generated_at||null); }
         if(d.news?.length){ setNewsStories(d.news);      setNewsUpdatedBy(d.news_updated_by); setNewsUpdatedAt(d.news_updated_at); }
         if(d.analytics)  { setGroupAnalytics(d.analytics); setAnalyticsGeneratedBy(d.analytics_generated_by); setAnalyticsGeneratedAt(d.analytics_generated_at); }
@@ -2573,6 +2575,8 @@ export default function App(){
       const data = JSON.parse(text);
       if (data.error) throw new Error(data.error);
       setBayesianPred(data);
+      // Persist to Supabase
+      await sbMergeAIContent({ bayesian: data, bayesian_generated_at: new Date().toISOString() }, groupCode);
     } catch(e) { console.error('Bayesian error:', e); }
     setBayesianLoading(false);
   };
