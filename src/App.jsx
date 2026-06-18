@@ -4374,6 +4374,124 @@ export default function App(){
         {/* ── KNOCKOUT ── */}
         {tab==="knockout"&&<div>
           <div style={{marginBottom:18}}><AdminPill/></div>
+
+          {/* ── Live Bracket Diagram ── */}
+          {(()=>{
+            const rounds = ['Round of 32','Round of 16','Quarter-Finals','Semi-Finals','Final'];
+            const roundLabels = ['R32','R16','QF','SF','F'];
+            const matchesByRound = rounds.map(r => actualKO.filter(m=>m.round===r));
+            const maxMatches = Math.max(...matchesByRound.map(r=>r.length));
+
+            // Layout constants
+            const COL_W = 110, ROW_H = 44, PAD = 8;
+            const cols = rounds.length;
+            const svgW = cols * COL_W + PAD*2;
+            const svgH = maxMatches * ROW_H * 2 + 60;
+
+            // Get y position for match index in a round
+            const getMatchY = (roundIdx, matchIdx, total) => {
+              const spacing = svgH / (total + 1);
+              return spacing * (matchIdx + 1) - ROW_H/2;
+            };
+
+            const MatchBox = ({m, x, y, isWinner}) => {
+              const hasTeams = m?.home && m?.home !== 'TBD' && m?.away && m?.away !== 'TBD';
+              const hasScore = m?.homeScore !== null && m?.homeScore !== undefined;
+              const homeWon = hasScore && m.homeScore > m.awayScore;
+              const awayWon = hasScore && m.awayScore > m.homeScore;
+              const boxW = COL_W - 16;
+              const boxH = ROW_H - 4;
+
+              return (
+                <g>
+                  {/* Home */}
+                  <rect x={x} y={y} width={boxW} height={boxH/2}
+                    rx="3" fill={homeWon?"rgba(252,185,0,0.15)":"rgba(255,255,255,0.04)"}
+                    stroke={homeWon?"rgba(252,185,0,0.4)":"rgba(255,255,255,0.08)"} strokeWidth="0.5"/>
+                  <text x={x+4} y={y+boxH/4+4} fontSize="7"
+                    fill={homeWon?"#fcb900":hasTeams?"#ccc":"#444"}
+                    fontFamily="system-ui,sans-serif">
+                    {hasTeams?(FLAGS[m.home]||"")+' '+(m.home?.split(' ').slice(-1)[0]||m.home||'').slice(0,10):'TBD'}
+                  </text>
+                  {hasScore&&<text x={x+boxW-12} y={y+boxH/4+4} fontSize="8"
+                    fill={homeWon?"#fcb900":"#888"} textAnchor="middle" fontFamily="monospace">{m.homeScore}</text>}
+
+                  {/* Away */}
+                  <rect x={x} y={y+boxH/2} width={boxW} height={boxH/2}
+                    rx="3" fill={awayWon?"rgba(96,165,250,0.15)":"rgba(255,255,255,0.04)"}
+                    stroke={awayWon?"rgba(96,165,250,0.4)":"rgba(255,255,255,0.08)"} strokeWidth="0.5"/>
+                  <text x={x+4} y={y+boxH*3/4+4} fontSize="7"
+                    fill={awayWon?"#60a5fa":hasTeams?"#ccc":"#444"}
+                    fontFamily="system-ui,sans-serif">
+                    {hasTeams?(FLAGS[m.away]||"")+' '+(m.away?.split(' ').slice(-1)[0]||m.away||'').slice(0,10):'TBD'}
+                  </text>
+                  {hasScore&&<text x={x+boxW-12} y={y+boxH*3/4+4} fontSize="8"
+                    fill={awayWon?"#60a5fa":"#888"} textAnchor="middle" fontFamily="monospace">{m.awayScore}</text>}
+                </g>
+              );
+            };
+
+            // Only show bracket if we have at least some KO data
+            if(!actualKO.some(m=>m.home&&m.home!=='TBD')) return null;
+
+            return(
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#fcb900",marginBottom:8,
+                  fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1}}>
+                  🏆 Knockout Bracket
+                </div>
+                <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",
+                  background:"rgba(255,255,255,0.02)",borderRadius:10,
+                  border:"1px solid rgba(255,255,255,0.06)",padding:"8px 4px"}}>
+                  <svg width={svgW} height={svgH} style={{display:"block"}}>
+                    {/* Round labels */}
+                    {rounds.map((r,ri)=>(
+                      <text key={r} x={PAD + ri*COL_W + (COL_W-16)/2} y={14}
+                        textAnchor="middle" fontSize="8" fill="#555"
+                        fontFamily="system-ui,sans-serif" fontWeight="700">
+                        {roundLabels[ri]}
+                      </text>
+                    ))}
+
+                    {matchesByRound.map((roundMatches, ri)=>{
+                      const x = PAD + ri * COL_W;
+                      return roundMatches.map((m, mi)=>{
+                        const y = getMatchY(ri, mi, roundMatches.length) + 20;
+                        const boxW = COL_W - 16;
+                        const boxH = ROW_H - 4;
+                        const midY = y + boxH/2;
+
+                        // Draw connector line to next round
+                        let connector = null;
+                        if(ri < rounds.length - 1) {
+                          const nextRoundMatches = matchesByRound[ri+1];
+                          const nextMi = Math.floor(mi/2);
+                          if(nextMi < nextRoundMatches.length) {
+                            const nextY = getMatchY(ri+1, nextMi, nextRoundMatches.length) + 20 + boxH/2;
+                            connector = <line
+                              x1={x+boxW} y1={midY}
+                              x2={x+COL_W} y2={nextY}
+                              stroke="rgba(255,255,255,0.08)" strokeWidth="0.8"/>;
+                          }
+                        }
+
+                        return(
+                          <g key={m.id||mi}>
+                            {connector}
+                            <MatchBox m={m} x={x} y={y}/>
+                          </g>
+                        );
+                      });
+                    })}
+                  </svg>
+                </div>
+                <div style={{fontSize:9,color:"#444",marginTop:4,textAlign:"center"}}>
+                  Scroll horizontally · Updates as results come in
+                </div>
+              </div>
+            );
+          })()}
+
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
             <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,color:"#fcb900",margin:0}}>Knockout Predictions</h2>
             <button onClick={autoFillKnockout} style={{
