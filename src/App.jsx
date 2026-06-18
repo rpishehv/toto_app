@@ -9,6 +9,7 @@ import {
   sbGetAllPredictions, sbBatchUpdateLeaderboard,
   sbGetSaveHistory, sbAddSaveHistory,
   sbGetAIContent, sbSaveAIContent, sbMergeAIContent,
+  invalidateLBCache, invalidatePredsCache,
   sbGetAnalytics, sbSaveAnalytics,
   sbGetNews, sbSaveNews,
   sbGetMessages, sbSendMessage, sbDeleteMessage,
@@ -1880,13 +1881,18 @@ export default function App(){
       })
       .subscribe();
 
-    // Subscribe to leaderboard changes — filter by group_code
+    // Subscribe to leaderboard changes — debounced to avoid N fetches when N users save
+    let lbDebounce = null;
     const lbSub = supabase
       .channel(`leaderboard_${groupCode}`)
       .on('postgres_changes', { event:'*', schema:'public', table:'leaderboard',
-        filter:`group_code=eq.${groupCode}` }, async ()=>{
-        const lb = await sbGetLeaderboard(groupCode);
-        if(lb) setLeaderboard(lb);
+        filter:`group_code=eq.${groupCode}` }, ()=>{
+        clearTimeout(lbDebounce);
+        lbDebounce = setTimeout(async()=>{
+          invalidateLBCache(groupCode);
+          const lb = await sbGetLeaderboard(groupCode);
+          if(lb) setLeaderboard(lb);
+        }, 2000); // wait 2s for all saves to complete before fetching
       })
       .subscribe();
 
@@ -3364,6 +3370,7 @@ export default function App(){
     lb.sort((a,b)=>b.points-a.points);
     setLeaderboard(lb);
     // Persist updated points back to Supabase for all players
+    invalidateLBCache(groupCode);
     await Promise.all(lb.map(e =>
       supabase.from('leaderboard')
         .update({ points: e.points, champion: e.champion, updated_at: new Date().toISOString() })

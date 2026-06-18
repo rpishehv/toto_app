@@ -1,5 +1,20 @@
 import { supabase } from './supabase.js'
 
+// ─── MODULE-LEVEL CACHE ───────────────────────────────────────────────────────
+const _cache = {};
+const CACHE_TTL = 30000; // 30s
+function cacheGet(key) {
+  const c = _cache[key];
+  if (c && Date.now() - c.ts < CACHE_TTL) return c.data;
+  return null;
+}
+function cacheSet(key, data) { _cache[key] = { data, ts: Date.now() }; }
+function cacheInvalidate(prefix) {
+  Object.keys(_cache).forEach(k => { if (k.startsWith(prefix)) delete _cache[k]; });
+}
+export function invalidateCache(prefix) { cacheInvalidate(prefix); }
+
+
 // ─── USER / PIN ───────────────────────────────────────────────────────────────
 
 export async function sbGetUser(username, groupCode='default') {
@@ -118,11 +133,17 @@ export async function sbGetAllGroupCodes() {
 
 // Fetch all predictions for a group in one query
 export async function sbGetAllPredictions(groupCode='default') {
+  const key = `preds_${groupCode}`;
+  const cached = cacheGet(key);
+  if (cached) return cached;
   const { data, error } = await supabase
     .from('predictions').select('username,matches,knockout,podium').eq('group_code', groupCode);
   if (error) { console.error('sbGetAllPredictions error:', error.message); return []; }
-  return data || [];
+  const result = data || [];
+  if (result.length) cacheSet(key, result);
+  return result;
 }
+export function invalidatePredsCache(groupCode) { cacheInvalidate(`preds_${groupCode}`); }
 
 // Batch update entire leaderboard in one upsert
 export async function sbBatchUpdateLeaderboard(entries, groupCode='default') {
@@ -153,13 +174,19 @@ export async function sbBatchUpdateLeaderboard(entries, groupCode='default') {
 }
 
 export async function sbGetLeaderboard(groupCode='default') {
+  const key = `lb_${groupCode}`;
+  const cached = cacheGet(key);
+  if (cached) return cached;
   const { data, error } = await supabase
     .from('leaderboard').select('username,points,champion,podium,paid,rank_history')
     .eq('group_code', groupCode)
     .order('points', { ascending: false })
   if (error) console.error('sbGetLeaderboard error:', error.message)
-  return data || []
+  const result = data || [];
+  if (result.length) cacheSet(key, result);
+  return result;
 }
+export function invalidateLBCache(groupCode) { cacheInvalidate(`lb_${groupCode}`); }
 
 export async function sbUpsertLeaderboard(username, podium, points, groupCode='default') {
   const row = {
@@ -245,7 +272,7 @@ export async function sbAddSaveHistory(label, matches, knockout, actualPodium, k
 
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
 
-export async function sbGetMessages(limit=100, groupCode='default') {
+export async function sbGetMessages(limit=50, groupCode='default') {
   const { data, error } = await supabase
     .from('chat_messages').select('*')
     .eq('group_code', groupCode)
