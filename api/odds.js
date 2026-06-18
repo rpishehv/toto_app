@@ -3,24 +3,33 @@
 
 export const config = { runtime: 'edge' };
 
-// 3-letter FIFA codes for team names
+// 3-letter FIFA codes for team names — must match Polymarket slug codes
 const FIFA_CODES = {
   'mexico': 'mex', 'south africa': 'rsa', 'south korea': 'kor', 'korea republic': 'kor',
   'czechia': 'cze', 'czech republic': 'cze', 'canada': 'can', 'bosnia-herzegovina': 'bih',
-  'bosnia herzegovina': 'bih', 'qatar': 'qat', 'switzerland': 'sui', 'brazil': 'bra',
-  'morocco': 'mar', 'haiti': 'hai', 'scotland': 'sco', 'usa': 'usa', 'united states': 'usa',
-  'paraguay': 'par', 'australia': 'aus', 'turkey': 'tur', 'germany': 'ger', 'curacao': 'cuw',
-  'ivory coast': 'civ', 'cote d\'ivoire': 'civ', 'ecuador': 'ecu', 'netherlands': 'ned',
+  'bosnia herzegovina': 'bih', 'qatar': 'qat',
+  'switzerland': 'che', // Polymarket uses CHE not SUI
+  'brazil': 'bra', 'morocco': 'mar', 'haiti': 'hai', 'scotland': 'sco',
+  'usa': 'usa', 'united states': 'usa', 'paraguay': 'par',
+  'australia': 'aus', 'turkey': 'tur', 'türkiye': 'tur',
+  'germany': 'ger', 'curacao': 'cuw',
+  'ivory coast': 'civ', 'cote d\'ivoire': 'civ',
+  'ecuador': 'ecu',
+  'netherlands': 'nld', // Polymarket uses NLD not NED
   'japan': 'jpn', 'sweden': 'swe', 'tunisia': 'tun', 'belgium': 'bel', 'egypt': 'egy',
-  'iran': 'irn', 'ir iran': 'irn', 'new zealand': 'nzl', 'spain': 'esp', 'cape verde': 'cpv',
-  'cabo verde': 'cpv', 'saudi arabia': 'ksa', 'uruguay': 'uru', 'france': 'fra',
+  'iran': 'irn', 'ir iran': 'irn', 'new zealand': 'nzl', 'spain': 'esp',
+  'cape verde': 'cpv', 'cabo verde': 'cpv', 'cape verde islands': 'cpv',
+  'saudi arabia': 'ksa', 'uruguay': 'uru', 'france': 'fra',
   'senegal': 'sen', 'iraq': 'irq', 'norway': 'nor', 'argentina': 'arg', 'algeria': 'alg',
   'austria': 'aut', 'jordan': 'jor', 'portugal': 'por', 'dr congo': 'cod', 'uzbekistan': 'uzb',
-  'colombia': 'col', 'england': 'eng', 'croatia': 'cro', 'ghana': 'gha', 'panama': 'pan',
+  'colombia': 'col', 'england': 'eng',
+  'croatia': 'hrv', // Polymarket uses HRV not CRO
+  'ghana': 'gha', 'panama': 'pan',
 };
 
-// Match kickoff dates (UTC)
+// Match kickoff dates — Polymarket URL dates (UTC)
 const MATCH_DATES = {
+  // Matchday 1
   'mexico||south africa': '2026-06-11',
   'south korea||czechia': '2026-06-11',
   'canada||bosnia-herzegovina': '2026-06-12',
@@ -43,11 +52,38 @@ const MATCH_DATES = {
   'austria||jordan': '2026-06-18',
   'portugal||dr congo': '2026-06-18',
   'uzbekistan||colombia': '2026-06-18',
-  'england||croatia': '2026-06-19',
-  'ghana||panama': '2026-06-19',
+  'england||croatia': '2026-06-17', // England vs Croatia was June 17
+  'ghana||panama': '2026-06-17',
+  // Matchday 2
   'mexico||south korea': '2026-06-18',
+  'south africa||czechia': '2026-06-18',
   'switzerland||bosnia-herzegovina': '2026-06-19',
   'canada||qatar': '2026-06-19',
+  'brazil||scotland': '2026-06-19',
+  'morocco||haiti': '2026-06-19',
+  'usa||australia': '2026-06-19',
+  'turkey||paraguay': '2026-06-19',
+  'germany||ivory coast': '2026-06-20',
+  'ecuador||curacao': '2026-06-20',
+  'netherlands||sweden': '2026-06-20',
+  'japan||tunisia': '2026-06-20',
+  'belgium||iran': '2026-06-21',
+  'egypt||new zealand': '2026-06-21',
+  'spain||saudi arabia': '2026-06-21',
+  'cape verde||uruguay': '2026-06-21',
+  'france||iraq': '2026-06-22',
+  'senegal||norway': '2026-06-22',
+  'argentina||austria': '2026-06-22',
+  'algeria||jordan': '2026-06-22',
+  'portugal||uzbekistan': '2026-06-23',
+  'dr congo||colombia': '2026-06-23',
+  'england||ghana': '2026-06-23',
+  'croatia||panama': '2026-06-23',
+  // Matchday 3 (simultaneous)
+  'mexico||czechia': '2026-06-25',
+  'south africa||south korea': '2026-06-25',
+  'switzerland||canada': '2026-06-25',
+  'bosnia-herzegovina||qatar': '2026-06-25',
 };
 
 function getCode(name) {
