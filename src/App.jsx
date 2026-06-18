@@ -1519,7 +1519,7 @@ export default function App(){
           )];
         });
       });
-    }, 30000); // poll every 30s — realtime handles new messages
+    }, 120000); // poll every 2 min as fallback — realtime handles new messages
     return ()=>clearInterval(poll);
   },[tab]);
   const [userName,setUserName]=useState("");
@@ -8012,9 +8012,9 @@ export default function App(){
           <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,color:"#fcb900",marginTop:0}}>
             Admin Panel
           </h2>
-          {/* Load prediction counts for all users */}
+          {/* Load prediction counts for all users — only once when admin opens */}
           {adminMode&&(()=>{
-            if(leaderboard.length>0){
+            if(leaderboard.length>0 && Object.keys(predCounts).length===0){
               sbGetAllPredictions(groupCode).then(allPreds=>{
                 const counts={};
                 const data={};
