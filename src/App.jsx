@@ -1537,6 +1537,12 @@ export default function App(){
   const [liveLoading,setLiveLoading]=useState(false);
   const [liveError,setLiveError]=useState(null);
   const [selectedFixture,setSelectedFixture]=useState(null);
+  const [highlights,setHighlights]=useState(null);
+  const [hlLoading,setHlLoading]=useState(false);
+  const [hlVideo,setHlVideo]=useState(null);
+
+  // Clear highlights when fixture changes
+  useEffect(()=>{ setHighlights(null); setHlVideo(null); },[selectedFixture?.fixture?.id]);
   const [fixtureStats,setFixtureStats]=useState(null);
   const [fixtureEvents,setFixtureEvents]=useState([]);
   const [fixtureLineups,setFixtureLineups]=useState([]);
@@ -6126,10 +6132,6 @@ export default function App(){
 
                     {/* 🎬 Match Highlights */}
                     {(()=>{
-                      const [highlights,setHighlights]=React.useState(null);
-                      const [hlLoading,setHlLoading]=React.useState(false);
-                      const [hlVideo,setHlVideo]=React.useState(null);
-
                       const fetchHighlights = async() => {
                         if(highlights) { setHlVideo(null); setHighlights(null); return; }
                         setHlLoading(true);
