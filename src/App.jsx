@@ -6124,6 +6124,78 @@ export default function App(){
                       );
                     })()}
 
+                    {/* 🎬 Match Highlights */}
+                    {(()=>{
+                      const [highlights,setHighlights]=React.useState(null);
+                      const [hlLoading,setHlLoading]=React.useState(false);
+                      const [hlVideo,setHlVideo]=React.useState(null);
+
+                      const fetchHighlights = async() => {
+                        if(highlights) { setHlVideo(null); setHighlights(null); return; }
+                        setHlLoading(true);
+                        try {
+                          const res = await fetch(`/api/highlights?home=${encodeURIComponent(home?.name||'')}&away=${encodeURIComponent(away?.name||'')}`);
+                          const data = await res.json();
+                          setHighlights(data.videos||[]);
+                          if(data.videos?.length) setHlVideo(data.videos[0].id);
+                        } catch(e) { setHighlights([]); }
+                        setHlLoading(false);
+                      };
+
+                      return(
+                        <div style={{marginBottom:14}}>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                            <div style={{fontSize:11,fontWeight:700,color:"#f472b6"}}>🎬 Highlights</div>
+                            <button onClick={fetchHighlights} style={{
+                              padding:"3px 10px",borderRadius:6,fontSize:10,fontWeight:700,
+                              background:highlights?"rgba(244,114,182,0.15)":"rgba(244,114,182,0.1)",
+                              border:"1px solid rgba(244,114,182,0.3)",color:"#f472b6",
+                              cursor:"pointer",fontFamily:"inherit",
+                            }}>{hlLoading?"⏳ Searching…":highlights?"✕ Close":"🔍 Find Videos"}</button>
+                          </div>
+                          {hlVideo&&(
+                            <div style={{borderRadius:8,overflow:"hidden",marginBottom:8,
+                              background:"#000",aspectRatio:"16/9"}}>
+                              <iframe
+                                width="100%" height="100%"
+                                src={`https://www.youtube.com/embed/${hlVideo}?autoplay=0&rel=0`}
+                                frameBorder="0"
+                                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                style={{display:"block"}}
+                              />
+                            </div>
+                          )}
+                          {highlights&&highlights.length>0&&(
+                            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                              {highlights.map(v=>(
+                                <div key={v.id} onClick={()=>setHlVideo(v.id)}
+                                  style={{
+                                    display:"flex",alignItems:"center",gap:8,padding:"6px 8px",
+                                    borderRadius:6,cursor:"pointer",
+                                    background:hlVideo===v.id?"rgba(244,114,182,0.1)":"rgba(255,255,255,0.02)",
+                                    border:`1px solid ${hlVideo===v.id?"rgba(244,114,182,0.3)":"rgba(255,255,255,0.05)"}`,
+                                  }}>
+                                  {v.thumbnail&&<img src={v.thumbnail} alt="" style={{width:60,height:34,borderRadius:4,objectFit:"cover",flexShrink:0}}/>}
+                                  <div style={{flex:1,minWidth:0}}>
+                                    <div style={{fontSize:11,color:"#ddd",lineHeight:1.3,
+                                      overflow:"hidden",textOverflow:"ellipsis",
+                                      display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>
+                                      {v.title}
+                                    </div>
+                                    <div style={{fontSize:9,color:"#555",marginTop:2}}>{v.channel}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {highlights&&highlights.length===0&&(
+                            <div style={{fontSize:11,color:"#555"}}>No highlights found yet — try again after the match.</div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {fixtureStats?.length>=2&&(()=>{
                       const hs=fixtureStats[0]?.statistics||[], as_=fixtureStats[1]?.statistics||[];
                       const getStat=(arr,key)=>parseInt(String(arr.find(s=>s.type===key)?.value||0).replace('%',''))||0;

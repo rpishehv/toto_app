@@ -5,7 +5,8 @@
     "api/tournament.js": { "maxDuration": 60 },
     "api/daily-recap.js":{ "maxDuration": 30 },
     "api/matchquery.js": { "maxDuration": 30 },
-    "api/autosync.js":   { "maxDuration": 30 }
+    "api/autosync.js":   { "maxDuration": 30 },
+    "api/highlights.js": { "maxDuration": 10 }
   },
   "crons": [
     {
