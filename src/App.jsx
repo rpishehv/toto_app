@@ -3152,18 +3152,16 @@ export default function App(){
 
   const myPts=calcTotal(matches,actualMatches,knockout,actualKO,podium,actualPodium);
 
-  // Recalc and update own leaderboard entry whenever actual results change
+  // Animate points when actual results change — don't upsert (admin save is source of truth)
   useEffect(()=>{
     if(!userName) return;
-    const prevPts = predictionCount._prevPts || 0;
     const newPts = calcTotal(matches,actualMatches,knockout,actualKO,podium,actualPodium);
-    if(prevPts > 0 && newPts > prevPts) {
-      setRecentPoints(newPts - prevPts);
-      setTimeout(()=>setRecentPoints(null), 5000);
-    }
-    sbUpsertLeaderboard(userName,podium,newPts,groupCode)
-      .then(lb=>{ if(lb) setLeaderboard(lb); })
-      .catch(e=>console.error('Leaderboard update error:', e));
+    setLeaderboard(prev => {
+      const updated = prev.map(e =>
+        e.username === userName ? { ...e, points: newPts } : e
+      );
+      return updated.sort((a,b)=>(b.points||0)-(a.points||0));
+    });
   },[actualMatches,actualKO,actualPodium]);
 
 
@@ -3365,6 +3363,15 @@ export default function App(){
     }
     lb.sort((a,b)=>b.points-a.points);
     setLeaderboard(lb);
+    // Persist updated points back to Supabase for all players
+    await Promise.all(lb.map(e =>
+      supabase.from('leaderboard')
+        .update({ points: e.points, champion: e.champion, updated_at: new Date().toISOString() })
+        .eq('username', e.username).eq('group_code', groupCode)
+    ));
+    // Final authoritative fetch to confirm sync
+    const confirmed = await sbGetLeaderboard(groupCode);
+    if(confirmed?.length) setLeaderboard(confirmed);
     // Update rank history for each user
     for(const [i,e] of lb.entries()){
       await sbUpdateRankHistory(e.username, i+1, e.points, groupCode);
