@@ -23,6 +23,7 @@ export default async function handler(req) {
   let prompt = '';
   let _champProbs = null;
   let _convergenceData = null;
+  let _updatedProbs = null;
 
   if (type === 'bracket') {
 
@@ -416,6 +417,7 @@ Respond ONLY with a JSON object:
         eloChange: Math.round((updatedElos[t]||1600)-(TEAM_DATA_B[t]?.[0]||1600)) }))
       .sort((a,b)=>parseFloat(b.prob)-parseFloat(a.prob))
       .slice(0,12);
+    _updatedProbs = updatedProbs;
 
     const top = updatedProbs[0];
     const matchSummary = (playedMatches||[]).slice(-5).map(m=>
@@ -428,11 +430,10 @@ Recent results: ${matchSummary || 'No matches yet'}
 Bayesian-updated championship probabilities (Elos updated from actual results, ${N2} simulations):
 ${updatedProbs.map((t,i)=>`${i+1}. ${t.team}: ${t.prob}% (was ${t.priorProb}%, Elo ${t.eloChange>=0?'+':''}${t.eloChange})`).join('\n')}
 
-Respond ONLY with JSON:
+Respond ONLY with JSON using plain ASCII text only, no apostrophes or special characters:
 {
-  "updatedProbs": ${JSON.stringify(updatedProbs)},
   "champion": "${top.team}",
-  "keyInsight": "2 sentence insight about how results so far have shifted the probabilities",
+  "keyInsight": "2 sentence insight about probability shifts. Plain text only.",
   "biggestRiser": "${updatedProbs.find(t=>parseFloat(t.eloChange)===Math.max(...updatedProbs.map(u=>parseFloat(u.eloChange))))?.team||top.team}",
   "biggestFaller": "${updatedProbs.find(t=>parseFloat(t.eloChange)===Math.min(...updatedProbs.map(u=>parseFloat(u.eloChange))))?.team||updatedProbs[updatedProbs.length-1]?.team}",
   "matchesProcessed": ${playedMatches?.length||0}
@@ -503,6 +504,7 @@ Respond ONLY with JSON:
     // Inject simulation data server-side (not via Claude to avoid JSON corruption)
     if (_champProbs) result.simulationData = _champProbs;
     if (_convergenceData) result.convergenceData = _convergenceData;
+    if (_updatedProbs) result.updatedProbs = _updatedProbs;
 
     return new Response(JSON.stringify(result), {
       status: 200, headers: { 'Content-Type': 'application/json' },
