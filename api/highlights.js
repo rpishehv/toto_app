@@ -17,7 +17,7 @@ export default async function handler(req) {
 
   // Search for match highlights
   const query = `${home} vs ${away} 2026 World Cup goals highlights`;
-  const ytUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&order=relevance&maxResults=5&videoDuration=short&key=${apiKey}`;
+  const ytUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&order=relevance&maxResults=10&videoEmbeddable=true&key=${apiKey}`;
 
   try {
     const res = await fetch(ytUrl);
@@ -27,13 +27,18 @@ export default async function handler(req) {
       return new Response(JSON.stringify({ error: data.error.message }), { status: 500 });
     }
 
-    const videos = (data.items || []).map(item => ({
-      id: item.id.videoId,
-      title: item.snippet.title,
-      channel: item.snippet.channelTitle,
-      thumbnail: item.snippet.thumbnails?.medium?.url,
-      published: item.snippet.publishedAt,
-    }));
+    // Filter out FIFA official channel (UCpcTrCXblq78GZrTUTLWeBw) — they block embedding
+    const BLOCKED_CHANNELS = ['UCpcTrCXblq78GZrTUTLWeBw', 'UCSb6IXMs4TEncyKLmBLEChw'];
+    const videos = (data.items || [])
+      .filter(item => !BLOCKED_CHANNELS.includes(item.snippet.channelId))
+      .slice(0, 5)
+      .map(item => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        channel: item.snippet.channelTitle,
+        thumbnail: item.snippet.thumbnails?.medium?.url,
+        published: item.snippet.publishedAt,
+      }));
 
     return new Response(JSON.stringify({ videos }), {
       status: 200,
