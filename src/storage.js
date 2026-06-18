@@ -49,11 +49,16 @@ export async function sbClearUser(username, groupCode='default') {
 }
 
 export async function sbDeleteUser(username, groupCode='default') {
-  await supabase.from('predictions').delete().eq('username', username).eq('group_code', groupCode)
-  await supabase.from('leaderboard').delete().eq('username', username).eq('group_code', groupCode)
-  await supabase.from('reactions').delete().eq('username', username)
-  await supabase.from('chat_messages').delete().eq('username', username).eq('group_code', groupCode)
-  await supabase.from('users').delete().eq('username', username).eq('group_code', groupCode)
+  const results = await Promise.all([
+    supabase.from('predictions').delete().eq('username', username).eq('group_code', groupCode),
+    supabase.from('leaderboard').delete().eq('username', username).eq('group_code', groupCode),
+    supabase.from('reactions').delete().eq('username', username),
+    supabase.from('chat_messages').delete().eq('username', username).eq('group_code', groupCode),
+    supabase.from('users').delete().eq('username', username).eq('group_code', groupCode),
+  ]);
+  results.forEach(({error}, i) => {
+    if (error) console.error(`sbDeleteUser table[${i}] error:`, error.message, error.details);
+  });
 }
 
 // ─── PREDICTIONS ──────────────────────────────────────────────────────────────

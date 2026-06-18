@@ -8589,34 +8589,42 @@ export default function App(){
                   ))}
                 </div>
 
-                {/* Delete confirmation modal */}
+                {/* Delete confirmation modal — fixed overlay */}
                 {deleteConfirmUser&&(
-                  <div style={{padding:"14px",borderRadius:8,
-                    background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.3)"}}>
-                    <div style={{fontSize:12,color:"#fca5a5",fontWeight:700,marginBottom:8}}>
-                      ⚠️ Delete "{deleteConfirmUser}"?
-                    </div>
-                    <div style={{fontSize:11,color:"#555",marginBottom:12}}>
-                      This will permanently remove their account, predictions, reactions and chat messages. This cannot be undone.
-                    </div>
-                    <div style={{display:"flex",gap:8}}>
-                      <button onClick={async()=>{
-                        await sbDeleteUser(deleteConfirmUser, groupCode);
-                        const lb = await sbGetLeaderboard(groupCode);
-                        if(lb) setLeaderboard(lb);
-                        setAdminPinError(`✅ "${deleteConfirmUser}" deleted.`);
-                        setDeleteConfirmUser(null);
-                        setTimeout(()=>setAdminPinError(""),3000);
-                      }} style={{
-                        flex:1,padding:"8px",background:"rgba(239,68,68,0.2)",
-                        border:"1px solid rgba(239,68,68,0.4)",borderRadius:6,
-                        color:"#ef4444",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
-                      }}>Yes, delete permanently</button>
-                      <button onClick={()=>setDeleteConfirmUser(null)} style={{
-                        flex:1,padding:"8px",background:"rgba(255,255,255,0.06)",
-                        border:"1px solid rgba(255,255,255,0.10)",borderRadius:6,
-                        color:"#555",fontSize:12,cursor:"pointer",fontFamily:"inherit",
-                      }}>Cancel</button>
+                  <div style={{
+                    position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",
+                    zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",
+                    padding:"20px",
+                  }} onClick={()=>setDeleteConfirmUser(null)}>
+                    <div onClick={e=>e.stopPropagation()} style={{
+                      background:"#1a1f2e",borderRadius:12,padding:"20px",
+                      border:"1px solid rgba(239,68,68,0.4)",maxWidth:320,width:"100%",
+                    }}>
+                      <div style={{fontSize:14,color:"#fca5a5",fontWeight:700,marginBottom:8}}>
+                        ⚠️ Delete "{deleteConfirmUser}"?
+                      </div>
+                      <div style={{fontSize:11,color:"#888",marginBottom:16,lineHeight:1.5}}>
+                        This will permanently remove their account, predictions, reactions and chat messages. This cannot be undone.
+                      </div>
+                      <div style={{display:"flex",gap:8}}>
+                        <button onClick={async()=>{
+                          await sbDeleteUser(deleteConfirmUser, groupCode);
+                          const lb = await sbGetLeaderboard(groupCode);
+                          if(lb) setLeaderboard(lb);
+                          setAdminPinError(`✅ "${deleteConfirmUser}" deleted.`);
+                          setDeleteConfirmUser(null);
+                          setTimeout(()=>setAdminPinError(""),3000);
+                        }} style={{
+                          flex:1,padding:"10px",background:"rgba(239,68,68,0.2)",
+                          border:"1px solid rgba(239,68,68,0.4)",borderRadius:8,
+                          color:"#ef4444",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                        }}>Yes, delete</button>
+                        <button onClick={()=>setDeleteConfirmUser(null)} style={{
+                          flex:1,padding:"10px",background:"rgba(255,255,255,0.06)",
+                          border:"1px solid rgba(255,255,255,0.10)",borderRadius:8,
+                          color:"#888",fontSize:13,cursor:"pointer",fontFamily:"inherit",
+                        }}>Cancel</button>
+                      </div>
                     </div>
                   </div>
                 )}
