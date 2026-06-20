@@ -4625,7 +4625,7 @@ export default function App(){
             {key:"first",     label:"1st Place 🥇", pts:50, color:"#f59e0b", actual:actualPodium?.first},
             {key:"second",    label:"2nd Place 🥈", pts:25,  color:"#c0c0c0", actual:actualPodium?.second},
             {key:"third",     label:"3rd Place 🥉", pts:15,  color:"#cd7f32", actual:actualPodium?.third},
-            {key:"topScorer", label:"Top Scorer ⚽", pts:10,  color:"#60a5fa", actual:actualPodium?.topScorer, freeText:true},
+            {key:"topScorer", label:"Top Scorer ⚽", pts:20,  color:"#60a5fa", actual:actualPodium?.topScorer, freeText:true},
           ];
 
           // AI podium suggestion — default or admin-updated
@@ -9102,7 +9102,7 @@ export default function App(){
                 {pts:50,label:"1st Place",     icon:"🥇", color:"#f59e0b", ex:"Tournament winner"},
                 {pts:25,label:"2nd Place",     icon:"🥈", color:"#c0c0c0", ex:"Runner-up"},
                 {pts:15,label:"3rd Place",     icon:"🥉", color:"#cd7f32", ex:"3rd place playoff"},
-                {pts:10,label:"Top Scorer",    icon:"⚽", color:"#60a5fa", ex:"Fuzzy name match"},
+                {pts:20,label:"Top Scorer",    icon:"⚽", color:"#60a5fa", ex:"Fuzzy name match"},
               ].map((r,i)=>(
                 <div key={i} style={{
                   background:`${r.color}0e`,border:`1px solid ${r.color}25`,
