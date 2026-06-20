@@ -437,17 +437,32 @@ function calcTotal(pM,aM,pK,aK,predPodium,actualPodium){
     if(predPodium.first  && predPodium.first ===actualPodium.first)  t+=50;
     if(predPodium.second && predPodium.second===actualPodium.second) t+=25;
     if(predPodium.third  && predPodium.third ===actualPodium.third)  t+=15;
-    // Top scorer — fuzzy match (last name or full name match)
+    // Top scorer — fuzzy match with edit distance for typos like "mbape" vs "mbappe"
     if(predPodium.topScorer && actualPodium.topScorer){
+      const normS = s => {
+        const cleaned = (s||'').trim().replace(/\b(jr|sr|ii|iii)\.?$/i,'').trim();
+        const lastName = cleaned.split(/\s+/).pop()||cleaned;
+        return lastName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');
+      };
+      const editDist = (a,b) => {
+        const m=a.length, n=b.length;
+        const dp=Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i||j));
+        for(let i=1;i<=m;i++) for(let j=1;j<=n;j++)
+          dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+        return dp[m][n];
+      };
+      const predLast = normS(predPodium.topScorer);
+      const actLast  = normS(actualPodium.topScorer);
       const norm = s => (s||'').toLowerCase().trim().replace(/[^a-z\s]/g,'').replace(/\s+/g,' ');
       const pred = norm(predPodium.topScorer);
       const act  = norm(actualPodium.topScorer);
       const predParts = pred.split(' ');
       const actParts  = act.split(' ');
-      // Match if: exact, or any word in pred matches any word in act (min 4 chars)
+      // Match if: exact last name, substring, prefix, or edit distance ≤ 2 on last name (min 5 chars)
       const fuzzy = pred===act ||
         act.includes(pred) || pred.includes(act) ||
-        predParts.some(w=>w.length>=4 && actParts.some(a2=>a2.length>=4 && (a2.startsWith(w)||w.startsWith(a2))));
+        predParts.some(w=>w.length>=4 && actParts.some(a2=>a2.length>=4 && (a2.startsWith(w)||w.startsWith(a2)))) ||
+        (predLast.length>=5 && actLast.length>=5 && editDist(predLast,actLast)<=2);
       if(fuzzy) t+=10;
     }
   }
