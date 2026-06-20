@@ -5589,12 +5589,37 @@ export default function App(){
                     // Build counts for each place from leaderboard podium field
                     const normScorer = s => {
                       if (!s) return '';
-                      // Strip Jr/Sr suffixes, take last word (surname), normalize
-                      const cleaned = s.trim().replace(/\b(jr|sr|ii|iii)\.?$/i, '').trim();
-                      const lastName = cleaned.split(/\s+/).pop() || cleaned;
-                      return lastName.toLowerCase()
-                        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip accents
-                        .replace(/[^a-z]/g, ''); // remove non-alpha
+                      const cleaned = s.trim().replace(/\b(jr|sr|ii|iii)\.?$/i,'').trim();
+                      const lastName = cleaned.split(/\s+/).pop()||cleaned;
+                      return lastName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');
+                    };
+                    const editDist = (a,b) => {
+                      const m=a.length,n=b.length;
+                      const dp=Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i||j));
+                      for(let i=1;i<=m;i++) for(let j=1;j<=n;j++)
+                        dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+                      return dp[m][n];
+                    };
+                    // Merge similar keys (edit distance ≤ 2) — keeps the most popular display name
+                    const mergeScorers = (raw) => {
+                      const keys = Object.keys(raw);
+                      const merged = {};
+                      const used = new Set();
+                      keys.sort((a,b) => raw[b].count - raw[a].count); // most popular first
+                      for (const k of keys) {
+                        if (used.has(k)) continue;
+                        let canonical = k;
+                        for (const k2 of keys) {
+                          if (k2 === k || used.has(k2)) continue;
+                          if (k.length >= 4 && k2.length >= 4 && editDist(k, k2) <= 2) {
+                            raw[canonical].count += raw[k2].count;
+                            used.add(k2);
+                          }
+                        }
+                        merged[canonical] = raw[canonical];
+                        used.add(k);
+                      }
+                      return merged;
                     };
                     const placeCounts = { first:{}, second:{}, third:{}, topScorer:{} };
                     leaderboard.forEach(e=>{
@@ -5622,7 +5647,9 @@ export default function App(){
                       <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"14px"}}>
                         <div style={{fontSize:12,fontWeight:700,marginBottom:14}}>👑 Podium Picks</div>
                         {places.map(place=>{
-                          const counts = placeCounts[place.key] || {};
+                          const counts = place.key === 'topScorer'
+                            ? mergeScorers(placeCounts[place.key] || {})
+                            : placeCounts[place.key] || {};
                           const isScorer = place.key === 'topScorer';
                           const sorted = Object.entries(counts)
                             .filter(([t])=>t!=='?')
