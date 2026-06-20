@@ -463,7 +463,7 @@ function calcTotal(pM,aM,pK,aK,predPodium,actualPodium){
         act.includes(pred) || pred.includes(act) ||
         predParts.some(w=>w.length>=4 && actParts.some(a2=>a2.length>=4 && (a2.startsWith(w)||w.startsWith(a2)))) ||
         (predLast.length>=5 && actLast.length>=5 && editDist(predLast,actLast)<=2);
-      if(fuzzy) t+=10;
+      if(fuzzy) t+=20;
     }
   }
   return t;
@@ -5640,7 +5640,7 @@ export default function App(){
                       {key:'first',     label:'🥇 1st Place', color:'#f59e0b', pts:50},
                       {key:'second',    label:'🥈 2nd Place', color:'#c0c0c0', pts:25},
                       {key:'third',     label:'🥉 3rd Place', color:'#cd7f32', pts:15},
-                      {key:'topScorer', label:'⚽ Top Scorer', color:'#60a5fa', pts:10, freeText:true},
+                      {key:'topScorer', label:'⚽ Top Scorer', color:'#60a5fa', pts:20, freeText:true},
                     ];
 
                     return(
@@ -9117,7 +9117,7 @@ export default function App(){
               ))}
             </div>
             <div style={{fontSize:10,color:"#555",padding:"6px 10px",background:"rgba(252,185,0,0.05)",borderRadius:6}}>
-              🔒 Podium & top scorer lock end of Friday June 19 · Max bonus: 100 pts
+              🔒 Podium & top scorer lock end of Friday June 19 · Max bonus: 110 pts
             </div>
           </div>
 
@@ -9149,8 +9149,8 @@ export default function App(){
                 ["Correct outcome only","Right winner or draw, wrong everything else → 2 pts"],
                 ["Wrong prediction","None of the above → 0 pts"],
                 ["Podium bonus","🥇 Champion = 50 pts · 🥈 Runner-up = 25 pts · 🥉 3rd place = 15 pts"],
-                ["Top scorer bonus","⚽ Correct top scorer = 10 pts · Fuzzy name matching (\"mbappe\" matches \"Kylian Mbappé\")"],
-                ["Max bonus","Get all 3 podium places + top scorer correct = 100 bonus pts"],
+                ["Top scorer bonus","⚽ Correct top scorer = 20 pts · Fuzzy name matching (\"mbappe\" matches \"Kylian Mbappé\")"],
+                ["Max bonus","Get all 3 podium places + top scorer correct = 110 bonus pts"],
                 ["Rules are mutually exclusive","For match scoring, you get the highest applicable category only — no stacking."],
               ]
             },
