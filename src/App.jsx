@@ -1550,6 +1550,8 @@ export default function App(){
   const [showPodiumReminder,setShowPodiumReminder]=useState(false);
   const [podiumReminderItems,setPodiumReminderItems]=useState([]);
   const [liveMatches,setLiveMatches]=useState([]);
+  const [topScorers,setTopScorers]=useState(null);
+  const [scorersLoading,setScorersLoading]=useState(false);
   const [liveLoading,setLiveLoading]=useState(false);
   const [liveError,setLiveError]=useState(null);
   const [selectedFixture,setSelectedFixture]=useState(null);
@@ -3016,6 +3018,16 @@ export default function App(){
     if(tab!=="live") return;
     if(refreshCooldown > 0) return;
     fetchLiveMatches(true); // include today on tab open
+  },[tab]);
+
+  // Fetch top scorers when news tab opens
+  useEffect(()=>{
+    if(tab!=="news" || topScorers!==null) return;
+    setScorersLoading(true);
+    fetch('/api/live?type=topscorers')
+      .then(r=>r.json())
+      .then(d=>{ setTopScorers(d.response||[]); setScorersLoading(false); })
+      .catch(()=>{ setTopScorers([]); setScorersLoading(false); });
   },[tab]);
 
   const buildChangeDiff = (prevMatches, newMatches, prevKO, newKO, prevPodium, newPodium) => {
@@ -7665,15 +7677,6 @@ export default function App(){
             <div>
               {/* ⚽ Top Scorer Tracker */}
               {(()=>{
-                const [topScorers, setTopScorers] = React.useState(null);
-                const [scorersLoading, setScorersLoading] = React.useState(false);
-                React.useEffect(()=>{
-                  setScorersLoading(true);
-                  fetch('/api/live?type=topscorers')
-                    .then(r=>r.json())
-                    .then(d=>{ setTopScorers(d.response||[]); setScorersLoading(false); })
-                    .catch(()=>setScorersLoading(false));
-                },[]);
                 const myPick = podium?.topScorer;
                 const normS = s => {
                   if(!s) return '';
