@@ -5572,6 +5572,15 @@ export default function App(){
                   {/* Podium picks breakdown */}
                   {leaderboard.length>0&&(()=>{
                     // Build counts for each place from leaderboard podium field
+                    const normScorer = s => {
+                      if (!s) return '';
+                      // Strip Jr/Sr suffixes, take last word (surname), normalize
+                      const cleaned = s.trim().replace(/\b(jr|sr|ii|iii)\.?$/i, '').trim();
+                      const lastName = cleaned.split(/\s+/).pop() || cleaned;
+                      return lastName.toLowerCase()
+                        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip accents
+                        .replace(/[^a-z]/g, ''); // remove non-alpha
+                    };
                     const placeCounts = { first:{}, second:{}, third:{}, topScorer:{} };
                     leaderboard.forEach(e=>{
                       const p = e.podium || {};
@@ -5579,7 +5588,12 @@ export default function App(){
                         const t = p[place] || (place==='first' ? (e.champion||'?') : '?');
                         placeCounts[place][t] = (placeCounts[place][t]||0)+1;
                       });
-                      if(p.topScorer) placeCounts.topScorer[p.topScorer] = (placeCounts.topScorer[p.topScorer]||0)+1;
+                      if(p.topScorer) {
+                        const key = normScorer(p.topScorer);
+                        // Store with display name = first occurrence of this normalized key
+                        if(!placeCounts.topScorer[key]) placeCounts.topScorer[key] = {count:0, display:p.topScorer};
+                        placeCounts.topScorer[key].count++;
+                      }
                     });
 
                     const places = [
@@ -5594,20 +5608,26 @@ export default function App(){
                         <div style={{fontSize:12,fontWeight:700,marginBottom:14}}>👑 Podium Picks</div>
                         {places.map(place=>{
                           const counts = placeCounts[place.key] || {};
+                          const isScorer = place.key === 'topScorer';
                           const sorted = Object.entries(counts)
                             .filter(([t])=>t!=='?')
-                            .sort((a,b)=>b[1]-a[1]).slice(0,5);
-                          const unknown = counts['?']||0;
+                            .map(([key,val])=>({
+                              key,
+                              display: isScorer ? val.display : key,
+                              count: isScorer ? val.count : val,
+                            }))
+                            .sort((a,b)=>b.count-a.count).slice(0,5);
+                          const unknown = isScorer ? 0 : (counts['?']||0);
                           return(
                             <div key={place.key} style={{marginBottom:16}}>
                               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
                                 <span style={{fontSize:12,fontWeight:700,color:place.color}}>{place.label}</span>
                                 <span style={{fontSize:10,color:"#444"}}>+{place.pts}pts if correct</span>
                               </div>
-                              {sorted.map(([team,count],i)=>(
+                              {sorted.map(({display,count},i)=>(
                                 <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                                  <span style={{fontSize:13}}>{FLAGS[team]||"🏳️"}</span>
-                                  <span style={{fontSize:11,flex:1,fontWeight:600}}>{team}</span>
+                                  <span style={{fontSize:13}}>{FLAGS[display]||"🏳️"}</span>
+                                  <span style={{fontSize:11,flex:1,fontWeight:600}}>{display}</span>
                                   <div style={{flex:2,height:5,background:"rgba(255,255,255,0.06)",borderRadius:4,overflow:"hidden"}}>
                                     <div style={{width:`${(count/leaderboard.length)*100}%`,
                                       height:"100%",background:place.color,borderRadius:4}}/>
