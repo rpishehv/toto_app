@@ -7663,6 +7663,88 @@ export default function App(){
           const cooldownLabel = newsCooldown>=3600 ? `${Math.floor(newsCooldown/3600)}h ${Math.floor((newsCooldown%3600)/60)}m` : `${Math.ceil(newsCooldown/60)}m`;
           return(
             <div>
+              {/* ⚽ Top Scorer Tracker */}
+              {(()=>{
+                const [topScorers, setTopScorers] = React.useState(null);
+                const [scorersLoading, setScorersLoading] = React.useState(false);
+                React.useEffect(()=>{
+                  setScorersLoading(true);
+                  fetch('/api/live?type=topscorers')
+                    .then(r=>r.json())
+                    .then(d=>{ setTopScorers(d.response||[]); setScorersLoading(false); })
+                    .catch(()=>setScorersLoading(false));
+                },[]);
+                const myPick = podium?.topScorer;
+                const normS = s => {
+                  if(!s) return '';
+                  const cleaned = s.trim().replace(/\b(jr|sr|ii|iii)\.?$/i,'').trim();
+                  const last = cleaned.split(/\s+/).pop()||cleaned;
+                  return last.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');
+                };
+                const editDist = (a,b) => {
+                  const m=a.length,n=b.length;
+                  const dp=Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i||j));
+                  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++)
+                    dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+                  return dp[m][n];
+                };
+                const isMyPick = (name) => {
+                  if(!myPick) return false;
+                  const a = normS(myPick), b = normS(name);
+                  return a===b || (a.length>=4&&b.length>=4&&editDist(a,b)<=2);
+                };
+                return(
+                  <div style={{marginBottom:18,borderRadius:10,overflow:"hidden",
+                    border:"1px solid rgba(255,255,255,0.06)",background:"rgba(255,255,255,0.02)"}}>
+                    <div style={{padding:"10px 12px 8px",borderBottom:"1px solid rgba(255,255,255,0.06)",
+                      display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#fcb900",fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1}}>
+                        ⚽ Top Scorers
+                      </div>
+                      {myPick&&<div style={{fontSize:10,color:"#555"}}>Your pick: <span style={{color:"#60a5fa"}}>{myPick}</span></div>}
+                    </div>
+                    {scorersLoading&&(
+                      <div style={{padding:"12px",fontSize:11,color:"#555",textAlign:"center"}}>Loading…</div>
+                    )}
+                    {!scorersLoading&&topScorers&&topScorers.length===0&&(
+                      <div style={{padding:"12px",fontSize:11,color:"#555",textAlign:"center"}}>No data yet — check back after matches start</div>
+                    )}
+                    {!scorersLoading&&topScorers&&topScorers.slice(0,8).map((item,i)=>{
+                      const p = item.player;
+                      const s = item.statistics?.[0];
+                      const goals = s?.goals?.total||0;
+                      const assists = s?.goals?.assists||0;
+                      const team = s?.team?.name||'';
+                      const mine = isMyPick(p?.name||'');
+                      return(
+                        <div key={p?.id||i} style={{
+                          display:"flex",alignItems:"center",gap:10,
+                          padding:"8px 12px",
+                          borderBottom:i<7?"1px solid rgba(255,255,255,0.04)":"none",
+                          background:mine?"rgba(96,165,250,0.06)":"transparent",
+                        }}>
+                          <div style={{fontSize:11,color:"#555",width:16,textAlign:"center",flexShrink:0}}>
+                            {i+1}
+                          </div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:12,fontWeight:mine?700:500,
+                              color:mine?"#60a5fa":"#ddd",
+                              overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                              {mine&&"⭐ "}{p?.name}
+                            </div>
+                            <div style={{fontSize:10,color:"#555"}}>{FLAGS[team]||""} {team}</div>
+                          </div>
+                          <div style={{textAlign:"right",flexShrink:0}}>
+                            <div style={{fontSize:16,fontWeight:700,color:mine?"#60a5fa":"#fcb900",lineHeight:1}}>{goals}</div>
+                            <div style={{fontSize:9,color:"#555"}}>{assists} ast</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
               {/* Header */}
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
                 <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:2,

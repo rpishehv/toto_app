@@ -65,6 +65,8 @@ export default async function handler(req) {
       lineups: lineups.response || [],
       players: players.response || [],
     }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' } });
+  } else if (type === 'topscorers') {
+    endpoint = `${BASE}/players/topscorers?league=${LEAGUE}&season=${SEASON}`;
   } else if (type === 'players' && fixtureId) {
     endpoint = `${BASE}/fixtures/players?fixture=${fixtureId}`;
   } else if (type === 'lineups' && fixtureId) {
