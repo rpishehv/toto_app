@@ -97,12 +97,12 @@ export function parseFeed(data, appMatches, appKO) {
 }
 
 // Apply parsed feed results to current app state
-export function applyFeedToState(parsed, appMatches, appKO, appPodium, koKickoffs) {
+export function applyFeedToState(parsed, appMatches, appKO, appPodium, koKickoffs, override=false) {
   const newMatches = appMatches.map(m => {
     const score = parsed.groupScores[m.id]
     if (!score) return m
-    const homeScore = m.homeScore !== null ? m.homeScore : score.homeScore
-    const awayScore = m.awayScore !== null ? m.awayScore : score.awayScore
+    const homeScore = (override || m.homeScore === null) ? score.homeScore : m.homeScore
+    const awayScore = (override || m.awayScore === null) ? score.awayScore : m.awayScore
     return { ...m, homeScore, awayScore }
   })
 
@@ -111,12 +111,12 @@ export function applyFeedToState(parsed, appMatches, appKO, appPodium, koKickoff
     const score = parsed.koScores?.[m.id]
     let updated = { ...m }
     if (teams) {
-      if (!updated.home || updated.home === 'TBD') updated.home = teams.home
-      if (!updated.away || updated.away === 'TBD') updated.away = teams.away
+      if (override || !updated.home || updated.home === 'TBD') updated.home = teams.home
+      if (override || !updated.away || updated.away === 'TBD') updated.away = teams.away
     }
     if (score) {
-      if (updated.homeScore === null) updated.homeScore = score.homeScore
-      if (updated.awayScore === null) updated.awayScore = score.awayScore
+      if (override || updated.homeScore === null) updated.homeScore = score.homeScore
+      if (override || updated.awayScore === null) updated.awayScore = score.awayScore
     }
     return updated
   })

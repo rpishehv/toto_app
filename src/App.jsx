@@ -2346,13 +2346,13 @@ export default function App(){
     setGeneratingAI(false);
   };
 
-  const syncFromLiveFeed = async () => {
+  const syncFromLiveFeed = async (override=false) => {
     setSyncing(true);
     setSyncStatus(null);
     try {
       const data = await fetchLiveFeed();
       const parsed = parseFeed(data, actualMatches, actualKO);
-      const applied = applyFeedToState(parsed, actualMatches, actualKO, actualPodium, koKickoffs);
+      const applied = applyFeedToState(parsed, actualMatches, actualKO, actualPodium, koKickoffs, override);
 
       // Apply to state — admin reviews before saving
       setActualMatches(applied.matches);
@@ -8348,6 +8348,14 @@ export default function App(){
                   cursor:syncing?"wait":"pointer",fontFamily:"inherit",
                   opacity:syncing?0.7:1,
                 }}>{syncing?"⏳ Syncing…":"🔄 Sync Live Feed"}</button>
+                <button onClick={()=>syncFromLiveFeed(true)} disabled={syncing} style={{
+                  padding:"10px 18px",
+                  background:syncing?"rgba(239,68,68,0.05)":"rgba(239,68,68,0.1)",
+                  border:"1px solid rgba(239,68,68,0.3)",borderRadius:8,
+                  color:"#ef4444",fontSize:13,fontWeight:700,
+                  cursor:syncing?"wait":"pointer",fontFamily:"inherit",
+                  opacity:syncing?0.7:1,
+                }}>{syncing?"⏳ Syncing…":"⚡ Force Override Sync"}</button>
                 <button onClick={forceRefreshNews} disabled={newsFetching} style={{
                   padding:"10px 18px",
                   background:newsFetching?"rgba(252,185,0,0.05)":"rgba(252,185,0,0.1)",
