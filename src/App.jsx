@@ -7731,13 +7731,14 @@ export default function App(){
                     {!scorersLoading&&topScorers&&topScorers.length===0&&(
                       <div style={{padding:"12px",fontSize:11,color:"#555",textAlign:"center"}}>No data yet — check back after matches start</div>
                     )}
-                    {!scorersLoading&&topScorers&&topScorers.slice(0,8).map((item,i)=>{
+                    {!scorersLoading&&topScorers&&topScorers.slice(0,12).map((item,i)=>{
                       const p = item.player;
                       const s = item.statistics?.[0];
                       const goals = s?.goals?.total||0;
                       const assists = s?.goals?.assists||0;
                       const team = s?.team?.name||'';
-                      const mine = isMyPick(p?.name||'');
+                      const displayName = p?.name || '';
+                      const mine = isMyPick(p?.name||'') || isMyPick(p?.firstname+' '+p?.lastname);
                       return(
                         <div key={p?.id||i} style={{
                           display:"flex",alignItems:"center",gap:10,
