@@ -7729,7 +7729,9 @@ export default function App(){
                       <div style={{padding:"12px",fontSize:11,color:"#555",textAlign:"center"}}>Loading…</div>
                     )}
                     {!scorersLoading&&topScorers&&topScorers.length===0&&(
-                      <div style={{padding:"12px",fontSize:11,color:"#555",textAlign:"center"}}>No data yet — check back after matches start</div>
+                      <div style={{padding:"12px",fontSize:11,color:"#555",textAlign:"center"}}>
+                        No data yet — this endpoint may require a higher API plan. Check back after more matches.
+                      </div>
                     )}
                     {!scorersLoading&&topScorers&&topScorers.slice(0,12).map((item,i)=>{
                       const p = item.player;
