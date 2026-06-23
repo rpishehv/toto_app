@@ -2178,8 +2178,14 @@ export default function App(){
     setAnalyticsLoading(true);
     setAnalyticsError(null);
     try {
+      // Always fetch fresh leaderboard so points are up-to-date
+      invalidateLBCache(groupCode);
+      const freshLB = await sbGetLeaderboard(groupCode);
+      if(freshLB?.length) setLeaderboard(freshLB);
+      const lbToUse = freshLB?.length ? freshLB : leaderboard;
+
       // Build players payload with predictions
-      const players = await Promise.all(leaderboard.map(async(e, i) => {
+      const players = await Promise.all(lbToUse.map(async(e, i) => {
         const pred = await sbGetPrediction(e.username, groupCode);
         return {
           username: e.username,
@@ -3020,9 +3026,9 @@ export default function App(){
     fetchLiveMatches(true); // include today on tab open
   },[tab]);
 
-  // Fetch top scorers when news tab opens
+  // Fetch top scorers when news tab opens — always refresh
   useEffect(()=>{
-    if(tab!=="news" || topScorers!==null) return;
+    if(tab!=="news") return;
     setScorersLoading(true);
     fetch('/api/live?type=topscorers')
       .then(r=>r.json())
@@ -7704,7 +7710,20 @@ export default function App(){
                       <div style={{fontSize:12,fontWeight:700,color:"#fcb900",fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1}}>
                         ⚽ Top Scorers
                       </div>
-                      {myPick&&<div style={{fontSize:10,color:"#555"}}>Your pick: <span style={{color:"#60a5fa"}}>{myPick}</span></div>}
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        {myPick&&<div style={{fontSize:10,color:"#555"}}>Your pick: <span style={{color:"#60a5fa"}}>{myPick}</span></div>}
+                        <button onClick={()=>{
+                          setScorersLoading(true);
+                          fetch('/api/live?type=topscorers')
+                            .then(r=>r.json())
+                            .then(d=>{ setTopScorers(d.response||[]); setScorersLoading(false); })
+                            .catch(()=>setScorersLoading(false));
+                        }} style={{
+                          padding:"2px 8px",borderRadius:5,fontSize:10,
+                          background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",
+                          color:"#555",cursor:"pointer",fontFamily:"inherit",
+                        }}>🔄</button>
+                      </div>
                     </div>
                     {scorersLoading&&(
                       <div style={{padding:"12px",fontSize:11,color:"#555",textAlign:"center"}}>Loading…</div>
