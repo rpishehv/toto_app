@@ -3130,9 +3130,9 @@ export default function App(){
         ]);
 
         // Calculate points for each user using in-memory predictions
-        const predMap = Object.fromEntries(allPreds.map(p => [p.username, p]));
+        const predMap = Object.fromEntries(allPreds.map(p => [p.username.trim().toLowerCase(), p]));
         const updatedEntries = lb.map(e => {
-          const p = predMap[e.username];
+          const p = predMap[e.username.trim().toLowerCase()];
           if (!p) return e;
           return {
             ...e,
