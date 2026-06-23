@@ -434,9 +434,20 @@ function calcTotal(pM,aM,pK,aK,predPodium,actualPodium){
   for(const p of pM){const a=aM.find(m=>m.id===p.id);if(a){const r=calcMatchPoints(p,a);if(r)t+=r.points;}}
   for(const p of pK){const a=aK.find(m=>m.id===p.id);if(a){const r=calcMatchPoints(p,a);if(r)t+=r.points;}}
   if(actualPodium&&predPodium){
-    if(predPodium.first  && predPodium.first ===actualPodium.first)  t+=50;
-    if(predPodium.second && predPodium.second===actualPodium.second) t+=25;
-    if(predPodium.third  && predPodium.third ===actualPodium.third)  t+=15;
+    const actualPodiumTeams = new Set([actualPodium.first, actualPodium.second, actualPodium.third].filter(Boolean));
+    const EXACT_PTS = {first:50, second:25, third:15};
+
+    for(const place of ['first','second','third']){
+      const pred = predPodium[place];
+      if(!pred) continue;
+      if(pred === actualPodium[place]) {
+        // Exact rank match — full points
+        t += EXACT_PTS[place];
+      } else if(actualPodiumTeams.has(pred)) {
+        // In podium but wrong rank — overlap bonus
+        t += 10;
+      }
+    }
     // Top scorer — fuzzy match with edit distance for typos like "mbape" vs "mbappe"
     if(predPodium.topScorer && actualPodium.topScorer){
       const normS = s => {
@@ -9214,9 +9225,10 @@ export default function App(){
                 {pts:6, label:"Exact Score",   icon:"⭐", color:"#22c55e", ex:"Pred 2-1 / Act 2-1"},
                 {pts:4, label:"Correct GD",    icon:"📐", color:"#fcb900", ex:"Pred 3-2 / Act 2-1"},
                 {pts:2, label:"Correct Winner",icon:"✓",  color:"#60a5fa", ex:"Pred 3-1 / Act 2-1"},
-                {pts:50,label:"1st Place",     icon:"🥇", color:"#f59e0b", ex:"Tournament winner"},
-                {pts:25,label:"2nd Place",     icon:"🥈", color:"#c0c0c0", ex:"Runner-up"},
-                {pts:15,label:"3rd Place",     icon:"🥉", color:"#cd7f32", ex:"3rd place playoff"},
+                {pts:50,label:"1st Place",     icon:"🥇", color:"#f59e0b", ex:"Correct champion"},
+                {pts:25,label:"2nd Place",     icon:"🥈", color:"#c0c0c0", ex:"Correct runner-up"},
+                {pts:15,label:"3rd Place",     icon:"🥉", color:"#cd7f32", ex:"Correct 3rd place"},
+                {pts:10,label:"Podium Overlap",icon:"🔄", color:"#a78bfa", ex:"Right team, wrong rank"},
                 {pts:20,label:"Top Scorer",    icon:"⚽", color:"#60a5fa", ex:"Fuzzy name match"},
               ].map((r,i)=>(
                 <div key={i} style={{
