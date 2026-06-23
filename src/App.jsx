@@ -4651,10 +4651,10 @@ export default function App(){
           const champCountdown = timeUntilChampionLock(now);
           const allTeams = Object.values(GROUPS).flat();
           const places = [
-            {key:"first",     label:"1st Place 🥇", pts:50, color:"#f59e0b", actual:actualPodium?.first},
-            {key:"second",    label:"2nd Place 🥈", pts:25,  color:"#c0c0c0", actual:actualPodium?.second},
-            {key:"third",     label:"3rd Place 🥉", pts:15,  color:"#cd7f32", actual:actualPodium?.third},
-            {key:"topScorer", label:"Top Scorer ⚽", pts:20,  color:"#60a5fa", actual:actualPodium?.topScorer, freeText:true},
+            {key:"first",     label:"1st Place 🥇", pts:50, color:"#f59e0b", actual:actualPodium?.first, overlap:10},
+            {key:"second",    label:"2nd Place 🥈", pts:25, color:"#c0c0c0", actual:actualPodium?.second, overlap:10},
+            {key:"third",     label:"3rd Place 🥉", pts:15, color:"#cd7f32", actual:actualPodium?.third, overlap:10},
+            {key:"topScorer", label:"Top Scorer ⚽", pts:20, color:"#60a5fa", actual:actualPodium?.topScorer, freeText:true},
           ];
 
           // AI podium suggestion — default or admin-updated
@@ -4787,7 +4787,7 @@ export default function App(){
                     <span style={{
                       fontFamily:"'Bebas Neue',sans-serif",fontSize:15,letterSpacing:2,
                       color:place.color,whiteSpace:"nowrap",
-                    }}>{place.label} — {place.pts} pts</span>
+                    }}>{place.label} — {place.pts} pts{place.overlap?<span style={{fontSize:10,color:"#555",fontWeight:400,fontFamily:"system-ui",letterSpacing:0}}> · 10 if in podium wrong rank</span>:""}</span>
                     <div style={{height:1,flex:1,background:"rgba(255,255,255,0.06)"}}/>
                   </div>
 
