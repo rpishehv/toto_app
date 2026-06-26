@@ -8993,36 +8993,61 @@ export default function App(){
                     border:"1px solid rgba(239,68,68,0.25)",borderRadius:6,
                     color:"#ef4444",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
                   }}>🗑 Reset All KO</button>
-                  <button onClick={()=>{
-                    // Quick-fill R32 from known API matchups
-                    const apiMatchups = [
-                      {home:"South Africa", away:"Canada"},
-                      {home:"Brazil",       away:"Japan"},
-                      {home:"Netherlands",  away:"Morocco"},
-                      {home:"USA",          away:"Bosnia-Herzegovina"},
-                    ];
-                    const ALIASES_REV = {"Bosnia & Herzegovina":"Bosnia-Herzegovina"};
-                    setActualKO(prev => {
-                      const ko = [...prev];
-                      const r32 = ko.filter(m=>m.round==="Round of 32");
-                      let filled = 0;
-                      apiMatchups.forEach(({home,away}) => {
-                        const h = ALIASES_REV[home]||home;
-                        const a = ALIASES_REV[away]||away;
-                        // Find matching slot or next TBD slot
-                        const idx = ko.findIndex(m=>m.round==="Round of 32"&&m.home==="TBD"&&m.away==="TBD");
-                        if(idx>=0) { ko[idx]={...ko[idx],home:h,away:a}; filled++; }
+                  <button onClick={async()=>{
+                    // Fetch R32 fixtures with kickoff times from API
+                    try {
+                      const res = await fetch('/api/live?type=fixtures&round=Round%20of%2032');
+                      const data = await res.json();
+                      const fixtures = data.response || [];
+                      if (!fixtures.length) {
+                        setAdminPinError("⚠️ No R32 fixtures found in API yet");
+                        setTimeout(()=>setAdminPinError(""),3000);
+                        return;
+                      }
+                      // Build name→kickoff map
+                      const koMap = {};
+                      fixtures.forEach(f => {
+                        const h = TEAM_ALIASES[f.teams?.home?.name] || f.teams?.home?.name;
+                        const a = TEAM_ALIASES[f.teams?.away?.name] || f.teams?.away?.name;
+                        const ms = new Date(f.fixture?.date).getTime();
+                        if (h && a && ms) koMap[`${h}||${a}`] = { home:h, away:a, ms, id: f.fixture?.id };
                       });
-                      console.log('[QuickFill] filled', filled, 'R32 slots');
-                      return ko;
-                    });
-                    setAdminPinError(`✅ Filled ${apiMatchups.length} R32 matches — set kickoff times then Save Results`);
-                    setTimeout(()=>setAdminPinError(""),5000);
+                      // Fill team names and kickoff times
+                      setActualKO(prev => {
+                        const ko = [...prev];
+                        const r32 = ko.filter(m=>m.round==="Round of 32");
+                        let idx = 0;
+                        Object.values(koMap).forEach(({home,away}) => {
+                          const slot = r32.findIndex((m,i) => i>=idx && m.home==="TBD");
+                          if (slot>=0) {
+                            const ki = ko.findIndex(m=>m.id===r32[slot].id);
+                            ko[ki] = {...ko[ki], home, away};
+                            idx = slot+1;
+                          }
+                        });
+                        return ko;
+                      });
+                      // Set kickoff times by match id
+                      setActualKO(prev => {
+                        const newKickoffs = {...koKickoffs};
+                        prev.filter(m=>m.round==="Round of 32"&&m.home!=="TBD").forEach(m => {
+                          const entry = Object.values(koMap).find(k=>k.home===m.home&&k.away===m.away);
+                          if (entry) newKickoffs[m.id] = entry.ms;
+                        });
+                        setKoKickoffs(newKickoffs);
+                        return prev;
+                      });
+                      setAdminPinError(`✅ Loaded ${fixtures.length} R32 fixtures with kickoff times from API`);
+                      setTimeout(()=>setAdminPinError(""),4000);
+                    } catch(e) {
+                      setAdminPinError(`⚠️ API error: ${e.message}`);
+                      setTimeout(()=>setAdminPinError(""),3000);
+                    }
                   }} style={{
                     padding:"7px 14px",background:"rgba(34,197,94,0.1)",
                     border:"1px solid rgba(34,197,94,0.3)",borderRadius:6,
                     color:"#22c55e",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
-                  }}>⚽ Quick Fill Known R32</button>
+                  }}>🌐 Load R32 from API</button>
                   <button onClick={async()=>{
                     const res = await fetch('/api/live?type=fixtures&round=Round%20of%2032');
                     const data = await res.json();
