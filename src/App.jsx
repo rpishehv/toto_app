@@ -3134,9 +3134,16 @@ export default function App(){
         const updatedEntries = lb.map(e => {
           const p = predMap[e.username.trim().toLowerCase()];
           if (!p) return e;
+          const pts = calcTotal(p.matches||[], actualMatches, p.knockout||[], actualKO, p.podium, newPodium);
+          if (e.username.toLowerCase().includes('germany')) {
+            console.log('[Debug Germany]', e.username, 'pts:', pts,
+              'matches:', p.matches?.length, 'actual:', actualMatches?.length,
+              'scored actual:', actualMatches?.filter(m=>m.homeScore!==null).length,
+              'scored pred:', p.matches?.filter(m=>m.homeScore!==null).length);
+          }
           return {
             ...e,
-            points: calcTotal(p.matches||[], actualMatches, p.knockout||[], actualKO, p.podium, newPodium),
+            points: pts,
             podium: p.podium || {},
             champion: p.podium?.first || '?',
           };
@@ -8963,6 +8970,18 @@ export default function App(){
                     border:"1px solid rgba(96,165,250,0.3)",borderRadius:6,
                     color:"#60a5fa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
                   }}>⚡ Fill R32 from standings</button>
+                  <button onClick={async()=>{
+                    const res = await fetch('/api/live?type=fixtures&round=Round%20of%2032');
+                    const data = await res.json();
+                    const teams = (data.response||[]).map(f=>
+                      `${f.teams?.home?.name||'?'} vs ${f.teams?.away?.name||'?'}`
+                    ).join('\n');
+                    alert(teams||'No R32 fixtures found yet in API-Football');
+                  }} style={{
+                    padding:"7px 14px",background:"rgba(252,185,0,0.08)",
+                    border:"1px solid rgba(252,185,0,0.2)",borderRadius:6,
+                    color:"#fcb900",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                  }}>🔍 Check API R32</button>
                 </div>
 
                 {/* Group selector */}

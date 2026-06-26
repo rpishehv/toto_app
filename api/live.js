@@ -65,6 +65,9 @@ export default async function handler(req) {
       lineups: lineups.response || [],
       players: players.response || [],
     }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' } });
+  } else if (type === 'fixtures') {
+    const round = url.searchParams.get('round');
+    endpoint = `${BASE}/fixtures?league=${LEAGUE}&season=${SEASON}${round?`&round=${encodeURIComponent(round)}`:''}`;
   } else if (type === 'topscorers') {
     endpoint = `${BASE}/players/topscorers?league=${LEAGUE}&season=${SEASON}`;
   } else if (type === 'players' && fixtureId) {
