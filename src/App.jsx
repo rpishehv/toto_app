@@ -4596,6 +4596,7 @@ export default function App(){
                   )};
                   const locked=isMatchLocked({...m,home:liveHome,away:liveAway},allKickoffs,koKickoffs);
                   const countdown=!locked?timeUntilLock({...m,home:liveHome,away:liveAway},allKickoffs,koKickoffs):null;
+                  if(m.id==='Round_of_32_0') console.log('[KO debug]', m.id, 'koKickoffs[id]:', koKickoffs[m.id], 'locked:', locked, 'countdown:', countdown);
                   return(
                     <div key={m.id} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${locked?"rgba(239,68,68,0.2)":"rgba(255,255,255,0.06)"}`,
                       borderRadius:10,padding:"11px 13px",marginBottom:8}}>
