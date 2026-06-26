@@ -324,18 +324,17 @@ function parseOFBKickoffs(data) {
 }
 
 // Lock predictions 15 min before kickoff
-function isMatchLocked(match, kickoffs) {
+function isMatchLocked(match, kickoffs, koKickoffsById={}) {
   const key = `${match.home}||${match.away}`;
-  const ko = kickoffs[key];
-  if (!ko) return false; // unknown kickoff = not locked
+  const ko = kickoffs[key] || koKickoffsById[match.id];
+  if (!ko) return false;
   const LOCK_BEFORE_MS = 15 * 60 * 1000;
   return Date.now() >= (ko - LOCK_BEFORE_MS);
 }
 
-// Format time until predictions lock (15 min before kickoff)
-function timeUntilLock(match, kickoffs) {
+function timeUntilLock(match, kickoffs, koKickoffsById={}) {
   const key = `${match.home}||${match.away}`;
-  const ko = kickoffs[key];
+  const ko = kickoffs[key] || koKickoffsById[match.id];
   if (!ko) return null;
   const diff = (ko - 15 * 60 * 1000) - Date.now();
   if (diff <= 0) return null;
@@ -4595,8 +4594,8 @@ export default function App(){
                       return ko?[[`${ko.home}||${ko.away}`,ms],[`${ko.away}||${ko.home}`,ms]]:[];
                     }).flat().filter(e=>e.length)
                   )};
-                  const locked=isMatchLocked({...m,home:liveHome,away:liveAway},allKickoffs);
-                  const countdown=!locked?timeUntilLock({...m,home:liveHome,away:liveAway},allKickoffs):null;
+                  const locked=isMatchLocked({...m,home:liveHome,away:liveAway},allKickoffs,koKickoffs);
+                  const countdown=!locked?timeUntilLock({...m,home:liveHome,away:liveAway},allKickoffs,koKickoffs):null;
                   return(
                     <div key={m.id} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${locked?"rgba(239,68,68,0.2)":"rgba(255,255,255,0.06)"}`,
                       borderRadius:10,padding:"11px 13px",marginBottom:8}}>
@@ -4614,8 +4613,8 @@ export default function App(){
                         {locked&&<span style={{fontSize:12,flexShrink:0}}>🔒</span>}
                         {!locked&&countdown&&<span style={{fontSize:10,color:"#60a5fa",flexShrink:0}}>⏱ locks in {countdown}</span>}
                         {!locked&&!countdown&&koKickoffs[m.id]&&(
-                          <span style={{fontSize:10,color:"#555",flexShrink:0}}>
-                            ⏰ {new Date(koKickoffs[m.id]).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+                          <span style={{fontSize:10,color:Date.now()>koKickoffs[m.id]-3600000?"#f97316":"#555",flexShrink:0}}>
+                            🔒 {new Date(koKickoffs[m.id]).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
                           </span>
                         )}
                       </div>
