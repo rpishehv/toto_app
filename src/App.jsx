@@ -8974,6 +8974,36 @@ export default function App(){
                     border:"1px solid rgba(96,165,250,0.3)",borderRadius:6,
                     color:"#60a5fa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
                   }}>⚡ Fill R32 from standings</button>
+                  <button onClick={()=>{
+                    // Quick-fill R32 from known API matchups
+                    const apiMatchups = [
+                      {home:"South Africa", away:"Canada"},
+                      {home:"Brazil",       away:"Japan"},
+                      {home:"Netherlands",  away:"Morocco"},
+                      {home:"USA",          away:"Bosnia-Herzegovina"},
+                    ];
+                    const ALIASES_REV = {"Bosnia & Herzegovina":"Bosnia-Herzegovina"};
+                    setActualKO(prev => {
+                      const ko = [...prev];
+                      const r32 = ko.filter(m=>m.round==="Round of 32");
+                      let filled = 0;
+                      apiMatchups.forEach(({home,away}) => {
+                        const h = ALIASES_REV[home]||home;
+                        const a = ALIASES_REV[away]||away;
+                        // Find matching slot or next TBD slot
+                        const idx = ko.findIndex(m=>m.round==="Round of 32"&&m.home==="TBD"&&m.away==="TBD");
+                        if(idx>=0) { ko[idx]={...ko[idx],home:h,away:a}; filled++; }
+                      });
+                      console.log('[QuickFill] filled', filled, 'R32 slots');
+                      return ko;
+                    });
+                    setAdminPinError(`✅ Filled ${apiMatchups.length} R32 matches — set kickoff times then Save Results`);
+                    setTimeout(()=>setAdminPinError(""),5000);
+                  }} style={{
+                    padding:"7px 14px",background:"rgba(34,197,94,0.1)",
+                    border:"1px solid rgba(34,197,94,0.3)",borderRadius:6,
+                    color:"#22c55e",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                  }}>⚽ Quick Fill Known R32</button>
                   <button onClick={async()=>{
                     const res = await fetch('/api/live?type=fixtures&round=Round%20of%2032');
                     const data = await res.json();
