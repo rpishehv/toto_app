@@ -4612,7 +4612,12 @@ export default function App(){
                         </span>
                         {teamsKnown&&<span style={{fontSize:16}}>{FLAGS[liveAway]||"🏳️"}</span>}
                         {locked&&<span style={{fontSize:12,flexShrink:0}}>🔒</span>}
-                        {countdown&&<span style={{fontSize:10,color:"#60a5fa",flexShrink:0}}>⏱{countdown}</span>}
+                        {!locked&&countdown&&<span style={{fontSize:10,color:"#60a5fa",flexShrink:0}}>⏱ locks in {countdown}</span>}
+                        {!locked&&!countdown&&koKickoffs[m.id]&&(
+                          <span style={{fontSize:10,color:"#555",flexShrink:0}}>
+                            ⏰ {new Date(koKickoffs[m.id]).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+                          </span>
+                        )}
                       </div>
                       {/* Score prediction — only when teams known and not locked */}
                       {teamsKnown&&(
@@ -8974,6 +8979,21 @@ export default function App(){
                     border:"1px solid rgba(96,165,250,0.3)",borderRadius:6,
                     color:"#60a5fa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
                   }}>⚡ Fill R32 from standings</button>
+                  <button onClick={()=>{
+                    if(!window.confirm("Reset all R32+ teams and scores to TBD? This cannot be undone.")) return;
+                    setActualKO(prev => prev.map(m => ({
+                      ...m,
+                      home: "TBD", away: "TBD",
+                      homeScore: null, awayScore: null,
+                    })));
+                    setKoKickoffs({});
+                    setAdminPinError("✅ All KO matches reset to TBD — don't forget to Save Results");
+                    setTimeout(()=>setAdminPinError(""),4000);
+                  }} style={{
+                    padding:"7px 14px",background:"rgba(239,68,68,0.08)",
+                    border:"1px solid rgba(239,68,68,0.25)",borderRadius:6,
+                    color:"#ef4444",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                  }}>🗑 Reset All KO</button>
                   <button onClick={()=>{
                     // Quick-fill R32 from known API matchups
                     const apiMatchups = [
