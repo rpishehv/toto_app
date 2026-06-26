@@ -2127,13 +2127,17 @@ export default function App(){
   // Admin: manually trigger R32 fill from actual group standings (only when button pressed)
   const adminFillR32=()=>{
     const liveQuals = deriveQualifiers(actualMatches);
-    // Only fill if we actually have some results — don't fill from empty standings
     const hasResults = actualMatches.some(m=>m.homeScore!==null);
+    console.log('[adminFillR32] hasResults:', hasResults, 'qualifiers:', JSON.stringify(liveQuals));
     if (!hasResults) {
       setAdminPinError("Enter some group stage results first!");setTimeout(()=>setAdminPinError(""),3000);
       return;
     }
-    setActualKO(prev=>fillLiveBracket(prev, liveQuals, null));
+    const newKO = fillLiveBracket(actualKO, liveQuals, null);
+    console.log('[adminFillR32] R32 teams:', newKO.filter(m=>m.round==="Round of 32").map(m=>`${m.home} vs ${m.away}`));
+    setActualKO(newKO);
+    setAdminPinError("✅ R32 filled from standings — review and hit Save Results");
+    setTimeout(()=>setAdminPinError(""),4000);
   };
 
   // Admin: save all actual results + recalc leaderboard
