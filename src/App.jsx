@@ -6959,6 +6959,62 @@ export default function App(){
           )}
 
           {/* Today's matches */}
+          {/* KO matches scheduled today/upcoming — shown even if API-Football hasn't returned them yet */}
+          {(()=>{
+            const now = Date.now();
+            const ptNow = new Date(now - 7*60*60*1000);
+            const ptDateStr = ptNow.toISOString().split('T')[0];
+            const ptDayStart = new Date(ptDateStr + 'T07:00:00Z').getTime();
+            const ptDayEnd = ptDayStart + 48*60*60*1000; // show 48h window for KO
+            const upcomingKO = actualKO.filter(m => {
+              const ko = koKickoffs[m.id];
+              if (!ko || m.home==="TBD") return false;
+              // Already in todayMatches from API? Skip
+              const inApi = todayMatches.some(f =>
+                (TEAM_ALIASES[f.teams?.home?.name]||f.teams?.home?.name)===m.home ||
+                (TEAM_ALIASES[f.teams?.away?.name]||f.teams?.away?.name)===m.away
+              );
+              return !inApi && ko > now && ko < ptDayEnd;
+            }).sort((a,b)=>(koKickoffs[a.id]||0)-(koKickoffs[b.id]||0));
+            if (!upcomingKO.length) return null;
+            return(
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#555",marginBottom:10}}>
+                  🏆 UPCOMING KNOCKOUT MATCHES
+                </div>
+                {upcomingKO.map(m=>{
+                  const ko = koKickoffs[m.id];
+                  const koDate = new Date(ko);
+                  const timeStr = koDate.toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+                  const hoursAway = (ko-now)/3600000;
+                  return(
+                    <div key={m.id} style={{
+                      display:"flex",alignItems:"center",gap:10,
+                      padding:"12px 14px",marginBottom:6,borderRadius:10,
+                      background:"rgba(252,185,0,0.03)",
+                      border:"1px solid rgba(252,185,0,0.12)",
+                    }}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:12,fontWeight:600}}>
+                          {FLAGS[m.home]||"🏳️"} {m.home}
+                        </div>
+                        <div style={{fontSize:12,fontWeight:600,marginTop:4}}>
+                          {FLAGS[m.away]||"🏳️"} {m.away}
+                        </div>
+                      </div>
+                      <div style={{textAlign:"right",flexShrink:0}}>
+                        <div style={{fontSize:12,color:"#fcb900",fontWeight:700}}>{timeStr}</div>
+                        <div style={{fontSize:10,color:hoursAway<3?"#f97316":"#555",marginTop:2}}>
+                          {m.round}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           {todayMatches.length>0&&(
             <div style={{marginBottom:20}}>
               <div style={{fontSize:11,fontWeight:700,color:"#555",marginBottom:10}}>
