@@ -3047,6 +3047,21 @@ export default function App(){
     fetchLiveMatches(true); // include today on tab open
   },[tab]);
 
+  // Refresh allPlayerPreds when stats tab opens — ensures fresh data
+  useEffect(()=>{
+    if(tab!=="stats"||!groupCode) return;
+    if(Object.keys(allPlayerPreds).length>0) return; // already loaded
+    invalidatePredsCache(groupCode);
+    sbGetAllPredictions(groupCode).then(allPreds=>{
+      if(!allPreds?.length) return;
+      const predsMap={};
+      allPreds.forEach(p=>{
+        if(p?.username) predsMap[p.username]={username:p.username,matches:p.matches||[],knockout:p.knockout||[],podium:p.podium||null};
+      });
+      setAllPlayerPreds(predsMap);
+    }).catch(()=>{});
+  },[tab]);
+
   // Fetch top scorers when news tab opens — always refresh
   useEffect(()=>{
     if(tab!=="news") return;
@@ -5918,7 +5933,7 @@ export default function App(){
                             const isMe = e.username===userName;
                             const playerPreds = isMe
                               ? [...(matches||[]),...(knockout||[])]
-                              : (allPlayerPreds[e.username]?.matches || []);
+                              : [...(allPlayerPreds[e.username]?.matches||[]),...(allPlayerPreds[e.username]?.knockout||[])];
                             const pred = playerPreds.find(m=>m&&m.id===actual.id);
                             const result = pred ? calcMatchPoints(pred, actual) : null;
                             return { username:e.username, pred, result };
