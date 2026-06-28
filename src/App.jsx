@@ -3133,6 +3133,9 @@ export default function App(){
       // Recalculate leaderboard for ALL groups — batched for performance
       const allGroupCodes = await sbGetAllGroupCodes();
       for (const gc of allGroupCodes) {
+        // Invalidate both caches to ensure fresh data
+        invalidateLBCache(gc);
+        invalidatePredsCache(gc);
         // Fetch ALL predictions for this group in one query
         const [lb, allPreds] = await Promise.all([
           sbGetLeaderboard(gc),
