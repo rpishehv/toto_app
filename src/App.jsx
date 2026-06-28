@@ -4494,11 +4494,11 @@ export default function App(){
               const shortName = hasName ? (name.split(' ').pop()||name).slice(0,9) : 'TBD';
               return(
                 <div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 5px",minHeight:20,
-                  background:won?"rgba(34,197,94,0.08)":"transparent"}}>
+                  background:won?"rgba(34,197,94,0.15)":"transparent"}}>
                   {!flip&&hasName&&<span style={{fontSize:11,flexShrink:0,lineHeight:1}}>{FLAGS[name]||"🏳️"}</span>}
                   {flip&&score!=null&&<span style={{fontSize:10,fontFamily:"monospace",color:won?"#22c55e":"#555",flexShrink:0,marginRight:2}}>{score}</span>}
                   <span style={{fontSize:9,fontWeight:500,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                    color:won?"#22c55e":hasName?"var(--text-secondary, #888)":"#333",
+                    color:won?"#22c55e":hasName?"#bbb":"#555",
                     textAlign:flip?"right":"left",direction:flip?"rtl":"ltr"}}>
                     {shortName}
                   </span>
@@ -4516,12 +4516,12 @@ export default function App(){
               const aWon = hasScore && m.awayScore>m.homeScore;
               return(
                 <div style={{
-                  background:"rgba(255,255,255,0.03)",
-                  border:`0.5px solid ${hasTeams?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)"}`,
+                  background:"rgba(255,255,255,0.08)",
+                  border:`0.5px solid ${hasTeams?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.09)"}`,
                   borderRadius:5,overflow:"hidden",width:104,flexShrink:0,
                 }}>
                   <Team name={m.home} score={hasScore?m.homeScore:null} won={hWon} flip={flip}/>
-                  <div style={{height:"0.5px",background:"rgba(255,255,255,0.06)"}}/>
+                  <div style={{height:"0.5px",background:"rgba(255,255,255,0.15)"}}/>
                   <Team name={m.away} score={hasScore?m.awayScore:null} won={aWon} flip={flip}/>
                 </div>
               );
@@ -4547,22 +4547,22 @@ export default function App(){
               for(let i=0;i<n;i++){
                 const y = rowH*i + rowH/2 + 16;
                 if(flip){
-                  lines.push(<line key={`h${i}`} x1="24" y1={y} x2="12" y2={y} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>);
+                  lines.push(<line key={`h${i}`} x1="24" y1={y} x2="12" y2={y} stroke="rgba(255,255,255,0.25)" strokeWidth="0.8"/>);
                   if(i%2===0&&i+1<n){
                     const y2=rowH*(i+1)+rowH/2+16;
                     const mid=(y+y2)/2;
-                    lines.push(<line key={`v${i}`} x1="12" y1={y} x2="12" y2={y2} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>);
-                    lines.push(<line key={`h2${i}`} x1="24" y1={y2} x2="12" y2={y2} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>);
-                    lines.push(<line key={`out${i}`} x1="0" y1={mid} x2="12" y2={mid} stroke="rgba(255,255,255,0.06)" strokeWidth="0.8"/>);
+                    lines.push(<line key={`v${i}`} x1="12" y1={y} x2="12" y2={y2} stroke="rgba(255,255,255,0.25)" strokeWidth="0.8"/>);
+                    lines.push(<line key={`h2${i}`} x1="24" y1={y2} x2="12" y2={y2} stroke="rgba(255,255,255,0.25)" strokeWidth="0.8"/>);
+                    lines.push(<line key={`out${i}`} x1="0" y1={mid} x2="12" y2={mid} stroke="rgba(255,255,255,0.15)" strokeWidth="0.8"/>);
                   }
                 } else {
-                  lines.push(<line key={`h${i}`} x1="0" y1={y} x2="12" y2={y} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>);
+                  lines.push(<line key={`h${i}`} x1="0" y1={y} x2="12" y2={y} stroke="rgba(255,255,255,0.25)" strokeWidth="0.8"/>);
                   if(i%2===0&&i+1<n){
                     const y2=rowH*(i+1)+rowH/2+16;
                     const mid=(y+y2)/2;
-                    lines.push(<line key={`v${i}`} x1="12" y1={y} x2="12" y2={y2} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>);
-                    lines.push(<line key={`h2${i}`} x1="12" y1={y2} x2="0" y2={y2} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>);
-                    lines.push(<line key={`out${i}`} x1="12" y1={mid} x2="24" y2={mid} stroke="rgba(255,255,255,0.06)" strokeWidth="0.8"/>);
+                    lines.push(<line key={`v${i}`} x1="12" y1={y} x2="12" y2={y2} stroke="rgba(255,255,255,0.25)" strokeWidth="0.8"/>);
+                    lines.push(<line key={`h2${i}`} x1="12" y1={y2} x2="0" y2={y2} stroke="rgba(255,255,255,0.25)" strokeWidth="0.8"/>);
+                    lines.push(<line key={`out${i}`} x1="12" y1={mid} x2="24" y2={mid} stroke="rgba(255,255,255,0.15)" strokeWidth="0.8"/>);
                   }
                 }
               }
@@ -4660,9 +4660,9 @@ export default function App(){
             return(
               <div key={round} style={{marginBottom:24}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                  <div style={{height:1,flex:1,background:"rgba(255,255,255,0.06)"}}/>
+                  <div style={{height:1,flex:1,background:"rgba(255,255,255,0.15)"}}/>
                   <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:13,letterSpacing:2,color:"#555",whiteSpace:"nowrap"}}>{round}</span>
-                  <div style={{height:1,flex:1,background:"rgba(255,255,255,0.06)"}}/>
+                  <div style={{height:1,flex:1,background:"rgba(255,255,255,0.15)"}}/>
                 </div>
                 {rM.map(m=>{
                   const act=rA.find(a=>a.id===m.id);
@@ -4900,12 +4900,12 @@ export default function App(){
                   <div style={{
                     display:"flex",alignItems:"center",gap:10,marginBottom:10,
                   }}>
-                    <div style={{height:1,flex:1,background:"rgba(255,255,255,0.06)"}}/>
+                    <div style={{height:1,flex:1,background:"rgba(255,255,255,0.15)"}}/>
                     <span style={{
                       fontFamily:"'Bebas Neue',sans-serif",fontSize:15,letterSpacing:2,
                       color:place.color,whiteSpace:"nowrap",
                     }}>{place.label} — {place.pts} pts{place.overlap?<span style={{fontSize:10,color:"#555",fontWeight:400,fontFamily:"system-ui",letterSpacing:0}}> · 10 if in podium wrong rank</span>:""}</span>
-                    <div style={{height:1,flex:1,background:"rgba(255,255,255,0.06)"}}/>
+                    <div style={{height:1,flex:1,background:"rgba(255,255,255,0.15)"}}/>
                   </div>
 
                   {/* Current pick card */}
@@ -5654,7 +5654,7 @@ export default function App(){
                             {/* Grid lines */}
                             {[1,Math.ceil(maxRank/2),maxRank].map(r=>(
                               <line key={r} x1="0" y1={toY(r)} x2={W} y2={toY(r)}
-                                stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+                                stroke="rgba(255,255,255,0.15)" strokeWidth="1"/>
                             ))}
                             {/* Line */}
                             <path d={pathD} fill="none" stroke="#fcb900" strokeWidth="2"
@@ -7670,9 +7670,9 @@ export default function App(){
                         <div style={{textAlign:"center",margin:"12px 0 8px",
                           fontSize:10,color:"#333",
                           display:"flex",alignItems:"center",gap:8}}>
-                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/>
+                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.15)"}}/>
                           {dateLabel}
-                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/>
+                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.15)"}}/>
                         </div>
                       )}
                       <div style={{
@@ -7710,9 +7710,9 @@ export default function App(){
                         <div style={{textAlign:"center",margin:"12px 0 8px",
                           fontSize:10,color:"#333",
                           display:"flex",alignItems:"center",gap:8}}>
-                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/>
+                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.15)"}}/>
                           {dateLabel}
-                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/>
+                          <div style={{flex:1,height:1,background:"rgba(255,255,255,0.15)"}}/>
                         </div>
                       )}
                       <div style={{
