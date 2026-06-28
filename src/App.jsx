@@ -1716,6 +1716,7 @@ export default function App(){
   const [adminPinInput,setAdminPinInput]=useState("");
   const [adminPinError,setAdminPinError]=useState("");
   const [deleteConfirmUser,setDeleteConfirmUser]=useState(null);
+  const [confirmResetKO,setConfirmResetKO]=useState(false);
   const [chatReminderSent,setChatReminderSent]=useState(false);
   const [showAdvancedTray,setShowAdvancedTray]=useState(true);
   // Agentic features — track which reminders have already fired
@@ -4600,7 +4601,7 @@ export default function App(){
                     <div key={m.id} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${locked?"rgba(239,68,68,0.2)":"rgba(255,255,255,0.06)"}`,
                       borderRadius:10,padding:"11px 13px",marginBottom:8}}>
                       {/* Live team names from feed */}
-                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:teamsKnown?8:0}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:teamsKnown?4:0}}>
                         <span style={{fontSize:16}}>{FLAGS[liveHome]||"🏳️"}</span>
                         <span style={{flex:1,fontWeight:700,fontSize:13,color:teamsKnown?"#fff":"#444"}}>
                           {teamsKnown?liveHome:"TBD — admin fills after group stage"}
@@ -4611,13 +4612,17 @@ export default function App(){
                         </span>
                         {teamsKnown&&<span style={{fontSize:16}}>{FLAGS[liveAway]||"🏳️"}</span>}
                         {locked&&<span style={{fontSize:12,flexShrink:0}}>🔒</span>}
-                        {!locked&&countdown&&<span style={{fontSize:10,color:"#60a5fa",flexShrink:0}}>⏱ locks in {countdown}</span>}
-                        {!locked&&!countdown&&koKickoffs[m.id]&&(
-                          <span style={{fontSize:10,color:Date.now()>koKickoffs[m.id]-3600000?"#f97316":"#555",flexShrink:0}}>
-                            🔒 {new Date(koKickoffs[m.id]).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
-                          </span>
-                        )}
                       </div>
+                      {/* Lock countdown — always show if kickoff set */}
+                      {!locked&&(countdown||koKickoffs[m.id])&&(
+                        <div style={{fontSize:10,marginBottom:teamsKnown?4:0,
+                          color:countdown?"#60a5fa":"#555"}}>
+                          {countdown
+                            ? `⏱ Locks in ${countdown}`
+                            : `🔒 Locks at ${new Date(koKickoffs[m.id]).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}`
+                          }
+                        </div>
+                      )}
                       {/* Score prediction — only when teams known and not locked */}
                       {teamsKnown&&(
                         <div style={{display:"flex",alignItems:"center",gap:8,
@@ -8979,20 +8984,27 @@ export default function App(){
                     color:"#60a5fa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
                   }}>⚡ Fill R32 from standings</button>
                   <button onClick={()=>{
-                    if(!window.confirm("Reset all R32+ teams and scores to TBD? This cannot be undone.")) return;
+                    if (!confirmResetKO) {
+                      setConfirmResetKO(true);
+                      setTimeout(()=>setConfirmResetKO(false), 3000);
+                      return;
+                    }
+                    setConfirmResetKO(false);
                     setActualKO(prev => prev.map(m => ({
                       ...m,
                       home: "TBD", away: "TBD",
                       homeScore: null, awayScore: null,
                     })));
                     setKoKickoffs({});
-                    setAdminPinError("✅ All KO matches reset to TBD — don't forget to Save Results");
+                    setAdminPinError("✅ All KO matches reset to TBD — hit Save Results");
                     setTimeout(()=>setAdminPinError(""),4000);
                   }} style={{
-                    padding:"7px 14px",background:"rgba(239,68,68,0.08)",
-                    border:"1px solid rgba(239,68,68,0.25)",borderRadius:6,
+                    padding:"7px 14px",
+                    background:confirmResetKO?"rgba(239,68,68,0.2)":"rgba(239,68,68,0.08)",
+                    border:`1px solid ${confirmResetKO?"rgba(239,68,68,0.6)":"rgba(239,68,68,0.25)"}`,
+                    borderRadius:6,
                     color:"#ef4444",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
-                  }}>🗑 Reset All KO</button>
+                  }}>{confirmResetKO?"⚠️ Tap again to confirm":"🗑 Reset All KO"}</button>
                   <button onClick={async()=>{
                     try {
                       const res = await fetch('/api/live?type=fixtures&round=Round%20of%2032');
