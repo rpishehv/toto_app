@@ -3055,14 +3055,16 @@ export default function App(){
     if(Object.keys(allPlayerPreds).length>0 && now - allPredsLastFetch.current < 5*60*1000) return;
     invalidatePredsCache(groupCode);
     sbGetAllPredictions(groupCode).then(allPreds=>{
+      console.log('[Stats] sbGetAllPredictions returned:', allPreds?.length, 'users');
       if(!allPreds?.length) return;
       allPredsLastFetch.current = Date.now();
       const predsMap={};
       allPreds.forEach(p=>{
         if(p?.username) predsMap[p.username]={username:p.username,matches:p.matches||[],knockout:p.knockout||[],podium:p.podium||null};
       });
+      console.log('[Stats] allPlayerPreds keys:', Object.keys(predsMap));
       setAllPlayerPreds(predsMap);
-    }).catch(()=>{});
+    }).catch(e=>console.error('[Stats] fetch error:', e));
   },[tab]);
 
   // Fetch top scorers when news tab opens — always refresh
@@ -5941,6 +5943,7 @@ export default function App(){
                             const result = pred ? calcMatchPoints(pred, actual) : null;
                             return { username:e.username, pred, result };
                           }).filter(r=>r&&r.pred&&r.pred.homeScore!==null);
+                          if(actual.id==='A-0-1'||actual.id==='KO-R32-0') console.log('[Stats rows]', actual.id, 'playerRows:', playerRows.length, 'allPlayerPreds keys:', Object.keys(allPlayerPreds).length);
 
                           // Summary counts for collapsed view
                           const exactCount = playerRows.filter(r=>r.result?.points===6).length;
