@@ -4683,7 +4683,20 @@ export default function App(){
                           }
                         </div>
                       )}
-                      {/* Score prediction — only when teams known and not locked */}
+                      {/* Actual result — show when available */}
+                      {act?.homeScore!=null&&(
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"center",
+                          gap:8,padding:"4px 0",marginBottom:4}}>
+                          <span style={{fontSize:10,color:"#555"}}>Result:</span>
+                          <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,
+                            color:"#fcb900",letterSpacing:2}}>
+                            {act.homeScore} – {act.awayScore}
+                          </span>
+                          <span style={{fontSize:9,color:"#555",background:"rgba(252,185,0,0.1)",
+                            borderRadius:4,padding:"1px 5px"}}>FT</span>
+                        </div>
+                      )}
+                      {/* Score prediction — only when teams known */}
                       {teamsKnown&&(
                         <div style={{display:"flex",alignItems:"center",gap:8,
                           paddingTop:8,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
