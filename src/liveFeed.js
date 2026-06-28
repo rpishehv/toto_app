@@ -67,9 +67,15 @@ export function parseFeed(data, appMatches, appKO) {
     const home = normalise(f.teams?.home?.name || '')
     const away = normalise(f.teams?.away?.name || '')
     const status = f.fixture?.status?.short
-    const goals = f.goals
+    // For scoring purposes always use 90-min score (fulltime), not AET/PEN result
+    // API-Football: f.score.fulltime = 90min, f.goals = current/final incl. ET
+    const goals = f.score?.fulltime?.home != null ? f.score.fulltime : f.goals
     const isFinished = FINISHED.includes(status)
     const isLive = ['1H','2H','HT','ET','BT','P'].includes(status)
+    // During live ET/pens still show live goals for display, but save fulltime for scoring
+    const scoringGoals = (isFinished && ['AET','PEN'].includes(status) && f.score?.fulltime?.home != null)
+      ? f.score.fulltime
+      : f.goals
 
     // Kickoff time
     if (f.fixture?.date) {
@@ -84,12 +90,26 @@ export function parseFeed(data, appMatches, appKO) {
       (m.home === away && m.away === home)
     )
 
-    if (appMatch && (isFinished || isLive) && goals?.home !== null && goals?.home !== undefined) {
+    if (appMatch && (isFinished || isLive) && scoringGoals?.home !== null && scoringGoals?.home !== undefined) {
       const flipped = appMatch.home === away
       results.groupScores[appMatch.id] = {
-        homeScore: flipped ? goals.away : goals.home,
-        awayScore: flipped ? goals.home : goals.away,
+        homeScore: flipped ? scoringGoals.away : scoringGoals.home,
+        awayScore: flipped ? scoringGoals.home : scoringGoals.away,
       }
+    }
+
+    // KO match scoring — also use fulltime only
+    const appKOMatch = appKO?.find(m =>
+      (m.home === home && m.away === away) ||
+      (m.home === away && m.away === home)
+    )
+    if (appKOMatch && isFinished && scoringGoals?.home !== null && scoringGoals?.home !== undefined) {
+      const flipped = appKOMatch.home === away
+      results.koScores[appKOMatch.id] = {
+        homeScore: flipped ? scoringGoals.away : scoringGoals.home,
+        awayScore: flipped ? scoringGoals.home : scoringGoals.away,
+      }
+      results.koTeams[appKOMatch.id] = { home: appKOMatch.home, away: appKOMatch.away }
     }
   }
 

@@ -23,6 +23,8 @@ import { fetchLiveFeed, parseFeed, applyFeedToState } from './liveFeed.js';
 import GROUP_INSIGHTS from './insights.js';
 import EXPERT_PREDICTIONS from './experts.js';
 import GROUP_AI_PREDICTIONS from './groupPredictions.js';
+import R32_AI_PREDICTIONS from './r32Predictions.js';
+import R32_EXPERT_PREDICTIONS from './r32Experts.js';
 
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
@@ -1399,20 +1401,24 @@ function ExpertPanel({ home, away, data, loading, onClose }) {
   );
 }
 
-function KOMatchButtons({liveHome, liveAway, aiP}) {
+function KOMatchButtons({liveHome, liveAway, aiP, r32AI, r32Expert}) {
   const [showAI, setShowAI] = useState(false);
   const [showOdds, setShowOdds] = useState(false);
   const [showExperts, setShowExperts] = useState(false);
   const [odds, setOdds] = useState(aiP?.polymarket||null);
   const [oddsLoading, setOddsLoading] = useState(false);
-  // Use stored expert data if admin generated it, otherwise fetch fresh
-  const [expertData, setExpertData] = useState(aiP?.experts||null);
+  // Use stored expert data if admin generated it, otherwise fall back to hardcoded R32 experts
+  const [expertData, setExpertData] = useState(aiP?.experts||r32Expert||null);
   const [expertLoading, setExpertLoading] = useState(false);
+
+  // Combined AI prediction — admin-generated takes priority, then hardcoded R32
+  const effectiveAI = aiP || r32AI;
 
   // Update if admin pushes new data via Supabase real-time
   React.useEffect(()=>{
-    if (aiP?.experts && !expertData) setExpertData(aiP.experts);
-  }, [aiP?.experts]);
+    if (aiP?.experts) setExpertData(aiP.experts);
+    else if (r32Expert && !expertData) setExpertData(r32Expert);
+  }, [aiP?.experts, r32Expert]);
 
   const fetchOdds = async () => {
     if (odds) { setShowOdds(p=>!p); return; }
@@ -1440,7 +1446,7 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
   return(
     <div>
       <div style={{display:"flex",gap:6,marginTop:8,paddingTop:8,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
-        {aiP&&<button onClick={()=>setShowAI(p=>!p)} style={{
+        {effectiveAI&&<button onClick={()=>setShowAI(p=>!p)} style={{
           padding:"3px 10px",background:"rgba(139,92,246,0.12)",
           border:"1px solid rgba(139,92,246,0.3)",borderRadius:4,
           color:"#a78bfa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
@@ -1458,18 +1464,18 @@ function KOMatchButtons({liveHome, liveAway, aiP}) {
           color:"#60a5fa",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
         }}>📊 Odds</button>
       </div>
-      {showAI&&aiP&&(
+      {showAI&&effectiveAI&&(
         <div style={{marginTop:8,padding:"10px 12px",borderRadius:8,
           background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.2)"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <span style={{fontSize:11,color:"#a78bfa",fontWeight:700}}>🤖 AI:</span>
-            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>{aiP.h} – {aiP.a}</span>
-            {aiP.confidence&&<span style={{fontSize:10,color:"#6d5a9c",background:"rgba(139,92,246,0.15)",borderRadius:4,padding:"2px 6px"}}>{aiP.confidence}</span>}
+            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#c4b5fd",letterSpacing:1}}>{effectiveAI.h} – {effectiveAI.a}</span>
+            {effectiveAI.confidence&&<span style={{fontSize:10,color:"#6d5a9c",background:"rgba(139,92,246,0.15)",borderRadius:4,padding:"2px 6px"}}>{effectiveAI.confidence}</span>}
             <button onClick={()=>setShowAI(false)} style={{marginLeft:"auto",padding:"1px 6px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.10)",borderRadius:4,color:"#555",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
           </div>
-          {aiP.insight&&<div style={{fontSize:11,color:"#8b7dbf",lineHeight:1.6,marginBottom:4}}>{aiP.insight}</div>}
-          {aiP.key&&<div style={{fontSize:10,color:"#6d5a9c",fontStyle:"italic"}}>🔑 {aiP.key}</div>}
-          {!aiP.insight&&aiP.r&&<div style={{fontSize:10,color:"#7c6db3",fontStyle:"italic"}}>{aiP.r}</div>}
+          {effectiveAI.insight&&<div style={{fontSize:11,color:"#8b7dbf",lineHeight:1.6,marginBottom:4}}>{effectiveAI.insight}</div>}
+          {effectiveAI.key&&<div style={{fontSize:10,color:"#6d5a9c",fontStyle:"italic"}}>🔑 {effectiveAI.key}</div>}
+          {!effectiveAI.insight&&effectiveAI.r&&<div style={{fontSize:10,color:"#7c6db3",fontStyle:"italic"}}>{effectiveAI.r}</div>}
         </div>
       )}
       {(showExperts||expertLoading)&&(
@@ -4687,6 +4693,8 @@ export default function App(){
                       {teamsKnown&&<KOMatchButtons
                         liveHome={liveHome} liveAway={liveAway}
                         aiP={livePredictions[`${liveHome}||${liveAway}`]}
+                        r32AI={R32_AI_PREDICTIONS[`${liveHome}||${liveAway}`]||R32_AI_PREDICTIONS[`${liveAway}||${liveHome}`]}
+                        r32Expert={R32_EXPERT_PREDICTIONS[`${liveHome}||${liveAway}`]||R32_EXPERT_PREDICTIONS[`${liveAway}||${liveHome}`]}
                       />}
                     </div>
                   );
