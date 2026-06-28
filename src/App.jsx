@@ -6142,18 +6142,20 @@ export default function App(){
                       const currentScore={homeScore:score?.home??0, awayScore:score?.away??0};
                       const normHome = TEAM_ALIASES[homeName]||homeName;
                       const normAway = TEAM_ALIASES[awayName]||awayName;
-                      console.log('[Social panel] home:', homeName, 'normHome:', normHome, 'allPlayerPreds keys:', Object.keys(allPlayerPreds).length);
                       const matchPreds = Object.entries({...allPlayerPreds, ...Object.fromEntries(Object.entries(livePredictions).filter(([,v])=>v?.username&&Array.isArray(v?.matches)))})
-                        .filter(([k,v])=>k && typeof v==='object'&&v!==null&&!Array.isArray(v)&&v.username&&Array.isArray(v.matches))
+                        .filter(([k,v])=>k && typeof v==='object'&&v!==null&&!Array.isArray(v)&&v.username&&(Array.isArray(v.matches)||Array.isArray(v.knockout)))
                         .map(([,v])=>v)
                         .filter(p=>{
-                          const m=p.matches?.find(m=>
+                          // Check both group matches and knockout predictions
+                          const allPreds = [...(p.matches||[]), ...(p.knockout||[])];
+                          const m=allPreds.find(m=>
                             (m.home===normHome&&m.away===normAway)||(m.home===normAway&&m.away===normHome)||
                             (m.home===homeName&&m.away===awayName)||(m.home===awayName&&m.away===homeName));
                           return m?.homeScore!==null&&m?.homeScore!==undefined;
                         })
                         .map(p=>{
-                          const m=p.matches?.find(m=>
+                          const allPreds = [...(p.matches||[]), ...(p.knockout||[])];
+                          const m=allPreds.find(m=>
                             (m.home===normHome&&m.away===normAway)||(m.home===normAway&&m.away===normHome)||
                             (m.home===homeName&&m.away===awayName)||(m.home===awayName&&m.away===homeName));
                           const flipped=m?.home===normAway||m?.home===awayName;
@@ -6893,16 +6895,22 @@ export default function App(){
 
                     {(()=>{
                       const nm=home?.name, am=away?.name;
-                      const pred=matches.find(m=>(m.home===nm&&m.away===am)||(m.home===am&&m.away===nm));
+                      const normH=TEAM_ALIASES[nm]||nm, normA=TEAM_ALIASES[am]||am;
+                      const allMyPreds=[...matches,...knockout];
+                      const pred=allMyPreds.find(m=>
+                        (m.home===nm&&m.away===am)||(m.home===am&&m.away===nm)||
+                        (m.home===normH&&m.away===normA)||(m.home===normA&&m.away===normH));
                       if(!pred||pred.homeScore===null) return null;
-                      const result=score?.home!==null?calcMatchPoints(pred,{homeScore:score?.home,awayScore:score?.away}):null;
+                      const flipped=pred.home===am||pred.home===normA;
+                      const adjPred={homeScore:flipped?pred.awayScore:pred.homeScore,awayScore:flipped?pred.homeScore:pred.awayScore};
+                      const result=score?.home!=null?calcMatchPoints(adjPred,{homeScore:score?.home,awayScore:score?.away}):null;
                       return(
                         <div style={{marginBottom:12,padding:"10px 12px",
                           background:`${result?.color||"rgba(255,255,255,0.03)"}10`,
                           border:`1px solid ${result?.color||"rgba(255,255,255,0.06)"}25`,borderRadius:8}}>
                           <div style={{fontSize:10,color:"#555",marginBottom:4}}>Your prediction</div>
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
-                            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#c0c0c0"}}>{pred.homeScore}–{pred.awayScore}</span>
+                            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#c0c0c0"}}>{adjPred.homeScore}–{adjPred.awayScore}</span>
                             {result&&<span style={{fontSize:11,color:result.color,fontWeight:700}}>{result.label} {result.points>0?`+${result.points}pts`:""}</span>}
                           </div>
                         </div>
