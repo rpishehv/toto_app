@@ -4437,120 +4437,139 @@ export default function App(){
         {tab==="knockout"&&<div>
           <div style={{marginBottom:18}}><AdminPill/></div>
 
-          {/* ── Live Bracket Diagram ── */}
+          {/* ── Live Bracket Diagram — two-sided ── */}
           {(()=>{
-            const rounds = ['Round of 32','Round of 16','Quarter-Finals','Semi-Finals','Final'];
-            const roundLabels = ['R32','R16','QF','SF','F'];
-            const matchesByRound = rounds.map(r => actualKO.filter(m=>m.round===r));
-            const maxMatches = Math.max(...matchesByRound.map(r=>r.length));
+            const r32 = actualKO.filter(m=>m.round==='Round of 32');
+            const r16 = actualKO.filter(m=>m.round==='Round of 16');
+            const qf  = actualKO.filter(m=>m.round==='Quarter-Finals');
+            const sf  = actualKO.filter(m=>m.round==='Semi-Finals');
+            const fin = actualKO.filter(m=>m.round==='Final');
+            const half = Math.ceil(r32.length/2);
+            const leftR32  = r32.slice(0, half);
+            const rightR32 = r32.slice(half);
+            const leftR16  = r16.slice(0, Math.ceil(r16.length/2));
+            const rightR16 = r16.slice(Math.ceil(r16.length/2));
+            const leftQF   = qf.slice(0, Math.ceil(qf.length/2));
+            const rightQF  = qf.slice(Math.ceil(qf.length/2));
+            const leftSF   = sf.slice(0,1);
+            const rightSF  = sf.slice(1);
 
-            // Layout constants
-            const COL_W = 110, ROW_H = 44, PAD = 8;
-            const cols = rounds.length;
-            const svgW = cols * COL_W + PAD*2;
-            const svgH = maxMatches * ROW_H * 2 + 60;
-
-            // Get y position for match index in a round
-            const getMatchY = (roundIdx, matchIdx, total) => {
-              const spacing = svgH / (total + 1);
-              return spacing * (matchIdx + 1) - ROW_H/2;
-            };
-
-            const MatchBox = ({m, x, y, isWinner}) => {
-              const hasTeams = m?.home && m?.home !== 'TBD' && m?.away && m?.away !== 'TBD';
-              const hasScore = m?.homeScore !== null && m?.homeScore !== undefined;
-              const homeWon = hasScore && m.homeScore > m.awayScore;
-              const awayWon = hasScore && m.awayScore > m.homeScore;
-              const boxW = COL_W - 16;
-              const boxH = ROW_H - 4;
-
-              return (
-                <g>
-                  {/* Home */}
-                  <rect x={x} y={y} width={boxW} height={boxH/2}
-                    rx="3" fill={homeWon?"rgba(252,185,0,0.15)":"rgba(255,255,255,0.04)"}
-                    stroke={homeWon?"rgba(252,185,0,0.4)":"rgba(255,255,255,0.08)"} strokeWidth="0.5"/>
-                  <text x={x+4} y={y+boxH/4+4} fontSize="7"
-                    fill={homeWon?"#fcb900":hasTeams?"#ccc":"#444"}
-                    fontFamily="system-ui,sans-serif">
-                    {hasTeams?(FLAGS[m.home]||"")+' '+(m.home?.split(' ').slice(-1)[0]||m.home||'').slice(0,10):'TBD'}
-                  </text>
-                  {hasScore&&<text x={x+boxW-12} y={y+boxH/4+4} fontSize="8"
-                    fill={homeWon?"#fcb900":"#888"} textAnchor="middle" fontFamily="monospace">{m.homeScore}</text>}
-
-                  {/* Away */}
-                  <rect x={x} y={y+boxH/2} width={boxW} height={boxH/2}
-                    rx="3" fill={awayWon?"rgba(96,165,250,0.15)":"rgba(255,255,255,0.04)"}
-                    stroke={awayWon?"rgba(96,165,250,0.4)":"rgba(255,255,255,0.08)"} strokeWidth="0.5"/>
-                  <text x={x+4} y={y+boxH*3/4+4} fontSize="7"
-                    fill={awayWon?"#60a5fa":hasTeams?"#ccc":"#444"}
-                    fontFamily="system-ui,sans-serif">
-                    {hasTeams?(FLAGS[m.away]||"")+' '+(m.away?.split(' ').slice(-1)[0]||m.away||'').slice(0,10):'TBD'}
-                  </text>
-                  {hasScore&&<text x={x+boxW-12} y={y+boxH*3/4+4} fontSize="8"
-                    fill={awayWon?"#60a5fa":"#888"} textAnchor="middle" fontFamily="monospace">{m.awayScore}</text>}
-                </g>
+            const MatchCard = ({m, flip=false}) => {
+              const hasTeams = m?.home && m?.home!=='TBD';
+              const hasScore = m?.homeScore!=null;
+              const homeWon = hasScore && m.homeScore>m.awayScore;
+              const awayWon = hasScore && m.awayScore>m.homeScore;
+              return(
+                <div style={{
+                  background:"rgba(255,255,255,0.03)",
+                  border:`1px solid ${hasTeams?"rgba(255,255,255,0.1)":"rgba(255,255,255,0.04)"}`,
+                  borderRadius:6,overflow:"hidden",width:108,flexShrink:0,
+                }}>
+                  {[{team:m?.home,won:homeWon},{team:m?.away,won:awayWon}].map((t,i)=>(
+                    <div key={i}>
+                      {i===1&&<div style={{height:1,background:"rgba(255,255,255,0.06)"}}/>}
+                      <div style={{
+                        display:"flex",alignItems:"center",gap:3,
+                        padding:"4px 6px",minHeight:22,
+                        background:t.won?"rgba(252,185,0,0.1)":"transparent",
+                      }}>
+                        {hasTeams&&<span style={{fontSize:11,flexShrink:0}}>{FLAGS[t.team]||"🏳️"}</span>}
+                        <span style={{
+                          fontSize:9,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                          color:t.won?"#fcb900":hasTeams?"#ccc":"#333",fontWeight:t.won?700:400,
+                        }}>{hasTeams?(t.team?.split(' ').slice(-1)[0]||t.team):"TBD"}</span>
+                        {hasScore&&<span style={{fontSize:10,fontFamily:"monospace",color:t.won?"#fcb900":"#555",flexShrink:0}}>{t.won?t.team===m.home?m.homeScore:m.awayScore:t.team===m.home?m.homeScore:m.awayScore}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               );
             };
 
-            // Show bracket always — TBD slots show as empty
-            return(
-              <div style={{marginBottom:20}}>
-                <div style={{fontSize:13,fontWeight:700,color:"#fcb900",marginBottom:8,
-                  fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1}}>
-                  🏆 Knockout Bracket
-                </div>
-                <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",
-                  background:"rgba(255,255,255,0.02)",borderRadius:10,
-                  border:"1px solid rgba(255,255,255,0.06)",padding:"8px 4px"}}>
-                  <svg width={svgW} height={svgH} style={{display:"block"}}>
-                    {/* Round labels */}
-                    {rounds.map((r,ri)=>(
-                      <text key={r} x={PAD + ri*COL_W + (COL_W-16)/2} y={14}
-                        textAnchor="middle" fontSize="8" fill="#555"
-                        fontFamily="system-ui,sans-serif" fontWeight="700">
-                        {roundLabels[ri]}
-                      </text>
-                    ))}
+            const Connector = ({n, flip=false}) => {
+              const h = n*52+((n-1)*4);
+              const pts = Array.from({length:n},(_,i)=>{
+                const y = (h/(n))*(i+0.5);
+                return y;
+              });
+              return(
+                <svg width="20" style={{height:h,flexShrink:0,alignSelf:"center"}} viewBox={`0 0 20 ${h}`} preserveAspectRatio="none">
+                  {pts.map((y,i)=>(
+                    <g key={i}>
+                      <line x1={flip?20:0} y1={y} x2="10" y2={y} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>
+                    </g>
+                  ))}
+                  {pts.length>=2&&<line x1="10" y1={pts[0]} x2="10" y2={pts[pts.length-1]} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>}
+                  <line x1="10" y1={h/2} x2={flip?0:20} y2={h/2} stroke="rgba(255,255,255,0.15)" strokeWidth="0.8"/>
+                </svg>
+              );
+            };
 
-                    {matchesByRound.map((roundMatches, ri)=>{
-                      const x = PAD + ri * COL_W;
-                      return roundMatches.map((m, mi)=>{
-                        const y = getMatchY(ri, mi, roundMatches.length) + 20;
-                        const boxW = COL_W - 16;
-                        const boxH = ROW_H - 4;
-                        const midY = y + boxH/2;
-
-                        // Draw connector line to next round
-                        let connector = null;
-                        if(ri < rounds.length - 1) {
-                          const nextRoundMatches = matchesByRound[ri+1];
-                          const nextMi = Math.floor(mi/2);
-                          if(nextMi < nextRoundMatches.length) {
-                            const nextY = getMatchY(ri+1, nextMi, nextRoundMatches.length) + 20 + boxH/2;
-                            connector = <line
-                              x1={x+boxW} y1={midY}
-                              x2={x+COL_W} y2={nextY}
-                              stroke="rgba(255,255,255,0.08)" strokeWidth="0.8"/>;
-                          }
-                        }
-
-                        return(
-                          <g key={m.id||mi}>
-                            {connector}
-                            <MatchBox m={m} x={x} y={y}/>
-                          </g>
-                        );
-                      });
-                    })}
-                  </svg>
-                </div>
-                <div style={{fontSize:9,color:"#444",marginTop:4,textAlign:"center"}}>
-                  Scroll horizontally · Updates as results come in
+            const Col = ({matches, label, flip=false}) => (
+              <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:0,flexShrink:0}}>
+                <div style={{fontSize:9,color:"#555",fontWeight:600,marginBottom:6,letterSpacing:0.5,
+                  textAlign:"center",width:108}}>{label}</div>
+                <div style={{display:"flex",flexDirection:"column",justifyContent:"space-around",gap:4,
+                  flex:1,width:108}}>
+                  {matches.map((m,i)=><MatchCard key={m.id||i} m={m} flip={flip}/>)}
                 </div>
               </div>
             );
+
+            return(
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#fcb900",marginBottom:10,
+                  fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1}}>
+                  🏆 Knockout Bracket
+                </div>
+                <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:4}}>
+                  <div style={{display:"flex",alignItems:"stretch",gap:0,minWidth:800,padding:"0 4px"}}>
+                    {/* Left side */}
+                    <Col matches={leftR32} label="R32"/>
+                    <Connector n={leftR32.length}/>
+                    <Col matches={leftR16} label="R16"/>
+                    <Connector n={leftR16.length||1}/>
+                    <Col matches={leftQF.length?leftQF:[{id:'lqf',round:'Quarter-Finals',home:'TBD',away:'TBD',homeScore:null,awayScore:null}]} label="QF"/>
+                    <Connector n={1}/>
+                    <Col matches={leftSF.length?leftSF:[{id:'lsf',round:'Semi-Finals',home:'TBD',away:'TBD',homeScore:null,awayScore:null}]} label="SF"/>
+
+                    {/* Final centre */}
+                    <div style={{display:"flex",alignItems:"center",flexShrink:0,padding:"0 8px",flexDirection:"column",justifyContent:"center"}}>
+                      <div style={{fontSize:9,color:"#60a5fa",fontWeight:600,marginBottom:6,letterSpacing:0.5}}>FINAL</div>
+                      {fin.length>0
+                        ? <MatchCard m={fin[0]}/>
+                        : <div style={{
+                            background:"rgba(96,165,250,0.06)",
+                            border:"1px solid rgba(96,165,250,0.2)",
+                            borderRadius:6,width:108,overflow:"hidden",
+                          }}>
+                            <div style={{padding:"4px 6px",minHeight:22,display:"flex",alignItems:"center"}}>
+                              <span style={{fontSize:9,color:"#333"}}>TBD</span>
+                            </div>
+                            <div style={{height:1,background:"rgba(96,165,250,0.2)"}}/>
+                            <div style={{padding:"4px 6px",minHeight:22,display:"flex",alignItems:"center"}}>
+                              <span style={{fontSize:9,color:"#333"}}>TBD</span>
+                            </div>
+                          </div>
+                      }
+                      <div style={{fontSize:8,color:"#444",marginTop:4}}>Jul 19 · NJ</div>
+                    </div>
+
+                    {/* Right side — mirrored */}
+                    <Col matches={rightSF.length?rightSF:[{id:'rsf',round:'Semi-Finals',home:'TBD',away:'TBD',homeScore:null,awayScore:null}]} label="SF"/>
+                    <Connector n={1} flip/>
+                    <Col matches={rightQF.length?rightQF:[{id:'rqf',round:'Quarter-Finals',home:'TBD',away:'TBD',homeScore:null,awayScore:null}]} label="QF"/>
+                    <Connector n={rightR16.length||1} flip/>
+                    <Col matches={rightR16} label="R16"/>
+                    <Connector n={rightR32.length} flip/>
+                    <Col matches={rightR32} label="R32"/>
+                  </div>
+                </div>
+                <div style={{fontSize:9,color:"#444",textAlign:"center",marginTop:4}}>← scroll →</div>
+              </div>
+            );
           })()}
+
 
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
             <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,color:"#fcb900",margin:0}}>Knockout Predictions</h2>
