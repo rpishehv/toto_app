@@ -1,0 +1,14 @@
+FIFA 2026 Predictor — Supabase Backup
+Date: 6/27/2026, 5:22:43 PM
+URL:  https://noifigxmdlsnivlbyelp.supabase.co
+
+Table                  Rows    Status
+──────────────────────────────────────────────────
+users                      27  ok
+predictions                26  ok
+actual_results              1  ok
+leaderboard                26  ok
+save_history                5  ok
+ai_content                  3  ok
+reactions                  10  ok
+chat_messages             105  ok
