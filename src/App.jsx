@@ -4466,132 +4466,154 @@ export default function App(){
         {tab==="knockout"&&<div>
           <div style={{marginBottom:18}}><AdminPill/></div>
 
-          {/* ── Live Bracket Diagram — two-sided ── */}
+          {/* ── Live Bracket Diagram — FIFA style two-sided ── */}
           {(()=>{
-            const r32 = actualKO.filter(m=>m.round==='Round of 32');
-            const r16 = actualKO.filter(m=>m.round==='Round of 16');
-            const qf  = actualKO.filter(m=>m.round==='Quarter-Finals');
-            const sf  = actualKO.filter(m=>m.round==='Semi-Finals');
-            const fin = actualKO.filter(m=>m.round==='Final');
-            const half = Math.ceil(r32.length/2);
-            const leftR32  = r32.slice(0, half);
-            const rightR32 = r32.slice(half);
-            const leftR16  = r16.slice(0, Math.ceil(r16.length/2));
-            const rightR16 = r16.slice(Math.ceil(r16.length/2));
-            const leftQF   = qf.slice(0, Math.ceil(qf.length/2));
-            const rightQF  = qf.slice(Math.ceil(qf.length/2));
-            const leftSF   = sf.slice(0,1);
-            const rightSF  = sf.slice(1);
+            const byRound = r => actualKO.filter(m=>m.round===r);
+            const r32 = byRound('Round of 32');
+            const r16 = byRound('Round of 16');
+            const qf  = byRound('Quarter-Finals');
+            const sf  = byRound('Semi-Finals');
+            const fin = byRound('Final');
 
-            const MatchCard = ({m, flip=false}) => {
-              const hasTeams = m?.home && m?.home!=='TBD';
-              const hasScore = m?.homeScore!=null;
-              const homeWon = hasScore && m.homeScore>m.awayScore;
-              const awayWon = hasScore && m.awayScore>m.homeScore;
+            // Split each round: left = first half, right = second half
+            const half = n => Math.ceil(n/2);
+            const L = arr => arr.slice(0, half(arr.length));
+            const R = arr => arr.slice(half(arr.length));
+
+            const TBD = {id:'tbd',round:'',home:'TBD',away:'TBD',homeScore:null,awayScore:null};
+            const pad = (arr, n) => [...arr, ...Array(Math.max(0,n-arr.length)).fill(TBD)];
+
+            const lR32=pad(L(r32),8), rR32=pad(R(r32),8);
+            const lR16=pad(L(r16),4), rR16=pad(R(r16),4);
+            const lQF =pad(L(qf),2),  rQF =pad(R(qf),2);
+            const lSF =pad(L(sf),1),  rSF =pad(R(sf),1);
+            const finM=fin[0]||TBD;
+
+            const Team = ({name,score,won,flip}) => {
+              const hasName = name && name!=='TBD';
+              const shortName = hasName ? (name.split(' ').pop()||name).slice(0,9) : 'TBD';
               return(
-                <div style={{
-                  background:"rgba(255,255,255,0.03)",
-                  border:`1px solid ${hasTeams?"rgba(255,255,255,0.1)":"rgba(255,255,255,0.04)"}`,
-                  borderRadius:6,overflow:"hidden",width:108,flexShrink:0,
-                }}>
-                  {[{team:m?.home,won:homeWon},{team:m?.away,won:awayWon}].map((t,i)=>(
-                    <div key={i}>
-                      {i===1&&<div style={{height:1,background:"rgba(255,255,255,0.06)"}}/>}
-                      <div style={{
-                        display:"flex",alignItems:"center",gap:3,
-                        padding:"4px 6px",minHeight:22,
-                        background:t.won?"rgba(252,185,0,0.1)":"transparent",
-                      }}>
-                        {hasTeams&&<span style={{fontSize:11,flexShrink:0}}>{FLAGS[t.team]||"🏳️"}</span>}
-                        <span style={{
-                          fontSize:9,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                          color:t.won?"#fcb900":hasTeams?"#ccc":"#333",fontWeight:t.won?700:400,
-                        }}>{hasTeams?(t.team?.split(' ').slice(-1)[0]||t.team):"TBD"}</span>
-                        {hasScore&&<span style={{fontSize:10,fontFamily:"monospace",color:t.won?"#fcb900":"#555",flexShrink:0}}>{t.won?t.team===m.home?m.homeScore:m.awayScore:t.team===m.home?m.homeScore:m.awayScore}</span>}
-                      </div>
-                    </div>
-                  ))}
+                <div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 5px",minHeight:20,
+                  background:won?"rgba(34,197,94,0.08)":"transparent"}}>
+                  {!flip&&hasName&&<span style={{fontSize:11,flexShrink:0,lineHeight:1}}>{FLAGS[name]||"🏳️"}</span>}
+                  {flip&&score!=null&&<span style={{fontSize:10,fontFamily:"monospace",color:won?"#22c55e":"#555",flexShrink:0,marginRight:2}}>{score}</span>}
+                  <span style={{fontSize:9,fontWeight:500,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                    color:won?"#22c55e":hasName?"var(--text-secondary, #888)":"#333",
+                    textAlign:flip?"right":"left",direction:flip?"rtl":"ltr"}}>
+                    {shortName}
+                  </span>
+                  {!flip&&score!=null&&<span style={{fontSize:10,fontFamily:"monospace",color:won?"#22c55e":"#555",flexShrink:0}}>{score}</span>}
+                  {flip&&hasName&&<span style={{fontSize:11,flexShrink:0,lineHeight:1}}>{FLAGS[name]||"🏳️"}</span>}
                 </div>
               );
             };
 
-            const Connector = ({n, flip=false}) => {
-              const h = n*52+((n-1)*4);
-              const pts = Array.from({length:n},(_,i)=>{
-                const y = (h/(n))*(i+0.5);
-                return y;
-              });
+            const Match = ({m, flip=false}) => {
+              if(!m) return null;
+              const hasTeams = m.home && m.home!=='TBD';
+              const hasScore = m.homeScore!=null && m.awayScore!=null;
+              const hWon = hasScore && m.homeScore>m.awayScore;
+              const aWon = hasScore && m.awayScore>m.homeScore;
               return(
-                <svg width="20" style={{height:h,flexShrink:0,alignSelf:"center"}} viewBox={`0 0 20 ${h}`} preserveAspectRatio="none">
-                  {pts.map((y,i)=>(
-                    <g key={i}>
-                      <line x1={flip?20:0} y1={y} x2="10" y2={y} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>
-                    </g>
-                  ))}
-                  {pts.length>=2&&<line x1="10" y1={pts[0]} x2="10" y2={pts[pts.length-1]} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>}
-                  <line x1="10" y1={h/2} x2={flip?0:20} y2={h/2} stroke="rgba(255,255,255,0.15)" strokeWidth="0.8"/>
+                <div style={{
+                  background:"rgba(255,255,255,0.03)",
+                  border:`0.5px solid ${hasTeams?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)"}`,
+                  borderRadius:5,overflow:"hidden",width:104,flexShrink:0,
+                }}>
+                  <Team name={m.home} score={hasScore?m.homeScore:null} won={hWon} flip={flip}/>
+                  <div style={{height:"0.5px",background:"rgba(255,255,255,0.06)"}}/>
+                  <Team name={m.away} score={hasScore?m.awayScore:null} won={aWon} flip={flip}/>
+                </div>
+              );
+            };
+
+            const Col = ({matches, label, flip=false, height=440}) => {
+              const n = matches.length;
+              const slotH = height/n;
+              return(
+                <div style={{display:"flex",flexDirection:"column",flexShrink:0,width:104}}>
+                  <div style={{fontSize:9,fontWeight:500,color:"#555",textAlign:"center",
+                    paddingBottom:6,letterSpacing:0.5,textTransform:"uppercase"}}>{label}</div>
+                  <div style={{display:"flex",flexDirection:"column",height,justifyContent:"space-around",gap:2}}>
+                    {matches.map((m,i)=><Match key={m.id||i} m={m} flip={flip}/>)}
+                  </div>
+                </div>
+              );
+            };
+
+            const Conn = ({n, flip=false, height=440}) => {
+              const rowH = height/n;
+              const lines = [];
+              for(let i=0;i<n;i++){
+                const y = rowH*i + rowH/2 + 16;
+                if(flip){
+                  lines.push(<line key={`h${i}`} x1="24" y1={y} x2="12" y2={y} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>);
+                  if(i%2===0&&i+1<n){
+                    const y2=rowH*(i+1)+rowH/2+16;
+                    const mid=(y+y2)/2;
+                    lines.push(<line key={`v${i}`} x1="12" y1={y} x2="12" y2={y2} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>);
+                    lines.push(<line key={`h2${i}`} x1="24" y1={y2} x2="12" y2={y2} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>);
+                    lines.push(<line key={`out${i}`} x1="0" y1={mid} x2="12" y2={mid} stroke="rgba(255,255,255,0.06)" strokeWidth="0.8"/>);
+                  }
+                } else {
+                  lines.push(<line key={`h${i}`} x1="0" y1={y} x2="12" y2={y} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>);
+                  if(i%2===0&&i+1<n){
+                    const y2=rowH*(i+1)+rowH/2+16;
+                    const mid=(y+y2)/2;
+                    lines.push(<line key={`v${i}`} x1="12" y1={y} x2="12" y2={y2} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>);
+                    lines.push(<line key={`h2${i}`} x1="12" y1={y2} x2="0" y2={y2} stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>);
+                    lines.push(<line key={`out${i}`} x1="12" y1={mid} x2="24" y2={mid} stroke="rgba(255,255,255,0.06)" strokeWidth="0.8"/>);
+                  }
+                }
+              }
+              return(
+                <svg style={{flexShrink:0,alignSelf:"stretch",marginTop:16}} width="24" height={height} viewBox={`0 0 24 ${height}`} preserveAspectRatio="none">
+                  {lines}
                 </svg>
               );
             };
 
-            const Col = ({matches, label, flip=false}) => (
-              <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:0,flexShrink:0}}>
-                <div style={{fontSize:9,color:"#555",fontWeight:600,marginBottom:6,letterSpacing:0.5,
-                  textAlign:"center",width:108}}>{label}</div>
-                <div style={{display:"flex",flexDirection:"column",justifyContent:"space-around",gap:4,
-                  flex:1,width:108}}>
-                  {matches.map((m,i)=><MatchCard key={m.id||i} m={m} flip={flip}/>)}
-                </div>
-              </div>
-            );
-
+            const H=456;
+            const midY=H/2;
             return(
               <div style={{marginBottom:20}}>
                 <div style={{fontSize:12,fontWeight:700,color:"#fcb900",marginBottom:10,
                   fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1}}>
                   🏆 Knockout Bracket
                 </div>
-                <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:4}}>
-                  <div style={{display:"flex",alignItems:"stretch",gap:0,minWidth:800,padding:"0 4px"}}>
-                    {/* Left side */}
-                    <Col matches={leftR32} label="R32"/>
-                    <Connector n={leftR32.length}/>
-                    <Col matches={leftR16} label="R16"/>
-                    <Connector n={leftR16.length||1}/>
-                    <Col matches={leftQF.length?leftQF:[{id:'lqf',round:'Quarter-Finals',home:'TBD',away:'TBD',homeScore:null,awayScore:null}]} label="QF"/>
-                    <Connector n={1}/>
-                    <Col matches={leftSF.length?leftSF:[{id:'lsf',round:'Semi-Finals',home:'TBD',away:'TBD',homeScore:null,awayScore:null}]} label="SF"/>
-
-                    {/* Final centre */}
-                    <div style={{display:"flex",alignItems:"center",flexShrink:0,padding:"0 8px",flexDirection:"column",justifyContent:"center"}}>
-                      <div style={{fontSize:9,color:"#60a5fa",fontWeight:600,marginBottom:6,letterSpacing:0.5}}>FINAL</div>
-                      {fin.length>0
-                        ? <MatchCard m={fin[0]}/>
-                        : <div style={{
-                            background:"rgba(96,165,250,0.06)",
-                            border:"1px solid rgba(96,165,250,0.2)",
-                            borderRadius:6,width:108,overflow:"hidden",
-                          }}>
-                            <div style={{padding:"4px 6px",minHeight:22,display:"flex",alignItems:"center"}}>
-                              <span style={{fontSize:9,color:"#333"}}>TBD</span>
-                            </div>
-                            <div style={{height:1,background:"rgba(96,165,250,0.2)"}}/>
-                            <div style={{padding:"4px 6px",minHeight:22,display:"flex",alignItems:"center"}}>
-                              <span style={{fontSize:9,color:"#333"}}>TBD</span>
-                            </div>
-                          </div>
-                      }
-                      <div style={{fontSize:8,color:"#444",marginTop:4}}>Jul 19 · NJ</div>
+                <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:0,minWidth:900,padding:"0 4px"}}>
+                    <Col matches={lR32} label="R32" height={H}/>
+                    <Conn n={8} flip={false} height={H}/>
+                    <Col matches={lR16} label="R16" height={H}/>
+                    <Conn n={4} flip={false} height={H}/>
+                    <Col matches={lQF} label="QF" height={H}/>
+                    <Conn n={2} flip={false} height={H}/>
+                    <Col matches={lSF} label="SF" height={H}/>
+                    <svg style={{flexShrink:0,marginTop:16}} width="24" height={H} viewBox={`0 0 24 ${H}`} preserveAspectRatio="none">
+                      <line x1="0" y1={midY} x2="24" y2={midY} stroke="rgba(96,165,250,0.3)" strokeWidth="0.8"/>
+                    </svg>
+                    {/* Final */}
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",flexShrink:0,
+                      width:104,paddingTop:0,justifyContent:"flex-start"}}>
+                      <div style={{fontSize:9,fontWeight:500,color:"#60a5fa",marginBottom:6,
+                        letterSpacing:0.5,textTransform:"uppercase",textAlign:"center"}}>Final</div>
+                      <div style={{height:midY-20,display:"flex",alignItems:"flex-end",paddingBottom:2}}>
+                        <Match m={finM}/>
+                      </div>
+                      <div style={{fontSize:8,color:"#555",marginTop:4}}>Jul 19 · NJ</div>
+                      <div style={{fontSize:18,marginTop:4}}>🏆</div>
                     </div>
-
-                    {/* Right side — mirrored */}
-                    <Col matches={rightSF.length?rightSF:[{id:'rsf',round:'Semi-Finals',home:'TBD',away:'TBD',homeScore:null,awayScore:null}]} label="SF"/>
-                    <Connector n={1} flip/>
-                    <Col matches={rightQF.length?rightQF:[{id:'rqf',round:'Quarter-Finals',home:'TBD',away:'TBD',homeScore:null,awayScore:null}]} label="QF"/>
-                    <Connector n={rightR16.length||1} flip/>
-                    <Col matches={rightR16} label="R16"/>
-                    <Connector n={rightR32.length} flip/>
-                    <Col matches={rightR32} label="R32"/>
+                    <svg style={{flexShrink:0,marginTop:16}} width="24" height={H} viewBox={`0 0 24 ${H}`} preserveAspectRatio="none">
+                      <line x1="0" y1={midY} x2="24" y2={midY} stroke="rgba(96,165,250,0.3)" strokeWidth="0.8"/>
+                    </svg>
+                    <Col matches={rSF} label="SF" flip={true} height={H}/>
+                    <Conn n={2} flip={true} height={H}/>
+                    <Col matches={rQF} label="QF" flip={true} height={H}/>
+                    <Conn n={4} flip={true} height={H}/>
+                    <Col matches={rR16} label="R16" flip={true} height={H}/>
+                    <Conn n={8} flip={true} height={H}/>
+                    <Col matches={rR32} label="R32" flip={true} height={H}/>
                   </div>
                 </div>
                 <div style={{fontSize:9,color:"#444",textAlign:"center",marginTop:4}}>← scroll →</div>
