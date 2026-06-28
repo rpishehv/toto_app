@@ -67,15 +67,12 @@ export function parseFeed(data, appMatches, appKO) {
     const home = normalise(f.teams?.home?.name || '')
     const away = normalise(f.teams?.away?.name || '')
     const status = f.fixture?.status?.short
-    // For scoring purposes always use 90-min score (fulltime), not AET/PEN result
-    // API-Football: f.score.fulltime = 90min, f.goals = current/final incl. ET
-    const goals = f.score?.fulltime?.home != null ? f.score.fulltime : f.goals
     const isFinished = FINISHED.includes(status)
     const isLive = ['1H','2H','HT','ET','BT','P'].includes(status)
-    // During live ET/pens still show live goals for display, but save fulltime for scoring
-    const scoringGoals = (isFinished && ['AET','PEN'].includes(status) && f.score?.fulltime?.home != null)
-      ? f.score.fulltime
-      : f.goals
+    // Group stage: use 90-min fulltime score
+    // KO stage: use full result including ET (f.goals), but only when fully finished (AET/PEN/FT)
+    const fulltimeGoals = f.score?.fulltime?.home != null ? f.score.fulltime : f.goals
+    const finalGoals = f.goals  // includes ET goals
 
     // Kickoff time
     if (f.fixture?.date) {
@@ -90,24 +87,24 @@ export function parseFeed(data, appMatches, appKO) {
       (m.home === away && m.away === home)
     )
 
-    if (appMatch && (isFinished || isLive) && scoringGoals?.home !== null && scoringGoals?.home !== undefined) {
+    if (appMatch && (isFinished || isLive) && fulltimeGoals?.home !== null && fulltimeGoals?.home !== undefined) {
       const flipped = appMatch.home === away
       results.groupScores[appMatch.id] = {
-        homeScore: flipped ? scoringGoals.away : scoringGoals.home,
-        awayScore: flipped ? scoringGoals.home : scoringGoals.away,
+        homeScore: flipped ? fulltimeGoals.away : fulltimeGoals.home,
+        awayScore: flipped ? fulltimeGoals.home : fulltimeGoals.away,
       }
     }
 
-    // KO match scoring — also use fulltime only
+    // KO match — use final score (incl. ET) but only when fully done
     const appKOMatch = appKO?.find(m =>
       (m.home === home && m.away === away) ||
       (m.home === away && m.away === home)
     )
-    if (appKOMatch && isFinished && scoringGoals?.home !== null && scoringGoals?.home !== undefined) {
+    if (appKOMatch && isFinished && finalGoals?.home !== null && finalGoals?.home !== undefined) {
       const flipped = appKOMatch.home === away
       results.koScores[appKOMatch.id] = {
-        homeScore: flipped ? scoringGoals.away : scoringGoals.home,
-        awayScore: flipped ? scoringGoals.home : scoringGoals.away,
+        homeScore: flipped ? finalGoals.away : finalGoals.home,
+        awayScore: flipped ? finalGoals.home : finalGoals.away,
       }
       results.koTeams[appKOMatch.id] = { home: appKOMatch.home, away: appKOMatch.away }
     }
