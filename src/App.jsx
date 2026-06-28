@@ -4574,12 +4574,19 @@ export default function App(){
           </div>
           {KO_ROUNDS.map(round=>{
             const rM=knockout.filter(m=>m.round===round)
+              .filter(m=>{
+                const act=actualKO.find(a=>a.id===m.id);
+                const liveHome=act?.home||"TBD";
+                // Hide TBD slots with no kickoff set — they're empty placeholders
+                return liveHome!=="TBD" || koKickoffs[m.id];
+              })
               .sort((a,b)=>{
                 const ka = koKickoffs[a.id] || 0;
                 const kb = koKickoffs[b.id] || 0;
                 return ka - kb;
               });
             const rA=actualKO.filter(m=>m.round===round);
+            if(!rM.length) return null;
             return(
               <div key={round} style={{marginBottom:24}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
