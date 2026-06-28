@@ -3047,13 +3047,16 @@ export default function App(){
     fetchLiveMatches(true); // include today on tab open
   },[tab]);
 
-  // Refresh allPlayerPreds when stats tab opens — ensures fresh data
+  // Refresh allPlayerPreds when stats tab opens — 5min TTL to balance freshness vs egress
+  const allPredsLastFetch = React.useRef(0);
   useEffect(()=>{
     if(tab!=="stats"||!groupCode) return;
-    if(Object.keys(allPlayerPreds).length>0) return; // already loaded
+    const now = Date.now();
+    if(Object.keys(allPlayerPreds).length>0 && now - allPredsLastFetch.current < 5*60*1000) return;
     invalidatePredsCache(groupCode);
     sbGetAllPredictions(groupCode).then(allPreds=>{
       if(!allPreds?.length) return;
+      allPredsLastFetch.current = Date.now();
       const predsMap={};
       allPreds.forEach(p=>{
         if(p?.username) predsMap[p.username]={username:p.username,matches:p.matches||[],knockout:p.knockout||[],podium:p.podium||null};
