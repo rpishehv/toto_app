@@ -4573,7 +4573,12 @@ export default function App(){
             <div style={{marginTop:4}}>↺ <strong style={{color:"#c0c0c0"}}>Reset to TBD</strong> clears all team names so the admin can repopulate cleanly.</div>
           </div>
           {KO_ROUNDS.map(round=>{
-            const rM=knockout.filter(m=>m.round===round);
+            const rM=knockout.filter(m=>m.round===round)
+              .sort((a,b)=>{
+                const ka = koKickoffs[a.id] || 0;
+                const kb = koKickoffs[b.id] || 0;
+                return ka - kb;
+              });
             const rA=actualKO.filter(m=>m.round===round);
             return(
               <div key={round} style={{marginBottom:24}}>
