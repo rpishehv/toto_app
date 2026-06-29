@@ -460,6 +460,7 @@ export async function computePredictionHash(username, matches, knockout, kickoff
   if (!lockedMatches.length) return null;
 
   const payload = `${username}|${lockedMatches.join('|')}`;
+  console.log('[Hash compute]', username, 'locked matches:', lockedMatches.length, 'payload preview:', payload.slice(0, 100));
   const encoder = new TextEncoder();
   const data = encoder.encode(payload);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -483,6 +484,8 @@ export async function verifyPredictionHash(username, matches, knockout, kickoffs
 
   const currentHash = await computePredictionHash(username, matches, knockout, kickoffs);
   if (!currentHash) return { status: 'no_locked_matches' };
+
+  console.log('[Hash verify]', username, 'stored:', data.prediction_hash, 'current:', currentHash, 'match:', currentHash === data.prediction_hash);
 
   if (currentHash === data.prediction_hash) {
     return { status: 'ok', lockedAt: data.hash_locked_at };
