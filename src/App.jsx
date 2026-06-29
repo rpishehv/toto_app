@@ -3489,6 +3489,7 @@ export default function App(){
     const hash = await computePredictionHash(userName, matches, knockout, {});
     if (hash) {
       await savePredictionHash(userName, hash, groupCode);
+      setHashStatus('ok'); // immediately clear mismatch after successful save
       console.log('[Hash] stored:', hash);
       // Request RFC 3161 timestamp certificate from freetsa.org
       try {
