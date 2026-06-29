@@ -1590,6 +1590,12 @@ export default function App(){
   const [matchQueryLoading,setMatchQueryLoading]=useState(false);
   const [openMatch,setOpenMatch]=useState(null);
   const [filterGroup,setFilterGroup]=useState('All');
+  const [showAllBest,setShowAllBest]=useState(false);
+  const [showAllWorst,setShowAllWorst]=useState(false);
+  const [showAllGD,setShowAllGD]=useState(false);
+  const [mcResults,setMcResults]=useState(null);
+  const [mcRunning,setMcRunning]=useState(false);
+  const [projRefresh,setProjRefresh]=useState(0);
   const [allPlayerPreds,setAllPlayerPreds]=useState({});
   const [simActive,setSimActive]=useState(false);
   const [simMinute,setSimMinute]=useState(0);
@@ -5490,14 +5496,15 @@ export default function App(){
           const myPts   = myResults.reduce((s,r)=>s+r.points,0);
           const accuracy = total>0 ? Math.round(((exact+gd+outcome)/total)*100) : 0;
 
-          // Best/worst matches
+          // Best/worst matches — full lists, collapsible in UI
           const matchDetails = allPlayed.map(actual=>{
             const pred = [...matches,...knockout].find(m=>m.id===actual.id);
             const result = pred ? calcMatchPoints(pred,actual) : null;
             return result ? { actual, pred, result } : null;
           }).filter(Boolean);
-          const best  = matchDetails.filter(m=>m.result.points===6).slice(0,3);
-          const worst = matchDetails.filter(m=>m.result.points===0).slice(0,3);
+          const best  = matchDetails.filter(m=>m.result.points===6);
+          const worst = matchDetails.filter(m=>m.result.points===0);
+          const gdHits = matchDetails.filter(m=>m.result.points===4);
 
           // ── Group analytics ─────────────────────────────────────────────
           // Per-match: how many players got it right
@@ -5585,11 +5592,18 @@ export default function App(){
                     )}
                   </div>
 
-                  {/* Best predictions */}
+                  {/* Best predictions — collapsible */}
                   {best.length>0&&(
                     <div style={{marginBottom:16}}>
-                      <div style={{fontSize:12,fontWeight:700,color:"#22c55e",marginBottom:8}}>⭐ Best Predictions</div>
-                      {best.map(({actual,pred},i)=>(
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                        <div style={{fontSize:12,fontWeight:700,color:"#22c55e"}}>⭐ Exact Scores ({best.length})</div>
+                        {best.length>3&&<button onClick={()=>setShowAllBest(p=>!p)} style={{
+                          fontSize:10,color:"#22c55e",background:"rgba(34,197,94,0.08)",
+                          border:"1px solid rgba(34,197,94,0.2)",borderRadius:5,
+                          padding:"2px 8px",cursor:"pointer",fontFamily:"inherit",
+                        }}>{showAllBest?`Show less ▲`:`Show all ${best.length} ▼`}</button>}
+                      </div>
+                      {(showAllBest?best:best.slice(0,3)).map(({actual,pred},i)=>(
                         <div key={i} style={{display:"flex",alignItems:"center",gap:8,
                           padding:"7px 10px",marginBottom:5,borderRadius:8,
                           background:"rgba(34,197,94,0.06)",border:"1px solid rgba(34,197,94,0.15)"}}>
@@ -5606,11 +5620,18 @@ export default function App(){
                     </div>
                   )}
 
-                  {/* Worst predictions */}
+                  {/* Worst predictions — collapsible */}
                   {worst.length>0&&(
                     <div style={{marginBottom:24}}>
-                      <div style={{fontSize:12,fontWeight:700,color:"#ef4444",marginBottom:8}}>❌ Missed Predictions</div>
-                      {worst.slice(0,3).map(({actual,pred},i)=>(
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                        <div style={{fontSize:12,fontWeight:700,color:"#ef4444"}}>❌ Missed Predictions ({worst.length})</div>
+                        {worst.length>3&&<button onClick={()=>setShowAllWorst(p=>!p)} style={{
+                          fontSize:10,color:"#ef4444",background:"rgba(239,68,68,0.06)",
+                          border:"1px solid rgba(239,68,68,0.2)",borderRadius:5,
+                          padding:"2px 8px",cursor:"pointer",fontFamily:"inherit",
+                        }}>{showAllWorst?`Show less ▲`:`Show all ${worst.length} ▼`}</button>}
+                      </div>
+                      {(showAllWorst?worst:worst.slice(0,3)).map(({actual,pred},i)=>(
                         <div key={i} style={{display:"flex",alignItems:"center",gap:8,
                           padding:"7px 10px",marginBottom:5,borderRadius:8,
                           background:"rgba(239,68,68,0.04)",border:"1px solid rgba(239,68,68,0.12)"}}>
@@ -6045,71 +6066,136 @@ export default function App(){
                 );
               })()}
 
-              {/* ── Projected Final Standings ── */}
+              {/* ── Projected Final Standings + Monte Carlo ── */}
               {(()=>{
                 const remainingKO = actualKO.filter(m=>m.homeScore===null&&m.home!=="TBD"&&m.away!=="TBD");
                 if(!remainingKO.length&&!actualKO.some(m=>m.home!=="TBD")) return null;
 
-                // Build AI match result lookup from R32_AI_PREDICTIONS
+                // AI prediction lookup
                 const aiResultFor = (home, away) => {
-                  const key = `${home}||${away}`;
-                  const keyR = `${away}||${home}`;
-                  const pred = R32_AI_PREDICTIONS[key] || R32_AI_PREDICTIONS[keyR];
+                  const key=`${home}||${away}`, keyR=`${away}||${home}`;
+                  const pred=R32_AI_PREDICTIONS[key]||R32_AI_PREDICTIONS[keyR];
                   if(!pred) return null;
-                  const flipped = !!R32_AI_PREDICTIONS[keyR]&&!R32_AI_PREDICTIONS[key];
-                  return {
-                    homeScore: flipped?pred.a:pred.h,
-                    awayScore: flipped?pred.h:pred.a,
-                  };
+                  const flipped=!!R32_AI_PREDICTIONS[keyR]&&!R32_AI_PREDICTIONS[key];
+                  return {homeScore:flipped?pred.a:pred.h, awayScore:flipped?pred.h:pred.a,
+                    confidence:pred.confidence||'Medium'};
                 };
 
-                // For each remaining KO match, get AI prediction
-                const aiPredictions = remainingKO.map(m => ({
-                  ...m,
-                  ...aiResultFor(m.home, m.away),
-                }));
+                const aiPredictions = remainingKO.map(m=>({...m,...(aiResultFor(m.home,m.away)||{})}));
 
-                // Calculate projected bonus points per player
-                const projectedLB = leaderboard.map(e => {
-                  const isMe = e.username === userName;
-                  const playerKO = isMe ? knockout : (allPlayerPreds[e.username]?.knockout||[]);
-                  let projectedBonus = 0;
-                  aiPredictions.forEach(aiM => {
+                // Confidence → variance mapping
+                const confToSigma = c => ({'Very High':0.5,'High':0.8,'Medium':1.2,'Low':1.8,'Very Low':2.2}[c]||1.2);
+
+                // Single deterministic projection
+                const buildProjected = (playerKOMap) => leaderboard.map(e=>{
+                  const playerKO = playerKOMap[e.username]||[];
+                  let bonus=0;
+                  aiPredictions.forEach(aiM=>{
                     if(aiM.homeScore==null) return;
-                    const playerPred = playerKO.find(p=>p.id===aiM.id);
-                    if(!playerPred||playerPred.homeScore==null) return;
-                    const result = calcMatchPoints(playerPred, aiM);
-                    projectedBonus += result?.points||0;
+                    const p=playerKO.find(m=>m.id===aiM.id);
+                    if(!p||p.homeScore==null) return;
+                    bonus+=(calcMatchPoints(p,aiM)?.points||0);
                   });
-                  return {
-                    username: e.username,
-                    current: e.points||0,
-                    bonus: projectedBonus,
-                    projected: (e.points||0) + projectedBonus,
-                  };
+                  return {...e, bonus, projected:(e.points||0)+bonus};
                 }).sort((a,b)=>b.projected-a.projected);
 
+                // Build player KO map
+                const playerKOMap={};
+                leaderboard.forEach(e=>{
+                  const isMe=e.username===userName;
+                  playerKOMap[e.username]=isMe?knockout:(allPlayerPreds[e.username]?.knockout||[]);
+                });
+
+                const projectedLB = buildProjected(playerKOMap);
                 if(!projectedLB.length) return null;
                 const maxProj = projectedLB[0].projected;
 
+                // Monte Carlo simulation
+                const runMonteCarlo = () => {
+                  setMcRunning(true);
+                  setTimeout(()=>{
+                    const N_SIMS = 2000;
+                    // win counts per player
+                    const winCounts={};
+                    const rankSums={};
+                    const ptsSums={};
+                    leaderboard.forEach(e=>{ winCounts[e.username]=0; rankSums[e.username]=0; ptsSums[e.username]=0; });
+
+                    for(let sim=0;sim<N_SIMS;sim++){
+                      // For each remaining match, sample a random scoreline
+                      const simMatches = aiPredictions.map(aiM=>{
+                        if(aiM.homeScore==null) return aiM;
+                        const sigma=confToSigma(aiM.confidence);
+                        // Sample score: Poisson-like around AI prediction with noise
+                        const noise = ()=>Math.round((Math.random()+Math.random()-1)*sigma);
+                        const sh=Math.max(0,aiM.homeScore+noise());
+                        const sa=Math.max(0,aiM.awayScore+noise());
+                        return {...aiM, homeScore:sh, awayScore:sa};
+                      });
+
+                      // Score each player
+                      const simLB=leaderboard.map(e=>{
+                        const playerKO=playerKOMap[e.username]||[];
+                        let bonus=0;
+                        simMatches.forEach(simM=>{
+                          if(simM.homeScore==null) return;
+                          const p=playerKO.find(m=>m.id===simM.id);
+                          if(!p||p.homeScore==null) return;
+                          bonus+=(calcMatchPoints(p,simM)?.points||0);
+                        });
+                        return {...e, simPts:(e.points||0)+bonus};
+                      }).sort((a,b)=>b.simPts-a.simPts);
+
+                      simLB.forEach((e,rank)=>{
+                        if(rank===0) winCounts[e.username]=(winCounts[e.username]||0)+1;
+                        rankSums[e.username]=(rankSums[e.username]||0)+(rank+1);
+                        ptsSums[e.username]=(ptsSums[e.username]||0)+e.simPts;
+                      });
+                    }
+
+                    const mcLB=leaderboard.map(e=>({
+                      username:e.username,
+                      current:e.points||0,
+                      winPct:Math.round((winCounts[e.username]||0)/N_SIMS*100),
+                      avgRank:((rankSums[e.username]||0)/N_SIMS).toFixed(1),
+                      avgPts:Math.round((ptsSums[e.username]||0)/N_SIMS),
+                    })).sort((a,b)=>b.winPct-a.winPct||a.avgRank-b.avgRank);
+
+                    setMcResults({lb:mcLB, sims:N_SIMS, matches:aiPredictions.length});
+                    setMcRunning(false);
+                  }, 50); // yield to UI first
+                };
+
                 return(
                   <div style={{marginBottom:20}}>
+                    {/* Deterministic projection */}
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                       <div style={{fontSize:12,fontWeight:700,color:"#a78bfa",
                         fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1}}>
                         🤖 AI-Projected Final Standings
                       </div>
-                      <div style={{fontSize:9,color:"#555",maxWidth:120,textAlign:"right",lineHeight:1.3}}>
-                        Based on AI predictions for remaining KO matches
+                      <div style={{display:"flex",gap:6}}>
+                        <button onClick={()=>setProjRefresh(p=>p+1)} style={{
+                          fontSize:10,color:"#a78bfa",background:"rgba(139,92,246,0.08)",
+                          border:"1px solid rgba(139,92,246,0.2)",borderRadius:5,
+                          padding:"3px 8px",cursor:"pointer",fontFamily:"inherit",
+                        }}>🔄</button>
+                        <button onClick={runMonteCarlo} disabled={mcRunning} style={{
+                          fontSize:10,color:mcRunning?"#555":"#fcb900",
+                          background:mcRunning?"rgba(255,255,255,0.02)":"rgba(252,185,0,0.08)",
+                          border:`1px solid ${mcRunning?"rgba(255,255,255,0.06)":"rgba(252,185,0,0.2)"}`,
+                          borderRadius:5,padding:"3px 8px",cursor:mcRunning?"wait":"pointer",fontFamily:"inherit",
+                        }}>{mcRunning?"⏳ Simulating…":"🎲 Monte Carlo"}</button>
                       </div>
                     </div>
+
                     {projectedLB.map((e,i)=>{
-                      const isMe = e.username===userName;
-                      const barW = maxProj>0?Math.round((e.projected/maxProj)*100):0;
-                      const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`;
+                      const isMe=e.username===userName;
+                      const barW=maxProj>0?Math.round((e.projected/maxProj)*100):0;
+                      const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`;
                       return(
                         <div key={e.username} style={{
-                          marginBottom:5,padding:"7px 10px",borderRadius:8,
+                          marginBottom:4,padding:"6px 10px",borderRadius:8,
                           background:isMe?"rgba(139,92,246,0.08)":"rgba(255,255,255,0.02)",
                           border:`1px solid ${isMe?"rgba(139,92,246,0.25)":"rgba(255,255,255,0.05)"}`,
                         }}>
@@ -6121,20 +6207,70 @@ export default function App(){
                             </span>
                             <div style={{textAlign:"right",flexShrink:0}}>
                               <span style={{fontSize:12,fontWeight:700,color:isMe?"#a78bfa":"#fcb900"}}>{e.projected}</span>
-                              <span style={{fontSize:9,color:"#555",marginLeft:4}}>pts</span>
-                              {e.bonus>0&&<span style={{fontSize:9,color:"#22c55e",marginLeft:4}}>+{e.bonus} proj</span>}
+                              <span style={{fontSize:9,color:"#555",marginLeft:3}}>pts</span>
+                              {e.bonus>0&&<span style={{fontSize:9,color:"#22c55e",marginLeft:4}}>+{e.bonus}</span>}
                             </div>
                           </div>
                           <div style={{height:3,borderRadius:2,background:"rgba(255,255,255,0.05)",overflow:"hidden"}}>
                             <div style={{width:`${barW}%`,height:"100%",borderRadius:2,
-                              background:isMe?"rgba(139,92,246,0.6)":"rgba(252,185,0,0.4)",
-                              transition:"width 0.5s ease"}}/>
+                              background:isMe?"rgba(139,92,246,0.6)":"rgba(252,185,0,0.35)"}}/>
                           </div>
                         </div>
                       );
                     })}
-                    <div style={{fontSize:9,color:"#444",marginTop:6,textAlign:"center"}}>
-                      Projected bonus from {aiPredictions.length} remaining KO matches · AI predictions only
+
+                    {/* Monte Carlo results */}
+                    {mcResults&&(
+                      <div style={{marginTop:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"#fcb900",marginBottom:8,
+                          fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1}}>
+                          🎲 Monte Carlo ({mcResults.sims.toLocaleString()} simulations)
+                        </div>
+                        <div style={{display:"flex",gap:4,fontSize:9,color:"#555",marginBottom:8,flexWrap:"wrap"}}>
+                          <span style={{background:"rgba(255,255,255,0.04)",borderRadius:4,padding:"2px 6px"}}>Win% = probability of finishing 1st</span>
+                          <span style={{background:"rgba(255,255,255,0.04)",borderRadius:4,padding:"2px 6px"}}>Avg rank across all simulations</span>
+                        </div>
+                        {mcResults.lb.map((e,i)=>{
+                          const isMe=e.username===userName;
+                          const barW=Math.max(2,e.winPct);
+                          return(
+                            <div key={e.username} style={{
+                              marginBottom:4,padding:"6px 10px",borderRadius:8,
+                              background:isMe?"rgba(252,185,0,0.06)":"rgba(255,255,255,0.02)",
+                              border:`1px solid ${isMe?"rgba(252,185,0,0.2)":"rgba(255,255,255,0.05)"}`,
+                            }}>
+                              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
+                                <span style={{fontSize:11,minWidth:22}}>#{i+1}</span>
+                                <span style={{fontSize:11,flex:1,fontWeight:isMe?700:500,
+                                  color:isMe?"#fcb900":"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                  {e.username}
+                                </span>
+                                <div style={{display:"flex",gap:8,flexShrink:0,alignItems:"center"}}>
+                                  <span style={{fontSize:12,fontWeight:700,
+                                    color:e.winPct>=20?"#22c55e":e.winPct>=10?"#fcb900":"#555"}}>
+                                    {e.winPct}%
+                                  </span>
+                                  <span style={{fontSize:9,color:"#555"}}>avg #{e.avgRank}</span>
+                                  <span style={{fontSize:9,color:"#888"}}>{e.avgPts}pts</span>
+                                </div>
+                              </div>
+                              <div style={{height:3,borderRadius:2,background:"rgba(255,255,255,0.05)",overflow:"hidden"}}>
+                                <div style={{width:`${barW}%`,height:"100%",borderRadius:2,
+                                  background:e.winPct>=20?"rgba(34,197,94,0.5)":e.winPct>=10?"rgba(252,185,0,0.4)":"rgba(255,255,255,0.1)"}}/>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div style={{marginTop:10,padding:"8px 10px",borderRadius:8,
+                      background:"rgba(139,92,246,0.05)",border:"1px solid rgba(139,92,246,0.1)"}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"#a78bfa",marginBottom:4}}>How is this calculated?</div>
+                      <div style={{fontSize:10,color:"#555",lineHeight:1.5}}>
+                        <strong style={{color:"#888"}}>Projection:</strong> Scores your KO predictions against AI's predicted results using the standard 6/4/2/0 point rules. Current pts + projected bonus = projected total.
+                        {mcResults&&<><br/><strong style={{color:"#888"}}>Monte Carlo:</strong> Runs {mcResults.sims.toLocaleString()} simulations. Each sim randomly varies the AI's predicted scores (noise proportional to confidence level — High confidence = small variance). Win% = how often you finish 1st across all simulations.</>}
+                      </div>
                     </div>
                   </div>
                 );
