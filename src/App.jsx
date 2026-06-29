@@ -6197,7 +6197,7 @@ export default function App(){
                             });
                             console.log('[Refresh] setting allPlayerPreds keys:', Object.keys(predsMap).length);
                             setAllPlayerPreds({...predsMap});
-                            setProjRefresh(p=>p+1);
+                            setProjRefresh(Date.now());
                           });
                           setMcResults(null);
                         }} style={{
@@ -6205,6 +6205,9 @@ export default function App(){
                           border:"1px solid rgba(139,92,246,0.2)",borderRadius:5,
                           padding:"3px 8px",cursor:"pointer",fontFamily:"inherit",
                         }}>🔄 Refresh</button>
+                        {projRefresh>1&&<span style={{fontSize:9,color:"#555",alignSelf:"center"}}>
+                          ✓ {new Date(projRefresh).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+                        </span>}
                         <button onClick={runMonteCarlo} disabled={mcRunning} style={{
                           fontSize:10,color:mcRunning?"#555":"#fcb900",
                           background:mcRunning?"rgba(255,255,255,0.02)":"rgba(252,185,0,0.08)",
