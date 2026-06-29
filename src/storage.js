@@ -465,7 +465,8 @@ export async function computePredictionHash(username, matches, knockout, kickoff
   const data = encoder.encode(payload);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('').slice(0,16); // 16 char prefix
+  const fullHash = hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+  return fullHash; // full 64-char hex SHA-256
 }
 
 export async function savePredictionHash(username, hash, groupCode='default') {

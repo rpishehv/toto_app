@@ -540,7 +540,7 @@ function IntegrityRow({r, allPlayerPreds, groupCode, getTimestampToken}) {
             📜 {new Date(playerCert.timestamp_token_at||playerCert.hash_locked_at||Date.now()).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})}
           </div>
           <div style={{fontSize:9,fontFamily:"monospace",color:"#a78bfa",wordBreak:"break-all",marginBottom:6}}>
-            {playerCert.prediction_hash}
+            {playerCert.prediction_hash?.slice(0,32)}…
           </div>
           {playerCert.timestamp_token&&(
             <button onClick={()=>{
@@ -6244,7 +6244,7 @@ export default function App(){
                         <div style={{fontSize:9,color:"#555",marginBottom:2}}>Prediction fingerprint</div>
                         <div style={{fontSize:10,fontFamily:"monospace",color:"#a78bfa",
                           wordBreak:"break-all",background:"rgba(139,92,246,0.06)",
-                          padding:"4px 6px",borderRadius:4}}>{certificate.hash}</div>
+                          padding:"4px 6px",borderRadius:4}}>{certificate.hash?.slice(0,32)}…</div>
                       </div>
                       <div style={{marginBottom:10}}>
                         <div style={{fontSize:9,color:"#555",marginBottom:2}}>Timestamp token (Base64)</div>
