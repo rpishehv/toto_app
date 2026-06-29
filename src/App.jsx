@@ -1667,6 +1667,9 @@ export default function App(){
   const [groupAnalytics,setGroupAnalytics]=useState(null);
   const [analyticsGeneratedBy,setAnalyticsGeneratedBy]=useState(null);
   const [analyticsGeneratedAt,setAnalyticsGeneratedAt]=useState(null);
+  const [projection,setProjection]=useState(null);
+  const [projectionGeneratedBy,setProjectionGeneratedBy]=useState(null);
+  const [projectionGeneratedAt,setProjectionGeneratedAt]=useState(null);
   const [analyticsLoading,setAnalyticsLoading]=useState(false);
   const [analyticsError,setAnalyticsError]=useState(null);
   // News
@@ -1814,6 +1817,7 @@ export default function App(){
         // Load analytics
         const analyticsData = await sbGetAnalytics(gc);
         if(analyticsData?.analytics){ setGroupAnalytics(analyticsData.analytics); setAnalyticsGeneratedBy(analyticsData.analytics_generated_by); setAnalyticsGeneratedAt(analyticsData.analytics_generated_at); }
+        if(analyticsData?.projection){ setProjection(analyticsData.projection); setProjectionGeneratedBy(analyticsData.projection_generated_by); setProjectionGeneratedAt(analyticsData.projection_generated_at); }
         // Load rank history
         if(session?.username) {
           const rh = await sbGetRankHistory(session.username, gc);
@@ -1865,6 +1869,7 @@ export default function App(){
         if(d.commentary) { setCommentary(d.commentary); setCommentaryGeneratedBy(d.commentary_generated_by); setCommentaryGeneratedAt(d.commentary_generated_at||null); }
         if(d.news?.length){ setNewsStories(d.news);      setNewsUpdatedBy(d.news_updated_by); setNewsUpdatedAt(d.news_updated_at); }
         if(d.analytics)  { setGroupAnalytics(d.analytics); setAnalyticsGeneratedBy(d.analytics_generated_by); setAnalyticsGeneratedAt(d.analytics_generated_at); }
+        if(d.projection) { setProjection(d.projection); setProjectionGeneratedBy(d.projection_generated_by); setProjectionGeneratedAt(d.projection_generated_at); }
       })
       .subscribe();
 
@@ -6070,8 +6075,14 @@ export default function App(){
               {(()=>{
                 const remainingKO = actualKO.filter(m=>m.homeScore===null&&m.home!=="TBD"&&m.away!=="TBD");
                 const hasAnyKO = actualKO.some(m=>m.home!=="TBD");
-                void projRefresh; // triggers re-render when refresh is clicked
-                if(!hasAnyKO) return null; // no KO teams yet at all
+                void projRefresh;
+                if(!hasAnyKO) return null;
+
+                // Cooldown check — 6 hours
+                const COOLDOWN_MS = 6*60*60*1000;
+                const lastGen = projectionGeneratedAt ? new Date(projectionGeneratedAt).getTime() : 0;
+                const onCooldown = lastGen && (Date.now()-lastGen) < COOLDOWN_MS;
+                const hoursLeft = onCooldown ? Math.ceil((COOLDOWN_MS-(Date.now()-lastGen))/3600000) : 0;
 
                 // AI prediction lookup
                 const aiResultFor = (home, away) => {
@@ -6083,29 +6094,10 @@ export default function App(){
                     confidence:pred.confidence||'Medium'};
                 };
 
-                // Use remaining matches, OR if all played, use all KO for future round projection
-                const koForProjection = remainingKO.length > 0
-                  ? remainingKO
+                const koForProjection = remainingKO.length>0 ? remainingKO
                   : actualKO.filter(m=>m.home!=="TBD"&&m.homeScore===null);
-
                 const aiPredictions = koForProjection.map(m=>({...m,...(aiResultFor(m.home,m.away)||{})}))
-                  .filter(m=>m.homeScore!=null); // only keep ones AI can predict
-
-                // Confidence → variance mapping
-                const confToSigma = c => ({'Very High':0.5,'High':0.8,'Medium':1.2,'Low':1.8,'Very Low':2.2}[c]||1.2);
-
-                // Single deterministic projection
-                const buildProjected = (playerKOMap) => leaderboard.map(e=>{
-                  const playerKO = playerKOMap[e.username]||[];
-                  let bonus=0;
-                  aiPredictions.forEach(aiM=>{
-                    if(aiM.homeScore==null) return;
-                    const p=playerKO.find(m=>m.id===aiM.id);
-                    if(!p||p.homeScore==null) return;
-                    bonus+=(calcMatchPoints(p,aiM)?.points||0);
-                  });
-                  return {...e, bonus, projected:(e.points||0)+bonus};
-                }).sort((a,b)=>b.projected-a.projected);
+                  .filter(m=>m.homeScore!=null);
 
                 // Build player KO map
                 const playerKOMap={};
@@ -6114,153 +6106,152 @@ export default function App(){
                   playerKOMap[e.username]=isMe?knockout:(allPlayerPreds[e.username]?.knockout||[]);
                 });
 
-                const projectedLB = buildProjected(playerKOMap);
-                if(!projectedLB.length) return null;
-                const maxProj = projectedLB[0].projected;
+                // Confidence → variance
+                const confToSigma = c=>({'Very High':0.5,'High':0.8,'Medium':1.2,'Low':1.8,'Very Low':2.2}[c]||1.2);
 
-                // Monte Carlo simulation
-                const runMonteCarlo = () => {
+                // Run and save projection
+                const runProjection = async() => {
+                  if(onCooldown) return;
                   setMcRunning(true);
-                  setTimeout(()=>{
-                    const N_SIMS = 2000;
-                    // win counts per player
-                    const winCounts={};
-                    const rankSums={};
-                    const ptsSums={};
-                    leaderboard.forEach(e=>{ winCounts[e.username]=0; rankSums[e.username]=0; ptsSums[e.username]=0; });
 
-                    for(let sim=0;sim<N_SIMS;sim++){
-                      // For each remaining match, sample a random scoreline
-                      const simMatches = aiPredictions.map(aiM=>{
-                        if(aiM.homeScore==null) return aiM;
-                        const sigma=confToSigma(aiM.confidence);
-                        // Sample score: Poisson-like around AI prediction with noise
-                        const noise = ()=>Math.round((Math.random()+Math.random()-1)*sigma);
-                        const sh=Math.max(0,aiM.homeScore+noise());
-                        const sa=Math.max(0,aiM.awayScore+noise());
-                        return {...aiM, homeScore:sh, awayScore:sa};
+                  // Deterministic projection
+                  const projLB = leaderboard.map(e=>{
+                    const playerKO=playerKOMap[e.username]||[];
+                    let bonus=0;
+                    aiPredictions.forEach(aiM=>{
+                      if(aiM.homeScore==null) return;
+                      const p=playerKO.find(m=>m.id===aiM.id);
+                      if(!p||p.homeScore==null) return;
+                      bonus+=(calcMatchPoints(p,aiM)?.points||0);
+                    });
+                    return {...e, bonus, projected:(e.points||0)+bonus};
+                  }).sort((a,b)=>b.projected-a.projected);
+
+                  // Monte Carlo — 2000 sims
+                  const N_SIMS=2000;
+                  const winCounts={}, rankSums={}, ptsSums={};
+                  leaderboard.forEach(e=>{ winCounts[e.username]=0; rankSums[e.username]=0; ptsSums[e.username]=0; });
+
+                  await new Promise(resolve=>setTimeout(resolve,10)); // yield to UI
+                  for(let s=0;s<N_SIMS;s++){
+                    const simMatches=aiPredictions.map(aiM=>{
+                      if(aiM.homeScore==null) return aiM;
+                      const sigma=confToSigma(aiM.confidence);
+                      const noise=()=>Math.round((Math.random()+Math.random()-1)*sigma);
+                      return {...aiM,homeScore:Math.max(0,aiM.homeScore+noise()),awayScore:Math.max(0,aiM.awayScore+noise())};
+                    });
+                    const simLB=leaderboard.map(e=>{
+                      const playerKO=playerKOMap[e.username]||[];
+                      let bonus=0;
+                      simMatches.forEach(simM=>{
+                        const p=playerKO.find(m=>m.id===simM.id);
+                        if(!p||p.homeScore==null) return;
+                        bonus+=(calcMatchPoints(p,simM)?.points||0);
                       });
+                      return {...e,simPts:(e.points||0)+bonus};
+                    }).sort((a,b)=>b.simPts-a.simPts);
+                    simLB.forEach((e,rank)=>{
+                      if(rank===0) winCounts[e.username]++;
+                      rankSums[e.username]+=(rank+1);
+                      ptsSums[e.username]+=e.simPts;
+                    });
+                  }
 
-                      // Score each player
-                      const simLB=leaderboard.map(e=>{
-                        const playerKO=playerKOMap[e.username]||[];
-                        let bonus=0;
-                        simMatches.forEach(simM=>{
-                          if(simM.homeScore==null) return;
-                          const p=playerKO.find(m=>m.id===simM.id);
-                          if(!p||p.homeScore==null) return;
-                          bonus+=(calcMatchPoints(p,simM)?.points||0);
-                        });
-                        return {...e, simPts:(e.points||0)+bonus};
-                      }).sort((a,b)=>b.simPts-a.simPts);
+                  const mcLB=leaderboard.map(e=>({
+                    username:e.username,
+                    current:e.points||0,
+                    winPct:Math.round((winCounts[e.username]||0)/N_SIMS*100),
+                    avgRank:Number(((rankSums[e.username]||0)/N_SIMS).toFixed(1)),
+                    avgPts:Math.round((ptsSums[e.username]||0)/N_SIMS),
+                  })).sort((a,b)=>b.winPct-a.winPct||a.avgRank-b.avgRank);
 
-                      simLB.forEach((e,rank)=>{
-                        if(rank===0) winCounts[e.username]=(winCounts[e.username]||0)+1;
-                        rankSums[e.username]=(rankSums[e.username]||0)+(rank+1);
-                        ptsSums[e.username]=(ptsSums[e.username]||0)+e.simPts;
-                      });
-                    }
+                  const projData = { deterministic:projLB, monteCarlo:mcLB, sims:N_SIMS, matches:aiPredictions.length };
 
-                    const mcLB=leaderboard.map(e=>({
-                      username:e.username,
-                      current:e.points||0,
-                      winPct:Math.round((winCounts[e.username]||0)/N_SIMS*100),
-                      avgRank:((rankSums[e.username]||0)/N_SIMS).toFixed(1),
-                      avgPts:Math.round((ptsSums[e.username]||0)/N_SIMS),
-                    })).sort((a,b)=>b.winPct-a.winPct||a.avgRank-b.avgRank);
+                  // Persist to Supabase
+                  await sbMergeAIContent({
+                    projection: projData,
+                    projection_generated_by: userName,
+                    projection_generated_at: new Date().toISOString(),
+                  }, groupCode);
 
-                    setMcResults({lb:mcLB, sims:N_SIMS, matches:aiPredictions.length});
-                    setMcRunning(false);
-                  }, 50); // yield to UI first
+                  setProjection(projData);
+                  setProjectionGeneratedBy(userName);
+                  setProjectionGeneratedAt(new Date().toISOString());
+                  setMcResults(mcLB);
+                  setMcRunning(false);
                 };
+
+                const projLB = projection?.deterministic || [];
+                const mcLB = projection?.monteCarlo || mcResults;
+                const maxProj = projLB.length>0?projLB[0].projected:0;
 
                 return(
                   <div style={{marginBottom:20}}>
-                    {/* Deterministic projection */}
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                       <div style={{fontSize:12,fontWeight:700,color:"#a78bfa",
                         fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1}}>
-                        🤖 AI-Projected Final Standings
+                        🤖 AI Projected Standings
                       </div>
-                      <div style={{display:"flex",gap:6}}>
-                        <button onClick={()=>{
-                          console.log('[Refresh] invalidating cache and re-fetching...');
-                          invalidatePredsCache(groupCode);
-                          allPredsLastFetch.current=0;
-                          sbGetAllPredictions(groupCode).then(allPreds=>{
-                            console.log('[Refresh] got', allPreds?.length, 'predictions');
-                            if(!allPreds?.length) return;
-                            allPredsLastFetch.current=Date.now();
-                            const predsMap={};
-                            allPreds.forEach(p=>{
-                              if(p?.username) predsMap[p.username]={username:p.username,matches:p.matches||[],knockout:p.knockout||[],podium:p.podium||null};
-                            });
-                            console.log('[Refresh] setting allPlayerPreds keys:', Object.keys(predsMap).length);
-                            setAllPlayerPreds({...predsMap});
-                            setProjRefresh(Date.now());
-                          });
-                          setMcResults(null);
-                        }} style={{
-                          fontSize:10,color:"#a78bfa",background:"rgba(139,92,246,0.08)",
-                          border:"1px solid rgba(139,92,246,0.2)",borderRadius:5,
-                          padding:"3px 8px",cursor:"pointer",fontFamily:"inherit",
-                        }}>🔄 Refresh</button>
-                        {projRefresh>1&&<span style={{fontSize:9,color:"#555",alignSelf:"center"}}>
-                          ✓ {new Date(projRefresh).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        {projectionGeneratedAt&&<span style={{fontSize:9,color:"#555"}}>
+                          {onCooldown?`⏱ ${hoursLeft}h cooldown`:`Updated ${new Date(projectionGeneratedAt).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}`}
                         </span>}
-                        <button onClick={runMonteCarlo} disabled={mcRunning} style={{
-                          fontSize:10,color:mcRunning?"#555":"#fcb900",
-                          background:mcRunning?"rgba(255,255,255,0.02)":"rgba(252,185,0,0.08)",
-                          border:`1px solid ${mcRunning?"rgba(255,255,255,0.06)":"rgba(252,185,0,0.2)"}`,
-                          borderRadius:5,padding:"3px 8px",cursor:mcRunning?"wait":"pointer",fontFamily:"inherit",
-                        }}>{mcRunning?"⏳ Simulating…":"🎲 Monte Carlo"}</button>
+                        <button onClick={runProjection} disabled={mcRunning||onCooldown} style={{
+                          fontSize:10,
+                          color:mcRunning||onCooldown?"#444":"#a78bfa",
+                          background:mcRunning||onCooldown?"rgba(255,255,255,0.02)":"rgba(139,92,246,0.08)",
+                          border:`1px solid ${mcRunning||onCooldown?"rgba(255,255,255,0.06)":"rgba(139,92,246,0.2)"}`,
+                          borderRadius:5,padding:"3px 10px",cursor:mcRunning||onCooldown?"not-allowed":"pointer",fontFamily:"inherit",
+                        }}>{mcRunning?"⏳ Running…":onCooldown?`⏱ ${hoursLeft}h`:"🎲 Generate"}</button>
                       </div>
                     </div>
 
-                    {projectedLB.map((e,i)=>{
-                      const isMe=e.username===userName;
-                      const barW=maxProj>0?Math.round((e.projected/maxProj)*100):0;
-                      const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`;
-                      return(
-                        <div key={e.username} style={{
-                          marginBottom:4,padding:"6px 10px",borderRadius:8,
-                          background:isMe?"rgba(139,92,246,0.08)":"rgba(255,255,255,0.02)",
-                          border:`1px solid ${isMe?"rgba(139,92,246,0.25)":"rgba(255,255,255,0.05)"}`,
-                        }}>
-                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
-                            <span style={{fontSize:11,minWidth:22}}>{medal}</span>
-                            <span style={{fontSize:11,flex:1,fontWeight:isMe?700:500,
-                              color:isMe?"#a78bfa":"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                              {e.username}
-                            </span>
-                            <div style={{textAlign:"right",flexShrink:0}}>
-                              <span style={{fontSize:12,fontWeight:700,color:isMe?"#a78bfa":"#fcb900"}}>{e.projected}</span>
-                              <span style={{fontSize:9,color:"#555",marginLeft:3}}>pts</span>
-                              {e.bonus>0&&<span style={{fontSize:9,color:"#22c55e",marginLeft:4}}>+{e.bonus}</span>}
-                            </div>
-                          </div>
-                          <div style={{height:3,borderRadius:2,background:"rgba(255,255,255,0.05)",overflow:"hidden"}}>
-                            <div style={{width:`${barW}%`,height:"100%",borderRadius:2,
-                              background:isMe?"rgba(139,92,246,0.6)":"rgba(252,185,0,0.35)"}}/>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {!projLB.length&&<div style={{fontSize:11,color:"#555",textAlign:"center",padding:"20px 0"}}>
+                      Tap 🎲 Generate to compute AI projected standings and Monte Carlo win probabilities
+                    </div>}
 
-                    {/* Monte Carlo results */}
-                    {mcResults&&(
-                      <div style={{marginTop:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"#fcb900",marginBottom:8,
-                          fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1}}>
-                          🎲 Monte Carlo ({mcResults.sims.toLocaleString()} simulations)
-                        </div>
-                        <div style={{display:"flex",gap:4,fontSize:9,color:"#555",marginBottom:8,flexWrap:"wrap"}}>
-                          <span style={{background:"rgba(255,255,255,0.04)",borderRadius:4,padding:"2px 6px"}}>Win% = probability of finishing 1st</span>
-                          <span style={{background:"rgba(255,255,255,0.04)",borderRadius:4,padding:"2px 6px"}}>Avg rank across all simulations</span>
-                        </div>
-                        {mcResults.lb.map((e,i)=>{
+                    {projLB.length>0&&(
+                      <>
+                        <div style={{fontSize:9,color:"#555",marginBottom:8}}>Deterministic projection</div>
+                        {projLB.map((e,i)=>{
                           const isMe=e.username===userName;
-                          const barW=Math.max(2,e.winPct);
+                          const barW=maxProj>0?Math.round((e.projected/maxProj)*100):0;
+                          const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`;
+                          return(
+                            <div key={e.username} style={{
+                              marginBottom:4,padding:"6px 10px",borderRadius:8,
+                              background:isMe?"rgba(139,92,246,0.08)":"rgba(255,255,255,0.02)",
+                              border:`1px solid ${isMe?"rgba(139,92,246,0.25)":"rgba(255,255,255,0.05)"}`,
+                            }}>
+                              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
+                                <span style={{fontSize:11,minWidth:22}}>{medal}</span>
+                                <span style={{fontSize:11,flex:1,fontWeight:isMe?700:500,
+                                  color:isMe?"#a78bfa":"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                  {e.username}
+                                </span>
+                                <div style={{textAlign:"right",flexShrink:0}}>
+                                  <span style={{fontSize:12,fontWeight:700,color:isMe?"#a78bfa":"#fcb900"}}>{e.projected}</span>
+                                  <span style={{fontSize:9,color:"#555",marginLeft:3}}>pts</span>
+                                  {e.bonus>0&&<span style={{fontSize:9,color:"#22c55e",marginLeft:4}}>+{e.bonus}</span>}
+                                </div>
+                              </div>
+                              <div style={{height:3,borderRadius:2,background:"rgba(255,255,255,0.05)",overflow:"hidden"}}>
+                                <div style={{width:`${barW}%`,height:"100%",borderRadius:2,
+                                  background:isMe?"rgba(139,92,246,0.6)":"rgba(252,185,0,0.35)"}}/>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+
+                    {mcLB&&mcLB.length>0&&(
+                      <div style={{marginTop:16}}>
+                        <div style={{fontSize:9,color:"#555",marginBottom:8}}>
+                          Monte Carlo ({projection?.sims||2000} simulations) — win probability
+                        </div>
+                        {mcLB.map((e,i)=>{
+                          const isMe=e.username===userName;
                           return(
                             <div key={e.username} style={{
                               marginBottom:4,padding:"6px 10px",borderRadius:8,
@@ -6283,7 +6274,7 @@ export default function App(){
                                 </div>
                               </div>
                               <div style={{height:3,borderRadius:2,background:"rgba(255,255,255,0.05)",overflow:"hidden"}}>
-                                <div style={{width:`${barW}%`,height:"100%",borderRadius:2,
+                                <div style={{width:`${Math.max(2,e.winPct)}%`,height:"100%",borderRadius:2,
                                   background:e.winPct>=20?"rgba(34,197,94,0.5)":e.winPct>=10?"rgba(252,185,0,0.4)":"rgba(255,255,255,0.1)"}}/>
                               </div>
                             </div>
@@ -6296,17 +6287,20 @@ export default function App(){
                       background:"rgba(139,92,246,0.05)",border:"1px solid rgba(139,92,246,0.1)"}}>
                       <div style={{fontSize:10,fontWeight:700,color:"#a78bfa",marginBottom:4}}>How is this calculated?</div>
                       <div style={{fontSize:10,color:"#555",lineHeight:1.5}}>
-                        <strong style={{color:"#888"}}>Projection:</strong> Scores your KO predictions against AI's predicted results using the standard 6/4/2/0 point rules. Current pts + projected bonus = projected total.
-                        {mcResults&&<><br/><strong style={{color:"#888"}}>Monte Carlo:</strong> Runs {mcResults.sims.toLocaleString()} simulations. Each sim randomly varies the AI's predicted scores (noise proportional to confidence level — High confidence = small variance). Win% = how often you finish 1st across all simulations.</>}
+                        <strong style={{color:"#888"}}>Projection:</strong> Scores each player's KO predictions against AI's predicted results (6/4/2/0 pts). No token usage — runs locally in your browser.
+                        <br/><strong style={{color:"#888"}}>Monte Carlo:</strong> 2,000 simulations varying AI scores by confidence level. Win% = how often you finish 1st. Results saved for all players with a 6h cooldown.
                       </div>
                     </div>
+                    {projectionGeneratedBy&&<div style={{fontSize:9,color:"#444",marginTop:4,textAlign:"center"}}>
+                      Generated by {projectionGeneratedBy} · visible to all players
+                    </div>}
                   </div>
                 );
-              })()}
+              })()} {/* end projected standings */}
 
             </div>
           );
-        })()}
+        })()} {/* end stats tab */}
 
         {tab==="live"&&<div>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
