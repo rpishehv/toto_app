@@ -1597,7 +1597,9 @@ export default function App(){
   const [mcResults,setMcResults]=useState(null);
   const [mcRunning,setMcRunning]=useState(false);
   const [projRefresh,setProjRefresh]=useState(0);
-  const [hashStatus,setHashStatus]=useState(null); // 'ok' | 'tampered' | 'no_hash'
+  const [hashStatus,setHashStatus]=useState(null);
+  const [integrityResults,setIntegrityResults]=useState(null);
+  const [integrityLoading,setIntegrityLoading]=useState(false);
   const [allPlayerPreds,setAllPlayerPreds]=useState({});
   const [simActive,setSimActive]=useState(false);
   const [simMinute,setSimMinute]=useState(0);
@@ -8265,7 +8267,7 @@ export default function App(){
                 </div>
               </div>
 
-              {/* Prediction integrity badge */}
+              {/* Prediction integrity badge — own status */}
               {hashStatus&&hashStatus!=='no_locked_matches'&&(
                 <div style={{
                   display:"flex",alignItems:"center",gap:8,
@@ -8278,8 +8280,8 @@ export default function App(){
                     <div style={{fontSize:11,fontWeight:700,
                       color:hashStatus==='ok'?"#22c55e":"#ef4444"}}>
                       {hashStatus==='ok'
-                        ?"Predictions verified — no tampering detected"
-                        :"Prediction hash mismatch — predictions may have changed after lock"}
+                        ?"Your predictions verified — no tampering detected"
+                        :"Your prediction hash mismatch — predictions may have changed after lock"}
                     </div>
                     <div style={{fontSize:9,color:"#555",marginTop:1}}>
                       {hashStatus==='ok'
@@ -8289,6 +8291,100 @@ export default function App(){
                   </div>
                 </div>
               )}
+
+              {/* All-players integrity panel */}
+              {(()=>{
+                const allKickoffs = {...KICKOFFS,...koKickoffs};
+                const hasLockedMatches = Object.values(allKickoffs).some(t=>Date.now()>=t-15*60*1000);
+                if(!hasLockedMatches||!Object.keys(allPlayerPreds).length) return null;
+
+                const runIntegrityCheck = async() => {
+                  setIntegrityLoading(true);
+                  const results = await Promise.all(
+                    leaderboard.map(async e => {
+                      const p = allPlayerPreds[e.username];
+                      if(!p) return {username:e.username, status:'no_predictions'};
+                      if(!p.prediction_hash) return {username:e.username, status:'no_hash'};
+                      const current = await computePredictionHash(e.username, p.matches||[], p.knockout||[], allKickoffs);
+                      if(!current) return {username:e.username, status:'no_locked_matches'};
+                      return {
+                        username:e.username,
+                        status: current===p.prediction_hash?'ok':'tampered',
+                        hash: p.prediction_hash,
+                      };
+                    })
+                  );
+                  setIntegrityResults(results);
+                  setIntegrityLoading(false);
+                };
+
+                const ok     = integrityResults?.filter(r=>r.status==='ok').length||0;
+                const tampered = integrityResults?.filter(r=>r.status==='tampered').length||0;
+                const noHash = integrityResults?.filter(r=>r.status==='no_hash'||r.status==='no_predictions').length||0;
+
+                return(
+                  <div style={{marginBottom:16,borderRadius:10,overflow:"hidden",
+                    border:"1px solid rgba(255,255,255,0.06)",background:"rgba(255,255,255,0.02)"}}>
+                    <div style={{padding:"10px 12px",borderBottom:"1px solid rgba(255,255,255,0.06)",
+                      display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#60a5fa",
+                        fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1}}>
+                        🔒 Prediction Integrity
+                      </div>
+                      <button onClick={runIntegrityCheck} disabled={integrityLoading} style={{
+                        fontSize:10,color:integrityLoading?"#555":"#60a5fa",
+                        background:"rgba(96,165,250,0.08)",
+                        border:"1px solid rgba(96,165,250,0.2)",
+                        borderRadius:5,padding:"3px 10px",cursor:integrityLoading?"wait":"pointer",
+                        fontFamily:"inherit",
+                      }}>{integrityLoading?"⏳ Checking…":"🔍 Verify All"}</button>
+                    </div>
+
+                    {!integrityResults&&(
+                      <div style={{padding:"12px",fontSize:11,color:"#555",textAlign:"center"}}>
+                        Tap Verify All to check if anyone's predictions changed after lock
+                      </div>
+                    )}
+
+                    {integrityResults&&(
+                      <>
+                        <div style={{padding:"8px 12px",borderBottom:"1px solid rgba(255,255,255,0.04)",
+                          display:"flex",gap:16,fontSize:10}}>
+                          <span style={{color:"#22c55e"}}>✅ {ok} verified</span>
+                          {tampered>0&&<span style={{color:"#ef4444",fontWeight:700}}>⚠️ {tampered} flagged</span>}
+                          {noHash>0&&<span style={{color:"#555"}}>❓ {noHash} no hash yet</span>}
+                        </div>
+                        {integrityResults.map(r=>(
+                          <div key={r.username} style={{
+                            display:"flex",alignItems:"center",gap:8,
+                            padding:"7px 12px",
+                            borderBottom:"1px solid rgba(255,255,255,0.03)",
+                            background:r.status==='tampered'?"rgba(239,68,68,0.05)":
+                                       r.status==='ok'?"transparent":"transparent",
+                          }}>
+                            <span style={{fontSize:12,flexShrink:0}}>
+                              {r.status==='ok'?"🔒":r.status==='tampered'?"⚠️":"❓"}
+                            </span>
+                            <span style={{fontSize:11,flex:1,
+                              color:r.status==='tampered'?"#ef4444":
+                                    r.status==='ok'?"#ccc":"#555",
+                              fontWeight:r.status==='tampered'?700:400}}>
+                              {r.username}
+                            </span>
+                            <span style={{fontSize:9,color:
+                              r.status==='ok'?"#22c55e":
+                              r.status==='tampered'?"#ef4444":"#555"}}>
+                              {r.status==='ok'?"Verified":
+                               r.status==='tampered'?"Hash mismatch!":
+                               r.status==='no_hash'?"No hash yet":"No predictions"}
+                            </span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Error state */}
               {newsError&&(
