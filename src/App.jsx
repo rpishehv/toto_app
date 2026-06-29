@@ -1595,7 +1595,8 @@ export default function App(){
   const [showAllGD,setShowAllGD]=useState(false);
   const [mcResults,setMcResults]=useState(null);
   const [mcRunning,setMcRunning]=useState(false);
-  const [projRefresh,setProjRefresh]=useState(0);  const [allPlayerPreds,setAllPlayerPreds]=useState({});
+  const [projRefresh,setProjRefresh]=useState(0);
+  const [allPlayerPreds,setAllPlayerPreds]=useState({});
   const [simActive,setSimActive]=useState(false);
   const [simMinute,setSimMinute]=useState(0);
   const [simEvents,setSimEvents]=useState([]);
@@ -6068,6 +6069,7 @@ export default function App(){
               {/* ── Projected Final Standings + Monte Carlo ── */}
               {(()=>{
                 const remainingKO = actualKO.filter(m=>m.homeScore===null&&m.home!=="TBD"&&m.away!=="TBD");
+                void projRefresh; // triggers re-render when refresh is clicked
                 if(!remainingKO.length&&!actualKO.some(m=>m.home!=="TBD")) return null;
 
                 // AI prediction lookup
