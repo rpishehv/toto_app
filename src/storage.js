@@ -490,3 +490,19 @@ export async function verifyPredictionHash(username, matches, knockout, kickoffs
     return { status: 'tampered', stored: data.prediction_hash, current: currentHash, lockedAt: data.hash_locked_at };
   }
 }
+
+export async function saveTimestampToken(username, token, issuedAt, groupCode='default') {
+  const { error } = await supabase.from('predictions')
+    .update({ timestamp_token: token, timestamp_token_at: issuedAt })
+    .eq('username', username).eq('group_code', groupCode);
+  if (error) console.error('saveTimestampToken error:', error.message);
+}
+
+export async function getTimestampToken(username, groupCode='default') {
+  const { data, error } = await supabase.from('predictions')
+    .select('prediction_hash,hash_locked_at,timestamp_token,timestamp_token_at')
+    .eq('username', username).eq('group_code', groupCode)
+    .single();
+  if (error) return null;
+  return data;
+}

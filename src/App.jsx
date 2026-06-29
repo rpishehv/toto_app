@@ -5,6 +5,7 @@ import {
   sbGetUser, sbCreateUser, sbResetPin, sbVerifyRecovery, sbClearUser, sbDeleteUser, sbTogglePaid,
   sbGetPrediction, sbSavePrediction,
   computePredictionHash, savePredictionHash, verifyPredictionHash,
+  saveTimestampToken, getTimestampToken,
   sbGetActualResults, sbSaveActualResults,
   sbGetLeaderboard, sbUpsertLeaderboard, sbGetAllGroupCodes,
   sbGetAllPredictions, sbBatchUpdateLeaderboard,
@@ -496,6 +497,65 @@ function calcStandings(teams,matches){
   }
   return Object.entries(tbl).map(([team,s])=>({team,...s,gd:s.gf-s.ga}))
     .sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf);
+}
+
+function IntegrityRow({r, allPlayerPreds, groupCode, getTimestampToken}) {
+  const [expanded, setExpanded] = useState(false);
+  const [playerCert, setPlayerCert] = useState(null);
+  const p = allPlayerPreds[r.username];
+  const loadCert = async() => {
+    if(playerCert) { setExpanded(e=>!e); return; }
+    const data = await getTimestampToken(r.username, groupCode);
+    setPlayerCert(data);
+    setExpanded(true);
+  };
+  return(
+    <div>
+      <div style={{
+        display:"flex",alignItems:"center",gap:8,padding:"7px 12px",
+        borderBottom:"1px solid rgba(255,255,255,0.03)",
+        background:r.status==='tampered'?"rgba(239,68,68,0.05)":"transparent",
+        cursor:r.status==='ok'&&p?.prediction_hash?"pointer":"default",
+      }} onClick={r.status==='ok'&&p?.prediction_hash?loadCert:undefined}>
+        <span style={{fontSize:12,flexShrink:0}}>
+          {r.status==='ok'?"🔒":r.status==='tampered'?"⚠️":"❓"}
+        </span>
+        <span style={{fontSize:11,flex:1,
+          color:r.status==='tampered'?"#ef4444":r.status==='ok'?"#ccc":"#555",
+          fontWeight:r.status==='tampered'?700:400}}>
+          {r.username}
+        </span>
+        <span style={{fontSize:9,
+          color:r.status==='ok'?"#22c55e":r.status==='tampered'?"#ef4444":"#555"}}>
+          {r.status==='ok'?`Verified ${expanded?"▴":"▾"}`:
+           r.status==='tampered'?"Hash mismatch!":
+           r.status==='no_hash'?"No hash yet":"No predictions"}
+        </span>
+      </div>
+      {expanded&&playerCert&&(
+        <div style={{padding:"8px 12px 10px",
+          background:"rgba(252,185,0,0.03)",
+          borderBottom:"1px solid rgba(255,255,255,0.03)"}}>
+          <div style={{fontSize:9,color:"#555",marginBottom:4}}>
+            📜 {new Date(playerCert.timestamp_token_at||playerCert.hash_locked_at||Date.now()).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})}
+          </div>
+          <div style={{fontSize:9,fontFamily:"monospace",color:"#a78bfa",wordBreak:"break-all",marginBottom:6}}>
+            {playerCert.prediction_hash}
+          </div>
+          {playerCert.timestamp_token&&(
+            <button onClick={()=>{
+              const text=`FIFA 2026 Prediction Certificate\nPlayer: ${r.username}\nIssued: ${playerCert.timestamp_token_at}\nFingerprint: ${playerCert.prediction_hash}\nToken: ${playerCert.timestamp_token}\n\nVerify: openssl ts -verify -in predictions.tsr -digest ${playerCert.prediction_hash} -CAfile freetsa.crt`;
+              navigator.clipboard?.writeText(text);
+            }} style={{
+              fontSize:9,color:"#fcb900",background:"rgba(252,185,0,0.06)",
+              border:"1px solid rgba(252,185,0,0.15)",borderRadius:4,
+              padding:"2px 8px",cursor:"pointer",fontFamily:"inherit",
+            }}>📋 Copy certificate</button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ScoreInput({value,onChange,readOnly=false}){
@@ -1598,6 +1658,8 @@ export default function App(){
   const [mcRunning,setMcRunning]=useState(false);
   const [projRefresh,setProjRefresh]=useState(0);
   const [hashStatus,setHashStatus]=useState(null);
+  const [certificate,setCertificate]=useState(null); // {hash, token, issuedAt, tsa}
+  const [certLoading,setCertLoading]=useState(false);
   const [integrityResults,setIntegrityResults]=useState(null);
   const [integrityLoading,setIntegrityLoading]=useState(false);
   const [allPlayerPreds,setAllPlayerPreds]=useState({});
@@ -2023,6 +2085,17 @@ export default function App(){
                 console.log('[Hash] integrity OK for', userName);
               }
             });
+          // Load existing certificate
+          getTimestampToken(userName, groupCode).then(data => {
+            if(data?.timestamp_token) {
+              setCertificate({
+                hash: data.prediction_hash,
+                token: data.timestamp_token,
+                issuedAt: data.timestamp_token_at,
+                tsa: 'freetsa.org',
+              });
+            }
+          });
 
           // Check completion — show reminder if less than 50% of current stage predicted
           const koOpenCount = (p.knockout||[]).filter(m=>m.home!=='TBD'&&m.away!=='TBD').length;
@@ -3419,6 +3492,25 @@ export default function App(){
     if (hash) {
       await savePredictionHash(userName, hash, groupCode);
       console.log('[Hash] stored:', hash);
+      // Request RFC 3161 timestamp certificate from freetsa.org
+      try {
+        setCertLoading(true);
+        const certRes = await fetch('/api/certify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hash }),
+        });
+        if (certRes.ok) {
+          const { token, issuedAt, tsa } = await certRes.json();
+          await saveTimestampToken(userName, token, issuedAt, groupCode);
+          setCertificate({ hash, token, issuedAt, tsa });
+          console.log('[Certificate] issued at', issuedAt, 'by', tsa);
+        }
+      } catch(e) {
+        console.warn('[Certificate] failed:', e.message);
+      } finally {
+        setCertLoading(false);
+      }
     }
     setSaved(true);
   };
@@ -6098,6 +6190,147 @@ export default function App(){
                 );
               })()}
 
+              {/* ── Prediction Integrity & Certificate ── */}
+              {hashStatus&&hashStatus!=='no_locked_matches'&&(
+                <div style={{
+                  display:"flex",alignItems:"center",gap:8,
+                  padding:"8px 12px",marginBottom:10,borderRadius:8,
+                  background:hashStatus==='ok'?"rgba(34,197,94,0.06)":"rgba(239,68,68,0.06)",
+                  border:`1px solid ${hashStatus==='ok'?"rgba(34,197,94,0.2)":"rgba(239,68,68,0.2)"}`,
+                }}>
+                  <span style={{fontSize:14}}>{hashStatus==='ok'?"🔒":"⚠️"}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11,fontWeight:700,
+                      color:hashStatus==='ok'?"#22c55e":"#ef4444"}}>
+                      {hashStatus==='ok'
+                        ?"Your predictions verified — no tampering detected"
+                        :"Your prediction hash mismatch — predictions may have changed after lock"}
+                    </div>
+                    <div style={{fontSize:9,color:"#555",marginTop:1}}>
+                      {hashStatus==='ok'
+                        ?"Your locked predictions match their stored hash"
+                        :"Contact the admin to investigate"}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Certificate viewer */}
+              {(certificate||certLoading)&&(
+                <div style={{marginBottom:14,borderRadius:10,overflow:"hidden",
+                  border:"1px solid rgba(252,185,0,0.2)",background:"rgba(252,185,0,0.03)"}}>
+                  <div style={{padding:"10px 12px",borderBottom:"1px solid rgba(252,185,0,0.1)",
+                    display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:16}}>📜</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"#fcb900"}}>Prediction Certificate</div>
+                      <div style={{fontSize:9,color:"#555"}}>RFC 3161 trusted timestamp · freetsa.org</div>
+                    </div>
+                    {certLoading&&<span style={{fontSize:10,color:"#555"}}>⏳ Certifying…</span>}
+                    {certificate&&!certLoading&&<span style={{fontSize:10,color:"#22c55e"}}>✅ Certified</span>}
+                  </div>
+                  {certificate&&(
+                    <div style={{padding:"10px 12px"}}>
+                      <div style={{marginBottom:8}}>
+                        <div style={{fontSize:9,color:"#555",marginBottom:2}}>Issued at</div>
+                        <div style={{fontSize:11,color:"#ccc"}}>
+                          {new Date(certificate.issuedAt).toLocaleString([],{
+                            year:'numeric',month:'short',day:'numeric',
+                            hour:'2-digit',minute:'2-digit',second:'2-digit',timeZoneName:'short'
+                          })}
+                        </div>
+                      </div>
+                      <div style={{marginBottom:8}}>
+                        <div style={{fontSize:9,color:"#555",marginBottom:2}}>Prediction fingerprint</div>
+                        <div style={{fontSize:10,fontFamily:"monospace",color:"#a78bfa",
+                          wordBreak:"break-all",background:"rgba(139,92,246,0.06)",
+                          padding:"4px 6px",borderRadius:4}}>{certificate.hash}</div>
+                      </div>
+                      <div style={{marginBottom:10}}>
+                        <div style={{fontSize:9,color:"#555",marginBottom:2}}>Timestamp token (Base64)</div>
+                        <div style={{fontSize:9,fontFamily:"monospace",color:"#555",
+                          wordBreak:"break-all",background:"rgba(255,255,255,0.03)",
+                          padding:"4px 6px",borderRadius:4,maxHeight:48,overflow:"hidden"}}>
+                          {certificate.token?.slice(0,120)}…
+                        </div>
+                      </div>
+                      <button onClick={()=>{
+                        const text = `FIFA 2026 Prediction Certificate\nPlayer: ${userName}\nIssued: ${certificate.issuedAt}\nTSA: ${certificate.tsa}\nFingerprint: ${certificate.hash}\nToken: ${certificate.token}\n\nTo verify:\n1. Save token to predictions.tsr (base64 decode first)\n2. Run: openssl ts -verify -in predictions.tsr -digest ${certificate.hash} -CAfile freetsa.crt\n3. Download freetsa.crt from https://freetsa.org/files/cacert.pem`;
+                        navigator.clipboard?.writeText(text);
+                        alert('Certificate copied to clipboard!');
+                      }} style={{
+                        width:"100%",padding:"8px",borderRadius:6,
+                        background:"rgba(252,185,0,0.08)",border:"1px solid rgba(252,185,0,0.2)",
+                        color:"#fcb900",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                      }}>📋 Copy Certificate & Verify Instructions</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* All-players integrity */}
+              {(()=>{
+                const allKickoffs = {...KICKOFFS,...koKickoffs};
+                const hasLockedMatches = Object.values(allKickoffs).some(t=>Date.now()>=t-15*60*1000);
+                if(!hasLockedMatches||!Object.keys(allPlayerPreds).length) return null;
+                const runIntegrityCheck = async() => {
+                  setIntegrityLoading(true);
+                  const results = await Promise.all(
+                    leaderboard.map(async e => {
+                      const p = allPlayerPreds[e.username];
+                      if(!p) return {username:e.username, status:'no_predictions'};
+                      if(!p.prediction_hash) return {username:e.username, status:'no_hash'};
+                      const current = await computePredictionHash(e.username, p.matches||[], p.knockout||[], allKickoffs);
+                      if(!current) return {username:e.username, status:'no_locked_matches'};
+                      return {username:e.username, status:current===p.prediction_hash?'ok':'tampered', hash:p.prediction_hash};
+                    })
+                  );
+                  setIntegrityResults(results);
+                  setIntegrityLoading(false);
+                };
+                const ok      = integrityResults?.filter(r=>r.status==='ok').length||0;
+                const tampered = integrityResults?.filter(r=>r.status==='tampered').length||0;
+                const noHash  = integrityResults?.filter(r=>r.status==='no_hash'||r.status==='no_predictions').length||0;
+                return(
+                  <div style={{marginBottom:16,borderRadius:10,overflow:"hidden",
+                    border:"1px solid rgba(255,255,255,0.06)",background:"rgba(255,255,255,0.02)"}}>
+                    <div style={{padding:"10px 12px",borderBottom:"1px solid rgba(255,255,255,0.06)",
+                      display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#60a5fa",
+                        fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1}}>
+                        🔒 Prediction Integrity
+                      </div>
+                      <button onClick={runIntegrityCheck} disabled={integrityLoading} style={{
+                        fontSize:10,color:integrityLoading?"#555":"#60a5fa",
+                        background:"rgba(96,165,250,0.08)",border:"1px solid rgba(96,165,250,0.2)",
+                        borderRadius:5,padding:"3px 10px",cursor:integrityLoading?"wait":"pointer",fontFamily:"inherit",
+                      }}>{integrityLoading?"⏳ Checking…":"🔍 Verify All"}</button>
+                    </div>
+                    {!integrityResults&&(
+                      <div style={{padding:"12px",fontSize:11,color:"#555",textAlign:"center"}}>
+                        Tap Verify All to check if anyone's predictions changed after lock
+                      </div>
+                    )}
+                    {integrityResults&&(
+                      <>
+                        <div style={{padding:"8px 12px",borderBottom:"1px solid rgba(255,255,255,0.04)",
+                          display:"flex",gap:16,fontSize:10}}>
+                          <span style={{color:"#22c55e"}}>✅ {ok} verified</span>
+                          {tampered>0&&<span style={{color:"#ef4444",fontWeight:700}}>⚠️ {tampered} flagged</span>}
+                          {noHash>0&&<span style={{color:"#555"}}>❓ {noHash} no hash yet</span>}
+                        </div>
+                        {integrityResults.map(r=>(
+                          <IntegrityRow key={r.username} r={r}
+                            allPlayerPreds={allPlayerPreds}
+                            groupCode={groupCode}
+                            getTimestampToken={getTimestampToken}/>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* ── Projected Final Standings + Monte Carlo ── */}
               {(()=>{
                 const remainingKO = actualKO.filter(m=>m.homeScore===null&&m.home!=="TBD"&&m.away!=="TBD");
@@ -8266,125 +8499,6 @@ export default function App(){
                   </button>
                 </div>
               </div>
-
-              {/* Prediction integrity badge — own status */}
-              {hashStatus&&hashStatus!=='no_locked_matches'&&(
-                <div style={{
-                  display:"flex",alignItems:"center",gap:8,
-                  padding:"8px 12px",marginBottom:14,borderRadius:8,
-                  background:hashStatus==='ok'?"rgba(34,197,94,0.06)":"rgba(239,68,68,0.06)",
-                  border:`1px solid ${hashStatus==='ok'?"rgba(34,197,94,0.2)":"rgba(239,68,68,0.2)"}`,
-                }}>
-                  <span style={{fontSize:14}}>{hashStatus==='ok'?"🔒":"⚠️"}</span>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:11,fontWeight:700,
-                      color:hashStatus==='ok'?"#22c55e":"#ef4444"}}>
-                      {hashStatus==='ok'
-                        ?"Your predictions verified — no tampering detected"
-                        :"Your prediction hash mismatch — predictions may have changed after lock"}
-                    </div>
-                    <div style={{fontSize:9,color:"#555",marginTop:1}}>
-                      {hashStatus==='ok'
-                        ?"Your locked predictions match their stored hash"
-                        :"Contact the admin to investigate"}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* All-players integrity panel */}
-              {(()=>{
-                const allKickoffs = {...KICKOFFS,...koKickoffs};
-                const hasLockedMatches = Object.values(allKickoffs).some(t=>Date.now()>=t-15*60*1000);
-                if(!hasLockedMatches||!Object.keys(allPlayerPreds).length) return null;
-
-                const runIntegrityCheck = async() => {
-                  setIntegrityLoading(true);
-                  const results = await Promise.all(
-                    leaderboard.map(async e => {
-                      const p = allPlayerPreds[e.username];
-                      if(!p) return {username:e.username, status:'no_predictions'};
-                      if(!p.prediction_hash) return {username:e.username, status:'no_hash'};
-                      const current = await computePredictionHash(e.username, p.matches||[], p.knockout||[], allKickoffs);
-                      if(!current) return {username:e.username, status:'no_locked_matches'};
-                      return {
-                        username:e.username,
-                        status: current===p.prediction_hash?'ok':'tampered',
-                        hash: p.prediction_hash,
-                      };
-                    })
-                  );
-                  setIntegrityResults(results);
-                  setIntegrityLoading(false);
-                };
-
-                const ok     = integrityResults?.filter(r=>r.status==='ok').length||0;
-                const tampered = integrityResults?.filter(r=>r.status==='tampered').length||0;
-                const noHash = integrityResults?.filter(r=>r.status==='no_hash'||r.status==='no_predictions').length||0;
-
-                return(
-                  <div style={{marginBottom:16,borderRadius:10,overflow:"hidden",
-                    border:"1px solid rgba(255,255,255,0.06)",background:"rgba(255,255,255,0.02)"}}>
-                    <div style={{padding:"10px 12px",borderBottom:"1px solid rgba(255,255,255,0.06)",
-                      display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                      <div style={{fontSize:12,fontWeight:700,color:"#60a5fa",
-                        fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1}}>
-                        🔒 Prediction Integrity
-                      </div>
-                      <button onClick={runIntegrityCheck} disabled={integrityLoading} style={{
-                        fontSize:10,color:integrityLoading?"#555":"#60a5fa",
-                        background:"rgba(96,165,250,0.08)",
-                        border:"1px solid rgba(96,165,250,0.2)",
-                        borderRadius:5,padding:"3px 10px",cursor:integrityLoading?"wait":"pointer",
-                        fontFamily:"inherit",
-                      }}>{integrityLoading?"⏳ Checking…":"🔍 Verify All"}</button>
-                    </div>
-
-                    {!integrityResults&&(
-                      <div style={{padding:"12px",fontSize:11,color:"#555",textAlign:"center"}}>
-                        Tap Verify All to check if anyone's predictions changed after lock
-                      </div>
-                    )}
-
-                    {integrityResults&&(
-                      <>
-                        <div style={{padding:"8px 12px",borderBottom:"1px solid rgba(255,255,255,0.04)",
-                          display:"flex",gap:16,fontSize:10}}>
-                          <span style={{color:"#22c55e"}}>✅ {ok} verified</span>
-                          {tampered>0&&<span style={{color:"#ef4444",fontWeight:700}}>⚠️ {tampered} flagged</span>}
-                          {noHash>0&&<span style={{color:"#555"}}>❓ {noHash} no hash yet</span>}
-                        </div>
-                        {integrityResults.map(r=>(
-                          <div key={r.username} style={{
-                            display:"flex",alignItems:"center",gap:8,
-                            padding:"7px 12px",
-                            borderBottom:"1px solid rgba(255,255,255,0.03)",
-                            background:r.status==='tampered'?"rgba(239,68,68,0.05)":
-                                       r.status==='ok'?"transparent":"transparent",
-                          }}>
-                            <span style={{fontSize:12,flexShrink:0}}>
-                              {r.status==='ok'?"🔒":r.status==='tampered'?"⚠️":"❓"}
-                            </span>
-                            <span style={{fontSize:11,flex:1,
-                              color:r.status==='tampered'?"#ef4444":
-                                    r.status==='ok'?"#ccc":"#555",
-                              fontWeight:r.status==='tampered'?700:400}}>
-                              {r.username}
-                            </span>
-                            <span style={{fontSize:9,color:
-                              r.status==='ok'?"#22c55e":
-                              r.status==='tampered'?"#ef4444":"#555"}}>
-                              {r.status==='ok'?"Verified":
-                               r.status==='tampered'?"Hash mismatch!":
-                               r.status==='no_hash'?"No hash yet":"No predictions"}
-                            </span>
-                          </div>
-                        ))}
-                      </>
-                    )}
-                  </div>
-                );
-              })()}
 
               {/* Error state */}
               {newsError&&(

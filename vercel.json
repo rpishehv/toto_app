@@ -6,7 +6,8 @@
     "api/daily-recap.js":{ "maxDuration": 30 },
     "api/matchquery.js": { "maxDuration": 30 },
     "api/autosync.js":   { "maxDuration": 30 },
-    "api/highlights.js": { "maxDuration": 10 }
+    "api/highlights.js": { "maxDuration": 10 },
+    "api/certify.js":    { "maxDuration": 15 }
   },
   "crons": [
     {
