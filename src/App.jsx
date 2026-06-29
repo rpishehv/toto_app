@@ -6069,8 +6069,9 @@ export default function App(){
               {/* ── Projected Final Standings + Monte Carlo ── */}
               {(()=>{
                 const remainingKO = actualKO.filter(m=>m.homeScore===null&&m.home!=="TBD"&&m.away!=="TBD");
+                const hasAnyKO = actualKO.some(m=>m.home!=="TBD");
                 void projRefresh; // triggers re-render when refresh is clicked
-                if(!remainingKO.length&&!actualKO.some(m=>m.home!=="TBD")) return null;
+                if(!hasAnyKO) return null; // no KO teams yet at all
 
                 // AI prediction lookup
                 const aiResultFor = (home, away) => {
@@ -6082,7 +6083,13 @@ export default function App(){
                     confidence:pred.confidence||'Medium'};
                 };
 
-                const aiPredictions = remainingKO.map(m=>({...m,...(aiResultFor(m.home,m.away)||{})}));
+                // Use remaining matches, OR if all played, use all KO for future round projection
+                const koForProjection = remainingKO.length > 0
+                  ? remainingKO
+                  : actualKO.filter(m=>m.home!=="TBD"&&m.homeScore===null);
+
+                const aiPredictions = koForProjection.map(m=>({...m,...(aiResultFor(m.home,m.away)||{})}))
+                  .filter(m=>m.homeScore!=null); // only keep ones AI can predict
 
                 // Confidence → variance mapping
                 const confToSigma = c => ({'Very High':0.5,'High':0.8,'Medium':1.2,'Low':1.8,'Very Low':2.2}[c]||1.2);
