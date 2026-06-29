@@ -1595,8 +1595,7 @@ export default function App(){
   const [showAllGD,setShowAllGD]=useState(false);
   const [mcResults,setMcResults]=useState(null);
   const [mcRunning,setMcRunning]=useState(false);
-  const [projRefresh,setProjRefresh]=useState(0);
-  const [allPlayerPreds,setAllPlayerPreds]=useState({});
+  const [projRefresh,setProjRefresh]=useState(0);  const [allPlayerPreds,setAllPlayerPreds]=useState({});
   const [simActive,setSimActive]=useState(false);
   const [simMinute,setSimMinute]=useState(0);
   const [simEvents,setSimEvents]=useState([]);
@@ -6176,16 +6175,20 @@ export default function App(){
                       </div>
                       <div style={{display:"flex",gap:6}}>
                         <button onClick={()=>{
+                          console.log('[Refresh] invalidating cache and re-fetching...');
                           invalidatePredsCache(groupCode);
                           allPredsLastFetch.current=0;
                           sbGetAllPredictions(groupCode).then(allPreds=>{
+                            console.log('[Refresh] got', allPreds?.length, 'predictions');
                             if(!allPreds?.length) return;
                             allPredsLastFetch.current=Date.now();
                             const predsMap={};
                             allPreds.forEach(p=>{
                               if(p?.username) predsMap[p.username]={username:p.username,matches:p.matches||[],knockout:p.knockout||[],podium:p.podium||null};
                             });
-                            setAllPlayerPreds(predsMap);
+                            console.log('[Refresh] setting allPlayerPreds keys:', Object.keys(predsMap).length);
+                            setAllPlayerPreds({...predsMap});
+                            setProjRefresh(p=>p+1);
                           });
                           setMcResults(null);
                         }} style={{
