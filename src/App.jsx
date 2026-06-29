@@ -6175,11 +6175,24 @@ export default function App(){
                         🤖 AI-Projected Final Standings
                       </div>
                       <div style={{display:"flex",gap:6}}>
-                        <button onClick={()=>setProjRefresh(p=>p+1)} style={{
+                        <button onClick={()=>{
+                          invalidatePredsCache(groupCode);
+                          allPredsLastFetch.current=0;
+                          sbGetAllPredictions(groupCode).then(allPreds=>{
+                            if(!allPreds?.length) return;
+                            allPredsLastFetch.current=Date.now();
+                            const predsMap={};
+                            allPreds.forEach(p=>{
+                              if(p?.username) predsMap[p.username]={username:p.username,matches:p.matches||[],knockout:p.knockout||[],podium:p.podium||null};
+                            });
+                            setAllPlayerPreds(predsMap);
+                          });
+                          setMcResults(null);
+                        }} style={{
                           fontSize:10,color:"#a78bfa",background:"rgba(139,92,246,0.08)",
                           border:"1px solid rgba(139,92,246,0.2)",borderRadius:5,
                           padding:"3px 8px",cursor:"pointer",fontFamily:"inherit",
-                        }}>🔄</button>
+                        }}>🔄 Refresh</button>
                         <button onClick={runMonteCarlo} disabled={mcRunning} style={{
                           fontSize:10,color:mcRunning?"#555":"#fcb900",
                           background:mcRunning?"rgba(255,255,255,0.02)":"rgba(252,185,0,0.08)",
