@@ -4,6 +4,7 @@ import { supabase } from './supabase.js';
 import {
   sbGetUser, sbCreateUser, sbResetPin, sbVerifyRecovery, sbClearUser, sbDeleteUser, sbTogglePaid,
   sbGetPrediction, sbSavePrediction,
+  computePredictionHash, savePredictionHash, verifyPredictionHash,
   sbGetActualResults, sbSaveActualResults,
   sbGetLeaderboard, sbUpsertLeaderboard, sbGetAllGroupCodes,
   sbGetAllPredictions, sbBatchUpdateLeaderboard,
@@ -1596,6 +1597,7 @@ export default function App(){
   const [mcResults,setMcResults]=useState(null);
   const [mcRunning,setMcRunning]=useState(false);
   const [projRefresh,setProjRefresh]=useState(0);
+  const [hashStatus,setHashStatus]=useState(null); // 'ok' | 'tampered' | 'no_hash'
   const [allPlayerPreds,setAllPlayerPreds]=useState({});
   const [simActive,setSimActive]=useState(false);
   const [simMinute,setSimMinute]=useState(0);
@@ -2007,6 +2009,18 @@ export default function App(){
             setKnockout(merged);
           }
           if(p.podium) setPodium(p.podium);
+
+          // Verify integrity hash for locked predictions
+          const allKickoffs = {...KICKOFFS,...koKickoffs};
+          verifyPredictionHash(userName, p.matches||[], p.knockout||[], allKickoffs, groupCode)
+            .then(result => {
+              setHashStatus(result.status);
+              if(result.status==='tampered') {
+                console.warn('[Hash] TAMPER DETECTED for', userName, 'stored:', result.stored, 'current:', result.current);
+              } else if(result.status==='ok') {
+                console.log('[Hash] integrity OK for', userName);
+              }
+            });
 
           // Check completion — show reminder if less than 50% of current stage predicted
           const koOpenCount = (p.knockout||[]).filter(m=>m.home!=='TBD'&&m.away!=='TBD').length;
@@ -3397,6 +3411,13 @@ export default function App(){
     const lb = await sbUpsertLeaderboard(userName, podium, myPts, groupCode);
     setLeaderboard(lb);
     await saveBackup(matches, knockout, podium);
+    // Compute and store integrity hash for locked matches
+    const allKickoffs = {...KICKOFFS,...koKickoffs};
+    const hash = await computePredictionHash(userName, matches, knockout, allKickoffs);
+    if (hash) {
+      await savePredictionHash(userName, hash, groupCode);
+      console.log('[Hash] stored:', hash);
+    }
     setSaved(true);
   };
 
@@ -4004,6 +4025,10 @@ export default function App(){
             transition:"all 0.3s",fontFamily:"inherit",flexShrink:0}}>
             {saved?"✓ Saved":"Save"}
           </button>
+          {hashStatus==='ok'&&<span title="Predictions verified — no tampering detected" style={{
+            fontSize:10,color:"#22c55e",flexShrink:0,cursor:"default"}}>🔒</span>}
+          {hashStatus==='tampered'&&<span title="⚠️ Prediction hash mismatch — predictions may have been modified after lock" style={{
+            fontSize:10,color:"#ef4444",flexShrink:0,cursor:"default"}}>⚠️</span>}
         </div>
 
         {/* Action row — logout only, rest moved to Admin */}
@@ -8239,6 +8264,31 @@ export default function App(){
                   </button>
                 </div>
               </div>
+
+              {/* Prediction integrity badge */}
+              {hashStatus&&hashStatus!=='no_locked_matches'&&(
+                <div style={{
+                  display:"flex",alignItems:"center",gap:8,
+                  padding:"8px 12px",marginBottom:14,borderRadius:8,
+                  background:hashStatus==='ok'?"rgba(34,197,94,0.06)":"rgba(239,68,68,0.06)",
+                  border:`1px solid ${hashStatus==='ok'?"rgba(34,197,94,0.2)":"rgba(239,68,68,0.2)"}`,
+                }}>
+                  <span style={{fontSize:14}}>{hashStatus==='ok'?"🔒":"⚠️"}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11,fontWeight:700,
+                      color:hashStatus==='ok'?"#22c55e":"#ef4444"}}>
+                      {hashStatus==='ok'
+                        ?"Predictions verified — no tampering detected"
+                        :"Prediction hash mismatch — predictions may have changed after lock"}
+                    </div>
+                    <div style={{fontSize:9,color:"#555",marginTop:1}}>
+                      {hashStatus==='ok'
+                        ?"Your locked predictions match their stored hash"
+                        :"Contact the admin to investigate"}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Error state */}
               {newsError&&(

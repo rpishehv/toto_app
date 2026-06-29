@@ -137,7 +137,7 @@ export async function sbGetAllPredictions(groupCode='default') {
   const cached = cacheGet(key);
   if (cached) return cached;
   const { data, error } = await supabase
-    .from('predictions').select('username,matches,knockout,podium').eq('group_code', groupCode);
+    .from('predictions').select('username,matches,knockout,podium,prediction_hash,hash_locked_at').eq('group_code', groupCode);
   if (error) { console.error('sbGetAllPredictions error:', error.message); return []; }
   const result = data || [];
   if (result.length) cacheSet(key, result);
@@ -438,4 +438,55 @@ export function generateRecoveryCode() {
   code += '-'
   for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)]
   return code
+}
+
+// ─── PREDICTION INTEGRITY HASH ────────────────────────────────────────────────
+// SHA-256 hash of all locked match predictions — tamper detection
+
+export async function computePredictionHash(username, matches, knockout, kickoffs) {
+  // Only include locked matches (kickoff time has passed)
+  const now = Date.now();
+  const LOCK_OFFSET = 15 * 60 * 1000;
+
+  const lockedMatches = [...(matches||[]), ...(knockout||[])]
+    .filter(m => {
+      if (m.homeScore === null || m.awayScore === null) return false;
+      const kickoff = kickoffs[`${m.home}||${m.away}`] || kickoffs[`${m.away}||${m.home}`] || kickoffs[m.id];
+      return kickoff && now >= (kickoff - LOCK_OFFSET);
+    })
+    .sort((a,b) => a.id.localeCompare(b.id)) // deterministic order
+    .map(m => `${m.id}:${m.homeScore}-${m.awayScore}`);
+
+  if (!lockedMatches.length) return null;
+
+  const payload = `${username}|${lockedMatches.join('|')}`;
+  const encoder = new TextEncoder();
+  const data = encoder.encode(payload);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('').slice(0,16); // 16 char prefix
+}
+
+export async function savePredictionHash(username, hash, groupCode='default') {
+  const { error } = await supabase.from('predictions')
+    .update({ prediction_hash: hash, hash_locked_at: new Date().toISOString() })
+    .eq('username', username).eq('group_code', groupCode);
+  if (error) console.error('savePredictionHash error:', error.message);
+}
+
+export async function verifyPredictionHash(username, matches, knockout, kickoffs, groupCode='default') {
+  const { data, error } = await supabase.from('predictions')
+    .select('prediction_hash, hash_locked_at')
+    .eq('username', username).eq('group_code', groupCode)
+    .single();
+  if (error || !data?.prediction_hash) return { status: 'no_hash' };
+
+  const currentHash = await computePredictionHash(username, matches, knockout, kickoffs);
+  if (!currentHash) return { status: 'no_locked_matches' };
+
+  if (currentHash === data.prediction_hash) {
+    return { status: 'ok', lockedAt: data.hash_locked_at };
+  } else {
+    return { status: 'tampered', stored: data.prediction_hash, current: currentHash, lockedAt: data.hash_locked_at };
+  }
 }
