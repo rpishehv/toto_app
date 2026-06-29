@@ -444,29 +444,23 @@ export function generateRecoveryCode() {
 // SHA-256 hash of all locked match predictions — tamper detection
 
 export async function computePredictionHash(username, matches, knockout, kickoffs) {
-  // Only include locked matches (kickoff time has passed)
-  const now = Date.now();
-  const LOCK_OFFSET = 15 * 60 * 1000;
-
+  // Include ALL matches with scores — kickoff-independent for reliability
+  // A match having a score implies it's locked (you can't score unplayed matches)
   const lockedMatches = [...(matches||[]), ...(knockout||[])]
-    .filter(m => {
-      if (m.homeScore === null || m.awayScore === null) return false;
-      const kickoff = kickoffs[`${m.home}||${m.away}`] || kickoffs[`${m.away}||${m.home}`] || kickoffs[m.id];
-      return kickoff && now >= (kickoff - LOCK_OFFSET);
-    })
+    .filter(m => m.homeScore !== null && m.awayScore !== null &&
+                 m.homeScore !== undefined && m.awayScore !== undefined)
     .sort((a,b) => a.id.localeCompare(b.id)) // deterministic order
     .map(m => `${m.id}:${m.homeScore}-${m.awayScore}`);
 
   if (!lockedMatches.length) return null;
 
   const payload = `${username}|${lockedMatches.join('|')}`;
-  console.log('[Hash compute]', username, 'locked matches:', lockedMatches.length, 'payload preview:', payload.slice(0, 100));
+  console.log('[Hash compute]', username, 'scored matches:', lockedMatches.length, 'payload preview:', payload.slice(0, 120));
   const encoder = new TextEncoder();
   const data = encoder.encode(payload);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const fullHash = hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
-  return fullHash; // full 64-char hex SHA-256
+  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
 export async function savePredictionHash(username, hash, groupCode='default') {

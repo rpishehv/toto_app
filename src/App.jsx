@@ -2074,9 +2074,8 @@ export default function App(){
           }
           if(p.podium) setPodium(p.podium);
 
-          // Verify integrity hash for locked predictions
-          const allKickoffs = {...KICKOFFS,...koKickoffs};
-          verifyPredictionHash(userName, p.matches||[], p.knockout||[], allKickoffs, groupCode)
+          // Verify integrity hash for all scored predictions
+          verifyPredictionHash(userName, p.matches||[], p.knockout||[], {}, groupCode)
             .then(result => {
               setHashStatus(result.status);
               if(result.status==='tampered') {
@@ -3486,9 +3485,8 @@ export default function App(){
     const lb = await sbUpsertLeaderboard(userName, podium, myPts, groupCode);
     setLeaderboard(lb);
     await saveBackup(matches, knockout, podium);
-    // Compute and store integrity hash for locked matches
-    const allKickoffs = {...KICKOFFS,...koKickoffs};
-    const hash = await computePredictionHash(userName, matches, knockout, allKickoffs);
+    // Compute and store integrity hash for all scored matches
+    const hash = await computePredictionHash(userName, matches, knockout, {});
     if (hash) {
       await savePredictionHash(userName, hash, groupCode);
       console.log('[Hash] stored:', hash);
