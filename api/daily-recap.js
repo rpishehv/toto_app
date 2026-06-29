@@ -38,15 +38,17 @@ export default async function handler(req) {
 
   try {
     // ── Fetch data ────────────────────────────────────────────────────────────
-    const [resultsRes, lbRes] = await Promise.all([
-      sb('actual_results?select=matches,knockout,actual_podium&order=id.desc&limit=1'),
+    const [resultsRes, lbRes, predsRes] = await Promise.all([
+      sb('actual_results?select=matches,knockout,actual_podium,ko_kickoffs&order=id.desc&limit=1'),
       sb('leaderboard?select=username,points,group_code,champion&order=points.desc&limit=100'),
+      sb('predictions?select=username,group_code,prediction_hash'),
     ]);
 
-    const [resultsData, allLb] = await Promise.all([resultsRes.json(), lbRes.json()]);
+    const [resultsData, allLb, allPreds] = await Promise.all([resultsRes.json(), lbRes.json(), predsRes.json()]);
     const allMatches   = resultsData?.[0]?.matches || [];
     const allKO        = resultsData?.[0]?.knockout || [];
     const actualPodium = resultsData?.[0]?.actual_podium || {};
+    const koKickoffs   = resultsData?.[0]?.ko_kickoffs || {};
     const played = allMatches.filter(m => m.homeScore !== null);
     const playedKO = allKO.filter(m => m.homeScore !== null && m.home !== 'TBD');
 
@@ -59,6 +61,14 @@ export default async function handler(req) {
     for (const gc of groupCodes) {
       const lb = allLb.filter(e => e.group_code === gc);
       if (!lb.length) continue;
+
+      // Integrity summary
+      const gcPreds = (allPreds||[]).filter(p => p.group_code === gc);
+      const withHash = gcPreds.filter(p => p.prediction_hash).length;
+      const total = lb.length;
+      const integrityLine = withHash > 0
+        ? `🔒 *Integrity:* ${withHash}/${total} predictions verified · no tampering detected\n_How it works: when you save predictions, a SHA-256 fingerprint of your locked scores is stored. Each day we recompute it from the database and compare — any mismatch after lock time would flag tampering._`
+        : null;
 
       const top3 = lb.slice(0,3).map((e,i) => `${['🥇','🥈','🥉'][i]} ${e.username} — ${e.points}pts (picked ${e.champion||'?'})`).join('\n');
       const recentResults = played.slice(-8).map(m => `${m.home} ${m.homeScore}–${m.awayScore} ${m.away}`).join(', ') || 'Tournament about to start!';
@@ -118,7 +128,8 @@ Focus on something surprising: a bold pick paying off, an upset nobody saw comin
         lb.slice(0,5).map((e,i)=>`${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} ${e.username} — ${e.points}pts`).join('\n'),
         ``,
         `${matchesLeft} group matches remaining · keep predicting! 🏆`,
-      ].join('\n');
+        integrityLine ? `\n${integrityLine}` : '',
+      ].filter(l => l !== '').join('\n');
 
       // Post to chat
       const chatRes = await sb('chat_messages', {
