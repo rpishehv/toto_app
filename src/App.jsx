@@ -6045,6 +6045,101 @@ export default function App(){
                 );
               })()}
 
+              {/* ── Projected Final Standings ── */}
+              {(()=>{
+                const remainingKO = actualKO.filter(m=>m.homeScore===null&&m.home!=="TBD"&&m.away!=="TBD");
+                if(!remainingKO.length&&!actualKO.some(m=>m.home!=="TBD")) return null;
+
+                // Build AI match result lookup from R32_AI_PREDICTIONS
+                const aiResultFor = (home, away) => {
+                  const key = `${home}||${away}`;
+                  const keyR = `${away}||${home}`;
+                  const pred = R32_AI_PREDICTIONS[key] || R32_AI_PREDICTIONS[keyR];
+                  if(!pred) return null;
+                  const flipped = !!R32_AI_PREDICTIONS[keyR]&&!R32_AI_PREDICTIONS[key];
+                  return {
+                    homeScore: flipped?pred.a:pred.h,
+                    awayScore: flipped?pred.h:pred.a,
+                  };
+                };
+
+                // For each remaining KO match, get AI prediction
+                const aiPredictions = remainingKO.map(m => ({
+                  ...m,
+                  ...aiResultFor(m.home, m.away),
+                }));
+
+                // Calculate projected bonus points per player
+                const projectedLB = leaderboard.map(e => {
+                  const isMe = e.username === userName;
+                  const playerKO = isMe ? knockout : (allPlayerPreds[e.username]?.knockout||[]);
+                  let projectedBonus = 0;
+                  aiPredictions.forEach(aiM => {
+                    if(aiM.homeScore==null) return;
+                    const playerPred = playerKO.find(p=>p.id===aiM.id);
+                    if(!playerPred||playerPred.homeScore==null) return;
+                    const result = calcMatchPoints(playerPred, aiM);
+                    projectedBonus += result?.points||0;
+                  });
+                  return {
+                    username: e.username,
+                    current: e.points||0,
+                    bonus: projectedBonus,
+                    projected: (e.points||0) + projectedBonus,
+                  };
+                }).sort((a,b)=>b.projected-a.projected);
+
+                if(!projectedLB.length) return null;
+                const maxProj = projectedLB[0].projected;
+
+                return(
+                  <div style={{marginBottom:20}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#a78bfa",
+                        fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1}}>
+                        🤖 AI-Projected Final Standings
+                      </div>
+                      <div style={{fontSize:9,color:"#555",maxWidth:120,textAlign:"right",lineHeight:1.3}}>
+                        Based on AI predictions for remaining KO matches
+                      </div>
+                    </div>
+                    {projectedLB.map((e,i)=>{
+                      const isMe = e.username===userName;
+                      const barW = maxProj>0?Math.round((e.projected/maxProj)*100):0;
+                      const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`;
+                      return(
+                        <div key={e.username} style={{
+                          marginBottom:5,padding:"7px 10px",borderRadius:8,
+                          background:isMe?"rgba(139,92,246,0.08)":"rgba(255,255,255,0.02)",
+                          border:`1px solid ${isMe?"rgba(139,92,246,0.25)":"rgba(255,255,255,0.05)"}`,
+                        }}>
+                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
+                            <span style={{fontSize:11,minWidth:22}}>{medal}</span>
+                            <span style={{fontSize:11,flex:1,fontWeight:isMe?700:500,
+                              color:isMe?"#a78bfa":"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                              {e.username}
+                            </span>
+                            <div style={{textAlign:"right",flexShrink:0}}>
+                              <span style={{fontSize:12,fontWeight:700,color:isMe?"#a78bfa":"#fcb900"}}>{e.projected}</span>
+                              <span style={{fontSize:9,color:"#555",marginLeft:4}}>pts</span>
+                              {e.bonus>0&&<span style={{fontSize:9,color:"#22c55e",marginLeft:4}}>+{e.bonus} proj</span>}
+                            </div>
+                          </div>
+                          <div style={{height:3,borderRadius:2,background:"rgba(255,255,255,0.05)",overflow:"hidden"}}>
+                            <div style={{width:`${barW}%`,height:"100%",borderRadius:2,
+                              background:isMe?"rgba(139,92,246,0.6)":"rgba(252,185,0,0.4)",
+                              transition:"width 0.5s ease"}}/>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div style={{fontSize:9,color:"#444",marginTop:6,textAlign:"center"}}>
+                      Projected bonus from {aiPredictions.length} remaining KO matches · AI predictions only
+                    </div>
+                  </div>
+                );
+              })()}
+
             </div>
           );
         })()}
