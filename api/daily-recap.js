@@ -67,7 +67,7 @@ export default async function handler(req) {
       const withHash = gcPreds.filter(p => p.prediction_hash).length;
       const total = lb.length;
       const integrityLine = withHash > 0
-        ? `🔒 *Integrity:* ${withHash}/${total} predictions verified · no tampering detected\n_How it works: when you save predictions, a SHA-256 fingerprint of your locked scores is stored. Each day we recompute it from the database and compare — any mismatch after lock time would flag tampering._`
+        ? `🔒 *Integrity check: ${withHash}/${total} predictions verified — no tampering detected*\n_Think of it like a wax seal on an envelope: when you hit Save, we stamp your predictions with a unique code. Every day we check if the seal is still intact. If anyone changed your scores after the match kicked off, the seal breaks and we'd know immediately._\n_For the technically curious: we compute a SHA-256 hash of each player's locked match scores, store it at save time, and recompute it daily — any mismatch flags a change after lock._`
         : null;
 
       const top3 = lb.slice(0,3).map((e,i) => `${['🥇','🥈','🥉'][i]} ${e.username} — ${e.points}pts (picked ${e.champion||'?'})`).join('\n');
