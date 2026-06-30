@@ -142,6 +142,60 @@ const KNOCKOUT_TEMPLATE = [
   ...makeKORound("Final",1),
 ];
 
+// ─── OFFICIAL FIFA BRACKET PROGRESSION ─────────────────────────────────────
+// NOT sequential pairing — follows FIFA's fixed bracket (matches 73-101).
+// Our Round_of_32_N order: 0=SAfrica/Canada, 1=Brazil/Japan, 2=Germany/Paraguay,
+// 3=Netherlands/Morocco, 4=IvoryCoast/Norway, 5=France/Sweden, 6=Mexico/Ecuador,
+// 7=England/DRCongo, 8=Belgium/Senegal, 9=USA/Bosnia, 10=Spain/Austria,
+// 11=Portugal/Croatia, 12=Switzerland/Algeria, 13=Australia/Egypt,
+// 14=Argentina/CapeVerde, 15=Colombia/Ghana
+const R32_TO_R16 = {
+  0:  {next:0, slot:'home'}, // SAfrica/Canada -> R16_0 (FIFA M90)
+  3:  {next:0, slot:'away'}, // Netherlands/Morocco -> R16_0
+  2:  {next:1, slot:'home'}, // Germany/Paraguay -> R16_1 (FIFA M89)
+  5:  {next:1, slot:'away'}, // France/Sweden -> R16_1
+  1:  {next:2, slot:'home'}, // Brazil/Japan -> R16_2 (FIFA M91)
+  4:  {next:2, slot:'away'}, // IvoryCoast/Norway -> R16_2
+  6:  {next:3, slot:'home'}, // Mexico/Ecuador -> R16_3 (FIFA M92)
+  7:  {next:3, slot:'away'}, // England/DRCongo -> R16_3
+  11: {next:4, slot:'home'}, // Portugal/Croatia -> R16_4 (FIFA M93)
+  10: {next:4, slot:'away'}, // Spain/Austria -> R16_4
+  9:  {next:5, slot:'home'}, // USA/Bosnia -> R16_5 (FIFA M94)
+  8:  {next:5, slot:'away'}, // Belgium/Senegal -> R16_5
+  14: {next:6, slot:'home'}, // Argentina/CapeVerde -> R16_6 (FIFA M95)
+  13: {next:6, slot:'away'}, // Australia/Egypt -> R16_6
+  12: {next:7, slot:'home'}, // Switzerland/Algeria -> R16_7 (FIFA M96)
+  15: {next:7, slot:'away'}, // Colombia/Ghana -> R16_7
+};
+const R16_TO_QF = {
+  1: {next:0, slot:'home'}, // R16_1 (M89) -> QF_0
+  0: {next:0, slot:'away'}, // R16_0 (M90) -> QF_0
+  2: {next:1, slot:'home'}, // R16_2 (M91) -> QF_1
+  3: {next:1, slot:'away'}, // R16_3 (M92) -> QF_1
+  4: {next:2, slot:'home'}, // R16_4 (M93) -> QF_2
+  5: {next:2, slot:'away'}, // R16_5 (M94) -> QF_2
+  6: {next:3, slot:'home'}, // R16_6 (M95) -> QF_3
+  7: {next:3, slot:'away'}, // R16_7 (M96) -> QF_3
+};
+const QF_TO_SF = {
+  0: {next:0, slot:'home'},
+  1: {next:0, slot:'away'},
+  2: {next:1, slot:'home'},
+  3: {next:1, slot:'away'},
+};
+const SF_TO_FINAL = {
+  0: {next:0, slot:'home'},
+  1: {next:0, slot:'away'},
+};
+function getNextBracketSlot(round, matchIdx) {
+  const map = round==="Round of 32" ? R32_TO_R16
+            : round==="Round of 16" ? R16_TO_QF
+            : round==="Quarter-Finals" ? QF_TO_SF
+            : round==="Semi-Finals" ? SF_TO_FINAL
+            : null;
+  return map ? map[matchIdx] : null;
+}
+
 // FIFA 2026 official Round of 32 bracket seeding
 // Slots: G1=group winner, G2=runner-up, T=best 3rd place (seeded by FIFA after groups)
 // The 16 R32 matchups — 3rd place slots filled by FIFA seeding table after group stage
@@ -2246,18 +2300,16 @@ export default function App(){
         const roundOrder = ["Round of 32","Round of 16","Quarter-Finals","Semi-Finals","Final"];
         const roundIdx = roundOrder.indexOf(u.round);
         if (roundIdx >= 0 && roundIdx < roundOrder.length-1) {
-          // Extract match index from id, e.g. "Round_of_32_5" -> 5
           const matchIdx = parseInt(u.id.split('_').pop());
           const nextRound = roundOrder[roundIdx+1];
-          const nextMatchIdx = Math.floor(matchIdx / 2);
-          const isHomeSlot = matchIdx % 2 === 0;
-          const nextId = `${nextRound.replace(/\s/g,"_")}_${nextMatchIdx}`;
-          return updated.map(m => {
-            if (m.id !== nextId) return m;
-            return isHomeSlot
-              ? { ...m, home: winner }
-              : { ...m, away: winner };
-          });
+          const slot = getNextBracketSlot(u.round, matchIdx);
+          if (slot) {
+            const nextId = `${nextRound.replace(/\s/g,"_")}_${slot.next}`;
+            return updated.map(m => {
+              if (m.id !== nextId) return m;
+              return slot.slot === 'home' ? { ...m, home: winner } : { ...m, away: winner };
+            });
+          }
         }
       }
       return updated;
@@ -2527,12 +2579,12 @@ export default function App(){
         if (roundIdx < 0 || roundIdx >= roundOrder.length-1) return;
         const matchIdx = parseInt(m.id.split('_').pop());
         const nextRound = roundOrder[roundIdx+1];
-        const nextMatchIdx = Math.floor(matchIdx / 2);
-        const isHomeSlot = matchIdx % 2 === 0;
-        const nextId = `${nextRound.replace(/\s/g,"_")}_${nextMatchIdx}`;
+        const slot = getNextBracketSlot(m.round, matchIdx);
+        if (!slot) return;
+        const nextId = `${nextRound.replace(/\s/g,"_")}_${slot.next}`;
         propagatedKO = propagatedKO.map(nm => {
           if (nm.id !== nextId) return nm;
-          return isHomeSlot ? { ...nm, home: winner } : { ...nm, away: winner };
+          return slot.slot === 'home' ? { ...nm, home: winner } : { ...nm, away: winner };
         });
       });
       setActualKO(propagatedKO);
@@ -4660,19 +4712,27 @@ export default function App(){
             const sf  = byRound('Semi-Finals');
             const fin = byRound('Final');
 
-            // Split each round: left = first half, right = second half
-            const half = n => Math.ceil(n/2);
-            const L = arr => arr.slice(0, half(arr.length));
-            const R = arr => arr.slice(half(arr.length));
+            // Split by FIFA bracket structure (not just array order):
+            // Left half feeds R16 slots 0,1,2,3 (FIFA M89,90,91,92); Right half feeds 4,5,6,7 (M93-96)
+            const byId = id => actualKO.find(m=>m.id===id) || {id, round:'Round of 32', home:'TBD', away:'TBD', homeScore:null, awayScore:null};
+            const lR32 = ['Round_of_32_0','Round_of_32_3','Round_of_32_2','Round_of_32_5',
+                          'Round_of_32_1','Round_of_32_4','Round_of_32_6','Round_of_32_7'].map(byId);
+            const rR32 = ['Round_of_32_11','Round_of_32_10','Round_of_32_9','Round_of_32_8',
+                          'Round_of_32_14','Round_of_32_13','Round_of_32_12','Round_of_32_15'].map(byId);
 
             const TBD = {id:'tbd',round:'',home:'TBD',away:'TBD',homeScore:null,awayScore:null};
             const pad = (arr, n) => [...arr, ...Array(Math.max(0,n-arr.length)).fill(TBD)];
 
-            const lR32=pad(L(r32),8), rR32=pad(R(r32),8);
-            const lR16=pad(L(r16),4), rR16=pad(R(r16),4);
-            const lQF =pad(L(qf),2),  rQF =pad(R(qf),2);
-            const lSF =pad(L(sf),1),  rSF =pad(R(sf),1);
-            const finM=fin[0]||TBD;
+            const byIdR16 = id => actualKO.find(m=>m.id===id) || {id, round:'Round of 16', home:'TBD', away:'TBD', homeScore:null, awayScore:null};
+            const lR16 = ['Round_of_16_1','Round_of_16_0','Round_of_16_2','Round_of_16_3'].map(byIdR16);
+            const rR16 = ['Round_of_16_4','Round_of_16_5','Round_of_16_6','Round_of_16_7'].map(byIdR16);
+            const lQF = [actualKO.find(m=>m.id==='Quarter-Finals_0')||{...TBD,id:'Quarter-Finals_0',round:'Quarter-Finals'},
+                         actualKO.find(m=>m.id==='Quarter-Finals_1')||{...TBD,id:'Quarter-Finals_1',round:'Quarter-Finals'}];
+            const rQF = [actualKO.find(m=>m.id==='Quarter-Finals_2')||{...TBD,id:'Quarter-Finals_2',round:'Quarter-Finals'},
+                         actualKO.find(m=>m.id==='Quarter-Finals_3')||{...TBD,id:'Quarter-Finals_3',round:'Quarter-Finals'}];
+            const lSF = [actualKO.find(m=>m.id==='Semi-Finals_0')||{...TBD,id:'Semi-Finals_0',round:'Semi-Finals'}];
+            const rSF = [actualKO.find(m=>m.id==='Semi-Finals_1')||{...TBD,id:'Semi-Finals_1',round:'Semi-Finals'}];
+            const finM = actualKO.find(m=>m.round==='Final') || TBD;
 
             const Team = ({name,score,won,flip}) => {
               const hasName = name && name!=='TBD';
