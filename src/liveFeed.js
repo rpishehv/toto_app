@@ -70,11 +70,10 @@ export function parseFeed(data, appMatches, appKO) {
     const isFinished = FINISHED.includes(status)
     const isLive = ['1H','2H','HT','ET','BT','P'].includes(status)
     // Group stage: use 90-min fulltime score
-    // KO stage: use fulltime score (90/120min) for display, plus penalty score separately
+    // KO stage: f.goals is the cumulative/current score (includes ET if applicable) — use directly.
+    // NOTE: score.extratime is ET-PERIOD-ONLY goals (like halftime), NOT cumulative — never use for display.
     const fulltimeGoals = f.score?.fulltime?.home != null ? f.score.fulltime : f.goals
-    // For KO matches: prefer extratime score if present (90min draws that went to ET),
-    // otherwise fulltime. This is the "match score" shown in the bracket (not incl. pens).
-    const koDisplayGoals = f.score?.extratime?.home != null ? f.score.extratime : fulltimeGoals
+    const koDisplayGoals = f.goals
     const penaltyGoals = f.score?.penalty
 
     // Kickoff time
@@ -106,6 +105,10 @@ export function parseFeed(data, appMatches, appKO) {
     )
     if (appKOMatch && isFinished && koDisplayGoals?.home !== null && koDisplayGoals?.home !== undefined) {
       const flipped = appKOMatch.home === away
+      if (appKOMatch.round !== 'Round of 32' || ['Round_of_32_2','Round_of_32_3'].includes(appKOMatch.id)) {
+        console.log('[KO sync debug]', appKOMatch.id, home, 'vs', away, 'status:', status,
+          'f.goals:', JSON.stringify(f.goals), 'f.score:', JSON.stringify(f.score));
+      }
       results.koScores[appKOMatch.id] = {
         homeScore: flipped ? koDisplayGoals.away : koDisplayGoals.home,
         awayScore: flipped ? koDisplayGoals.home : koDisplayGoals.away,
