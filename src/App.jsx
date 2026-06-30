@@ -4724,7 +4724,7 @@ export default function App(){
             const pad = (arr, n) => [...arr, ...Array(Math.max(0,n-arr.length)).fill(TBD)];
 
             const byIdR16 = id => actualKO.find(m=>m.id===id) || {id, round:'Round of 16', home:'TBD', away:'TBD', homeScore:null, awayScore:null};
-            const lR16 = ['Round_of_16_1','Round_of_16_0','Round_of_16_2','Round_of_16_3'].map(byIdR16);
+            const lR16 = ['Round_of_16_0','Round_of_16_1','Round_of_16_2','Round_of_16_3'].map(byIdR16);
             const rR16 = ['Round_of_16_4','Round_of_16_5','Round_of_16_6','Round_of_16_7'].map(byIdR16);
             const lQF = [actualKO.find(m=>m.id==='Quarter-Finals_0')||{...TBD,id:'Quarter-Finals_0',round:'Quarter-Finals'},
                          actualKO.find(m=>m.id==='Quarter-Finals_1')||{...TBD,id:'Quarter-Finals_1',round:'Quarter-Finals'}];
