@@ -6274,9 +6274,18 @@ export default function App(){
                 if(!hasLockedMatches||!Object.keys(allPlayerPreds).length) return null;
                 const runIntegrityCheck = async() => {
                   setIntegrityLoading(true);
+                  // Force fresh fetch — bypass cache to get latest hashes
+                  invalidatePredsCache(groupCode);
+                  const freshPreds = await sbGetAllPredictions(groupCode);
+                  const freshMap = {};
+                  freshPreds.forEach(p=>{
+                    if(p?.username) freshMap[p.username]={username:p.username,matches:p.matches||[],knockout:p.knockout||[],podium:p.podium||null,prediction_hash:p.prediction_hash,hash_locked_at:p.hash_locked_at};
+                  });
+                  setAllPlayerPreds(freshMap);
+
                   const results = await Promise.all(
                     leaderboard.map(async e => {
-                      const p = allPlayerPreds[e.username];
+                      const p = freshMap[e.username];
                       if(!p) return {username:e.username, status:'no_predictions'};
                       if(!p.prediction_hash) return {username:e.username, status:'no_hash'};
                       const current = await computePredictionHash(e.username, p.matches||[], p.knockout||[], allKickoffs);
