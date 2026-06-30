@@ -70,9 +70,12 @@ export function parseFeed(data, appMatches, appKO) {
     const isFinished = FINISHED.includes(status)
     const isLive = ['1H','2H','HT','ET','BT','P'].includes(status)
     // Group stage: use 90-min fulltime score
-    // KO stage: use full result including ET (f.goals), but only when fully finished (AET/PEN/FT)
+    // KO stage: use fulltime score (90/120min) for display, plus penalty score separately
     const fulltimeGoals = f.score?.fulltime?.home != null ? f.score.fulltime : f.goals
-    const finalGoals = f.goals  // includes ET goals
+    // For KO matches: prefer extratime score if present (90min draws that went to ET),
+    // otherwise fulltime. This is the "match score" shown in the bracket (not incl. pens).
+    const koDisplayGoals = f.score?.extratime?.home != null ? f.score.extratime : fulltimeGoals
+    const penaltyGoals = f.score?.penalty
 
     // Kickoff time
     if (f.fixture?.date) {
@@ -95,16 +98,19 @@ export function parseFeed(data, appMatches, appKO) {
       }
     }
 
-    // KO match — use final score (incl. ET) but only when fully done
+    // KO match — use 90/120min score (excl. pens) for the score line,
+    // plus separate penalty score if the match went to a shootout
     const appKOMatch = appKO?.find(m =>
       (m.home === home && m.away === away) ||
       (m.home === away && m.away === home)
     )
-    if (appKOMatch && isFinished && finalGoals?.home !== null && finalGoals?.home !== undefined) {
+    if (appKOMatch && isFinished && koDisplayGoals?.home !== null && koDisplayGoals?.home !== undefined) {
       const flipped = appKOMatch.home === away
       results.koScores[appKOMatch.id] = {
-        homeScore: flipped ? finalGoals.away : finalGoals.home,
-        awayScore: flipped ? finalGoals.home : finalGoals.away,
+        homeScore: flipped ? koDisplayGoals.away : koDisplayGoals.home,
+        awayScore: flipped ? koDisplayGoals.home : koDisplayGoals.away,
+        homePenalty: (penaltyGoals?.home != null) ? (flipped ? penaltyGoals.away : penaltyGoals.home) : null,
+        awayPenalty: (penaltyGoals?.away != null) ? (flipped ? penaltyGoals.home : penaltyGoals.away) : null,
       }
       results.koTeams[appKOMatch.id] = { home: appKOMatch.home, away: appKOMatch.away }
     }
@@ -134,6 +140,8 @@ export function applyFeedToState(parsed, appMatches, appKO, appPodium, koKickoff
     if (score) {
       if (override || updated.homeScore === null) updated.homeScore = score.homeScore
       if (override || updated.awayScore === null) updated.awayScore = score.awayScore
+      if (score.homePenalty != null && (override || updated.homePenalty == null)) updated.homePenalty = score.homePenalty
+      if (score.awayPenalty != null && (override || updated.awayPenalty == null)) updated.awayPenalty = score.awayPenalty
     }
     return updated
   })

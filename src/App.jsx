@@ -132,6 +132,7 @@ function makeKORound(name,count){
   return Array.from({length:count},(_,i)=>({
     id:`${name.replace(/\s/g,"_")}_${i}`,round:name,
     home:"TBD",away:"TBD",homeScore:null,awayScore:null,
+    homePenalty:null,awayPenalty:null, // penalty shootout score, if applicable
   }));
 }
 
@@ -2225,8 +2226,42 @@ export default function App(){
   const adminUpdateMatch = u => setActualMatches(p=>p.map(m=>m.id===u.id?u:m));
 
   // Admin: update actual KO match — no auto-cascade, admin controls teams manually
+  // Determine match winner — uses penalty score if match was a draw after 90/120min
+  const getKOWinner = m => {
+    if (m.homeScore === null || m.awayScore === null) return null;
+    if (m.homeScore !== m.awayScore) return m.homeScore > m.awayScore ? m.home : m.away;
+    // Draw after normal/extra time — check penalties
+    if (m.homePenalty !== null && m.awayPenalty !== null && m.homePenalty !== m.awayPenalty) {
+      return m.homePenalty > m.awayPenalty ? m.home : m.away;
+    }
+    return null; // genuinely undetermined yet
+  };
+
   const adminUpdateKO = u => {
-    setActualKO(prev => prev.map(m=>m.id===u.id?u:m));
+    setActualKO(prev => {
+      const updated = prev.map(m=>m.id===u.id?u:m);
+      // Propagate winner to next round if this match now has a determined winner
+      const winner = getKOWinner(u);
+      if (winner) {
+        const roundOrder = ["Round of 32","Round of 16","Quarter-Finals","Semi-Finals","Final"];
+        const roundIdx = roundOrder.indexOf(u.round);
+        if (roundIdx >= 0 && roundIdx < roundOrder.length-1) {
+          // Extract match index from id, e.g. "Round_of_32_5" -> 5
+          const matchIdx = parseInt(u.id.split('_').pop());
+          const nextRound = roundOrder[roundIdx+1];
+          const nextMatchIdx = Math.floor(matchIdx / 2);
+          const isHomeSlot = matchIdx % 2 === 0;
+          const nextId = `${nextRound.replace(/\s/g,"_")}_${nextMatchIdx}`;
+          return updated.map(m => {
+            if (m.id !== nextId) return m;
+            return isHomeSlot
+              ? { ...m, home: winner }
+              : { ...m, away: winner };
+          });
+        }
+      }
+      return updated;
+    });
   };
 
   // Admin: manually trigger R32 fill from actual group standings (only when button pressed)
@@ -2482,7 +2517,25 @@ export default function App(){
 
       // Apply to state — admin reviews before saving
       setActualMatches(applied.matches);
-      setActualKO(applied.ko);
+      // Propagate winners through the bracket for any newly-determined KO results
+      let propagatedKO = applied.ko;
+      const roundOrder = ["Round of 32","Round of 16","Quarter-Finals","Semi-Finals","Final"];
+      propagatedKO.forEach(m => {
+        const winner = getKOWinner(m);
+        if (!winner) return;
+        const roundIdx = roundOrder.indexOf(m.round);
+        if (roundIdx < 0 || roundIdx >= roundOrder.length-1) return;
+        const matchIdx = parseInt(m.id.split('_').pop());
+        const nextRound = roundOrder[roundIdx+1];
+        const nextMatchIdx = Math.floor(matchIdx / 2);
+        const isHomeSlot = matchIdx % 2 === 0;
+        const nextId = `${nextRound.replace(/\s/g,"_")}_${nextMatchIdx}`;
+        propagatedKO = propagatedKO.map(nm => {
+          if (nm.id !== nextId) return nm;
+          return isHomeSlot ? { ...nm, home: winner } : { ...nm, away: winner };
+        });
+      });
+      setActualKO(propagatedKO);
       setActualPodium(applied.podium);
       setKoKickoffs(applied.koKickoffs);
 
@@ -3225,7 +3278,10 @@ export default function App(){
     try {
       const getKOWinner = m => {
         if(!m||m.homeScore===null||m.awayScore===null) return null;
-        return m.homeScore>m.awayScore?m.home:m.awayScore>m.homeScore?m.away:null;
+        if(m.homeScore!==m.awayScore) return m.homeScore>m.awayScore?m.home:m.away;
+        if(m.homePenalty!=null&&m.awayPenalty!=null&&m.homePenalty!==m.awayPenalty)
+          return m.homePenalty>m.awayPenalty?m.home:m.away;
+        return null;
       };
       const newPodium = {...actualPodium};
       const finalMatch = actualKO.find(m=>m.round==="Final");
@@ -4641,8 +4697,15 @@ export default function App(){
               if(!m) return null;
               const hasTeams = m.home && m.home!=='TBD';
               const hasScore = m.homeScore!=null && m.awayScore!=null;
-              const hWon = hasScore && m.homeScore>m.awayScore;
-              const aWon = hasScore && m.awayScore>m.homeScore;
+              const isDraw = hasScore && m.homeScore===m.awayScore;
+              const hasPenalties = m.homePenalty!=null && m.awayPenalty!=null;
+              // Winner determined by score, or by penalties if drawn
+              const hWon = hasScore && (isDraw
+                ? (hasPenalties && m.homePenalty>m.awayPenalty)
+                : m.homeScore>m.awayScore);
+              const aWon = hasScore && (isDraw
+                ? (hasPenalties && m.awayPenalty>m.homePenalty)
+                : m.awayScore>m.homeScore);
               return(
                 <div style={{
                   background:"rgba(255,255,255,0.08)",
@@ -4652,6 +4715,12 @@ export default function App(){
                   <Team name={m.home} score={hasScore?m.homeScore:null} won={hWon} flip={flip}/>
                   <div style={{height:"0.5px",background:"rgba(255,255,255,0.15)"}}/>
                   <Team name={m.away} score={hasScore?m.awayScore:null} won={aWon} flip={flip}/>
+                  {isDraw&&hasPenalties&&(
+                    <div style={{fontSize:7,color:"#fcb900",textAlign:"center",padding:"1px 0",
+                      background:"rgba(252,185,0,0.08)"}}>
+                      pens {m.homePenalty}-{m.awayPenalty}
+                    </div>
+                  )}
                 </div>
               );
             };
@@ -9846,16 +9915,34 @@ export default function App(){
                     </div>
                     {/* Score row */}
                     {m.home!=="TBD"&&m.away!=="TBD"&&(
-                      <div style={{display:"flex",alignItems:"center",gap:8,justifyContent:"center"}}>
-                        <span style={{fontSize:11,color:"#555"}}>Score:</span>
-                        <ScoreInput value={m.homeScore} onChange={v=>adminUpdateKO({...m,homeScore:v})}/>
-                        <span style={{color:"#444",fontWeight:700}}>–</span>
-                        <ScoreInput value={m.awayScore} onChange={v=>adminUpdateKO({...m,awayScore:v})}/>
-                        {m.homeScore!==null&&m.awayScore!==null&&(
-                          <span style={{fontSize:11,color:"#22c55e",marginLeft:8}}>
-                            Winner: {m.homeScore>m.awayScore?m.home:m.awayScore>m.homeScore?m.away:"Draw — enter ET/pens"}
-                          </span>
+                      <div>
+                        <div style={{display:"flex",alignItems:"center",gap:8,justifyContent:"center"}}>
+                          <span style={{fontSize:11,color:"#555"}}>Score (90/120min):</span>
+                          <ScoreInput value={m.homeScore} onChange={v=>adminUpdateKO({...m,homeScore:v})}/>
+                          <span style={{color:"#444",fontWeight:700}}>–</span>
+                          <ScoreInput value={m.awayScore} onChange={v=>adminUpdateKO({...m,awayScore:v})}/>
+                        </div>
+                        {m.homeScore!==null&&m.awayScore!==null&&m.homeScore===m.awayScore&&(
+                          <div style={{display:"flex",alignItems:"center",gap:8,justifyContent:"center",marginTop:8,
+                            padding:"8px",background:"rgba(252,185,0,0.06)",borderRadius:6,
+                            border:"1px solid rgba(252,185,0,0.15)"}}>
+                            <span style={{fontSize:11,color:"#fcb900"}}>⚽ Penalties:</span>
+                            <ScoreInput value={m.homePenalty} onChange={v=>adminUpdateKO({...m,homePenalty:v})}/>
+                            <span style={{color:"#444",fontWeight:700}}>–</span>
+                            <ScoreInput value={m.awayPenalty} onChange={v=>adminUpdateKO({...m,awayPenalty:v})}/>
+                          </div>
                         )}
+                        {(()=>{ const w = getKOWinner(m); return w ? (
+                          <div style={{textAlign:"center",marginTop:6}}>
+                            <span style={{fontSize:11,color:"#22c55e"}}>
+                              ✅ Winner: {w}{m.homeScore===m.awayScore?" (on penalties)":""} — advances to next round
+                            </span>
+                          </div>
+                        ) : (m.homeScore!==null&&m.awayScore!==null&&m.homeScore===m.awayScore) ? (
+                          <div style={{textAlign:"center",marginTop:6}}>
+                            <span style={{fontSize:10,color:"#555"}}>Enter penalty score to determine winner</span>
+                          </div>
+                        ) : null; })()}
                       </div>
                     )}
                   </div>
