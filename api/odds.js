@@ -84,6 +84,32 @@ const MATCH_DATES = {
   'south africa||south korea': '2026-06-25',
   'switzerland||canada': '2026-06-25',
   'bosnia-herzegovina||qatar': '2026-06-25',
+  // Round of 32
+  'south africa||canada': '2026-06-28',
+  'germany||paraguay': '2026-06-29',
+  'netherlands||morocco': '2026-06-29',
+  'brazil||japan': '2026-06-29',
+  'france||sweden': '2026-06-30',
+  'ivory coast||norway': '2026-06-30',
+  'mexico||ecuador': '2026-06-30',
+  'england||dr congo': '2026-07-01',
+  'belgium||senegal': '2026-07-01',
+  'usa||bosnia-herzegovina': '2026-07-01',
+  'portugal||croatia': '2026-07-02',
+  'spain||austria': '2026-07-02',
+  'switzerland||algeria': '2026-07-02',
+  'australia||egypt': '2026-07-03',
+  'argentina||cape verde': '2026-07-03',
+  'colombia||ghana': '2026-07-03',
+  // Round of 16
+  'canada||morocco': '2026-07-04',
+  'paraguay||france': '2026-07-04',
+  'brazil||norway': '2026-07-05',
+  'mexico||england': '2026-07-05',
+  'portugal||spain': '2026-07-06',
+  'usa||belgium': '2026-07-06',
+  'argentina||egypt': '2026-07-07',
+  'switzerland||colombia': '2026-07-07',
 };
 
 function getCode(name) {
