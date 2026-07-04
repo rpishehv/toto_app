@@ -27,6 +27,8 @@ import EXPERT_PREDICTIONS from './experts.js';
 import GROUP_AI_PREDICTIONS from './groupPredictions.js';
 import R32_AI_PREDICTIONS from './r32Predictions.js';
 import R32_EXPERT_PREDICTIONS from './r32Experts.js';
+import R16_AI_PREDICTIONS from './r16Predictions.js';
+import R16_EXPERT_PREDICTIONS from './r16Experts.js';
 
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
@@ -1517,24 +1519,25 @@ function ExpertPanel({ home, away, data, loading, onClose }) {
   );
 }
 
-function KOMatchButtons({liveHome, liveAway, aiP, r32AI, r32Expert}) {
+function KOMatchButtons({liveHome, liveAway, aiP, r32AI, r32Expert, r16AI, r16Expert}) {
   const [showAI, setShowAI] = useState(false);
   const [showOdds, setShowOdds] = useState(false);
   const [showExperts, setShowExperts] = useState(false);
   const [odds, setOdds] = useState(aiP?.polymarket||null);
   const [oddsLoading, setOddsLoading] = useState(false);
   // Use stored expert data if admin generated it, otherwise fall back to hardcoded R32 experts
-  const [expertData, setExpertData] = useState(aiP?.experts||r32Expert||null);
   const [expertLoading, setExpertLoading] = useState(false);
 
   // Combined AI prediction — admin-generated takes priority, then hardcoded R32
-  const effectiveAI = aiP || r32AI;
+  const effectiveAI = aiP || r16AI || r32AI;
+  const [expertData, setExpertData] = useState(aiP?.experts || r16Expert || r32Expert || null);
 
   // Update if admin pushes new data via Supabase real-time
   React.useEffect(()=>{
     if (aiP?.experts) setExpertData(aiP.experts);
+    else if (r16Expert && !expertData) setExpertData(r16Expert);
     else if (r32Expert && !expertData) setExpertData(r32Expert);
-  }, [aiP?.experts, r32Expert]);
+  }, [aiP?.experts, r16Expert, r32Expert]);
 
   const fetchOdds = async () => {
     if (odds) { setShowOdds(p=>!p); return; }
@@ -5011,6 +5014,8 @@ export default function App(){
                         aiP={livePredictions[`${liveHome}||${liveAway}`]}
                         r32AI={R32_AI_PREDICTIONS[`${liveHome}||${liveAway}`]||R32_AI_PREDICTIONS[`${liveAway}||${liveHome}`]}
                         r32Expert={R32_EXPERT_PREDICTIONS[`${liveHome}||${liveAway}`]||R32_EXPERT_PREDICTIONS[`${liveAway}||${liveHome}`]}
+                        r16AI={R16_AI_PREDICTIONS[`${liveHome}||${liveAway}`]||R16_AI_PREDICTIONS[`${liveAway}||${liveHome}`]}
+                        r16Expert={R16_EXPERT_PREDICTIONS[`${liveHome}||${liveAway}`]||R16_EXPERT_PREDICTIONS[`${liveAway}||${liveHome}`]}
                       />}
                     </div>
                   );
