@@ -1531,16 +1531,20 @@ function KOMatchButtons({liveHome, liveAway, aiP, r32AI, r32Expert, r16AI, r16Ex
   const [expertLoading, setExpertLoading] = useState(false);
 
   // Combined AI prediction — admin-generated takes priority, then hardcoded R32
-  const effectiveAI = aiP || qfAI || r16AI || r32AI;
-  const [expertData, setExpertData] = useState(aiP?.experts || qfExpert || r16Expert || r32Expert || null);
+  // Priority: admin-generated > QF hardcoded > R16 hardcoded > R32 hardcoded
+  // Also try reversed key in case home/away are flipped
+  const effectiveAI = aiP || qfAI || r16AI || r32AI || null;
+  const effectiveExpert = qfExpert || r16Expert || r32Expert || null;
+  if (process.env.NODE_ENV==='development' && !effectiveAI && liveHome!=='TBD') {
+    console.log('[KO pred miss]', `"${liveHome}||${liveAway}"`);
+  }
+  const [expertData, setExpertData] = useState(aiP?.experts || effectiveExpert || null);
 
   // Update if admin pushes new data via Supabase real-time
   React.useEffect(()=>{
     if (aiP?.experts) setExpertData(aiP.experts);
-    else if (qfExpert && !expertData) setExpertData(qfExpert);
-    else if (r16Expert && !expertData) setExpertData(r16Expert);
-    else if (r32Expert && !expertData) setExpertData(r32Expert);
-  }, [aiP?.experts, qfExpert, r16Expert, r32Expert]);
+    else if (effectiveExpert && !expertData) setExpertData(effectiveExpert);
+  }, [aiP?.experts, effectiveExpert]);
 
   const fetchOdds = async () => {
     if (odds) { setShowOdds(p=>!p); return; }
