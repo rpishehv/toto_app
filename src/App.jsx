@@ -1536,7 +1536,6 @@ function KOMatchButtons({liveHome, liveAway, aiP, r32AI, r32Expert, r16AI, r16Ex
   const effectiveAI = aiP || qfAI || r16AI || r32AI || null;
   const effectiveExpert = qfExpert || r16Expert || r32Expert || null;
   if (process.env.NODE_ENV==='development' && !effectiveAI && liveHome!=='TBD') {
-    console.log('[KO pred miss]', `"${liveHome}||${liveAway}"`);
   }
   const [expertData, setExpertData] = useState(aiP?.experts || effectiveExpert || null);
 
@@ -1943,7 +1942,6 @@ export default function App(){
         }
         // Load news
         const newsData = await sbGetNews(gc);
-        console.log('[News load] groupCode:', gc, 'has news:', !!newsData?.news, 'count:', newsData?.news?.length);
         if(newsData?.news?.length){ setNewsStories(newsData.news); setNewsUpdatedBy(newsData.news_updated_by); setNewsUpdatedAt(newsData.news_updated_at); }
         // Load analytics
         const analyticsData = await sbGetAnalytics(gc);
@@ -2144,9 +2142,7 @@ export default function App(){
             .then(result => {
               setHashStatus(result.status);
               if(result.status==='tampered') {
-                console.warn('[Hash] TAMPER DETECTED for', userName, 'stored:', result.stored, 'current:', result.current);
               } else if(result.status==='ok') {
-                console.log('[Hash] integrity OK for', userName);
               }
             });
           // Load existing certificate
@@ -2330,13 +2326,11 @@ export default function App(){
   const adminFillR32=()=>{
     const liveQuals = deriveQualifiers(actualMatches);
     const hasResults = actualMatches.some(m=>m.homeScore!==null);
-    console.log('[adminFillR32] hasResults:', hasResults, 'qualifiers:', JSON.stringify(liveQuals));
     if (!hasResults) {
       setAdminPinError("Enter some group stage results first!");setTimeout(()=>setAdminPinError(""),3000);
       return;
     }
     const newKO = fillLiveBracket(actualKO, liveQuals, null);
-    console.log('[adminFillR32] R32 teams:', newKO.filter(m=>m.round==="Round of 32").map(m=>`${m.home} vs ${m.away}`));
     setActualKO(newKO);
     setAdminPinError("✅ R32 filled from standings — review and hit Save Results");
     setTimeout(()=>setAdminPinError(""),4000);
@@ -3608,7 +3602,6 @@ export default function App(){
     if (hash) {
       await savePredictionHash(userName, hash, groupCode);
       setHashStatus('ok'); // immediately clear mismatch after successful save
-      console.log('[Hash] stored:', hash);
       // Request RFC 3161 timestamp certificate from freetsa.org
       try {
         setCertLoading(true);
@@ -5026,9 +5019,7 @@ export default function App(){
                         qfAI={QF_AI_PREDICTIONS[`${liveHome}||${liveAway}`]||QF_AI_PREDICTIONS[`${liveAway}||${liveHome}`]}
                         qfExpert={QF_EXPERT_PREDICTIONS[`${liveHome}||${liveAway}`]||QF_EXPERT_PREDICTIONS[`${liveAway}||${liveHome}`]}
                       />}
-                      {teamsKnown&&!QF_AI_PREDICTIONS[`${liveHome}||${liveAway}`]&&!QF_AI_PREDICTIONS[`${liveAway}||${liveHome}`]&&!R16_AI_PREDICTIONS[`${liveHome}||${liveAway}`]&&!R16_AI_PREDICTIONS[`${liveAway}||${liveHome}`]&&(
                         <div style={{fontSize:9,color:"#ef4444",marginTop:4}}>
-                          [debug] no pred for: "{liveHome}||{liveAway}"
                         </div>
                       )}
                     </div>

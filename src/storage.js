@@ -206,11 +206,9 @@ export async function sbUpsertLeaderboard(username, podium, points, groupCode='d
       .update({ champion: row.champion, podium, points, updated_at: row.updated_at })
       .eq('username', username).eq('group_code', groupCode);
     if (error) console.error('sbUpsertLeaderboard update error:', error.message);
-    else console.log('sbUpsertLeaderboard: updated', username, 'in group', groupCode);
   } else {
     const { error } = await supabase.from('leaderboard').insert(row);
     if (error) console.error('sbUpsertLeaderboard insert error:', error.message, 'row:', JSON.stringify(row));
-    else console.log('sbUpsertLeaderboard: inserted', username, 'in group', groupCode);
   }
 
   return sbGetLeaderboard(groupCode);
@@ -328,7 +326,6 @@ export async function sbGetAIContent(groupCode='default') {
 
 // Helper: merge-update ai_content without wiping other columns
 export async function sbMergeAIContent(fields, groupCode='default') {
-  console.log('[sbMergeAIContent] saving fields:', Object.keys(fields), 'for group:', groupCode);
   // Ensure row exists first
   await supabase.from('ai_content')
     .insert({ group_code: groupCode })
@@ -338,7 +335,6 @@ export async function sbMergeAIContent(fields, groupCode='default') {
   const { error } = await supabase.from('ai_content')
     .update(fields).eq('group_code', groupCode);
   if (error) console.error('[sbMergeAIContent] update error:', error.message);
-  else console.log('[sbMergeAIContent] update success');
 }
 
 export async function sbSaveAIContent(bracket, commentary, bracketGeneratedBy, commentaryGeneratedBy, groupCode='default') {
@@ -455,7 +451,6 @@ export async function computePredictionHash(username, matches, knockout, kickoff
   if (!lockedMatches.length) return null;
 
   const payload = `${username}|${lockedMatches.join('|')}`;
-  console.log('[Hash compute]', username, 'scored matches:', lockedMatches.length, 'payload preview:', payload.slice(0, 120));
   const encoder = new TextEncoder();
   const data = encoder.encode(payload);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -480,7 +475,6 @@ export async function verifyPredictionHash(username, matches, knockout, kickoffs
   const currentHash = await computePredictionHash(username, matches, knockout, kickoffs);
   if (!currentHash) return { status: 'no_locked_matches' };
 
-  console.log('[Hash verify]', username, 'stored:', data.prediction_hash, 'current:', currentHash, 'match:', currentHash === data.prediction_hash);
 
   if (currentHash === data.prediction_hash) {
     return { status: 'ok', lockedAt: data.hash_locked_at };

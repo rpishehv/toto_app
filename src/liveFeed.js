@@ -106,8 +106,6 @@ export function parseFeed(data, appMatches, appKO) {
     if (appKOMatch && isFinished && koDisplayGoals?.home !== null && koDisplayGoals?.home !== undefined) {
       const flipped = appKOMatch.home === away
       if (appKOMatch.round !== 'Round of 32' || ['Round_of_32_2','Round_of_32_3'].includes(appKOMatch.id)) {
-        console.log('[KO sync debug]', appKOMatch.id, home, 'vs', away, 'status:', status,
-          'f.goals:', JSON.stringify(f.goals), 'f.score:', JSON.stringify(f.score));
       }
       results.koScores[appKOMatch.id] = {
         homeScore: flipped ? koDisplayGoals.away : koDisplayGoals.home,
