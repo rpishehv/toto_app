@@ -5019,9 +5019,6 @@ export default function App(){
                         qfAI={QF_AI_PREDICTIONS[`${liveHome}||${liveAway}`]||QF_AI_PREDICTIONS[`${liveAway}||${liveHome}`]}
                         qfExpert={QF_EXPERT_PREDICTIONS[`${liveHome}||${liveAway}`]||QF_EXPERT_PREDICTIONS[`${liveAway}||${liveHome}`]}
                       />}
-                        <div style={{fontSize:9,color:"#ef4444",marginTop:4}}>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
