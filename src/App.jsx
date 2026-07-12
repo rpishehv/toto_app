@@ -182,10 +182,10 @@ const R16_TO_QF = {
   7: {next:3, slot:'away'}, // R16_7 (M96) -> QF_3
 };
 const QF_TO_SF = {
-  0: {next:0, slot:'home'},
-  1: {next:0, slot:'away'},
-  2: {next:1, slot:'home'},
-  3: {next:1, slot:'away'},
+  0: {next:0, slot:'home'}, // QF_0 (France/Morocco) -> SF_0 home
+  2: {next:0, slot:'away'}, // QF_2 (Spain/Belgium)  -> SF_0 away  [France vs Spain]
+  1: {next:1, slot:'home'}, // QF_1 (Norway/England) -> SF_1 home
+  3: {next:1, slot:'away'}, // QF_3 (Arg/Switzerland)-> SF_1 away
 };
 const SF_TO_FINAL = {
   0: {next:0, slot:'home'},
@@ -4730,8 +4730,8 @@ export default function App(){
             const lR16 = ['Round_of_16_0','Round_of_16_1','Round_of_16_2','Round_of_16_3'].map(byIdR16);
             const rR16 = ['Round_of_16_4','Round_of_16_5','Round_of_16_6','Round_of_16_7'].map(byIdR16);
             const lQF = [actualKO.find(m=>m.id==='Quarter-Finals_0')||{...TBD,id:'Quarter-Finals_0',round:'Quarter-Finals'},
-                         actualKO.find(m=>m.id==='Quarter-Finals_1')||{...TBD,id:'Quarter-Finals_1',round:'Quarter-Finals'}];
-            const rQF = [actualKO.find(m=>m.id==='Quarter-Finals_2')||{...TBD,id:'Quarter-Finals_2',round:'Quarter-Finals'},
+                         actualKO.find(m=>m.id==='Quarter-Finals_2')||{...TBD,id:'Quarter-Finals_2',round:'Quarter-Finals'}];
+            const rQF = [actualKO.find(m=>m.id==='Quarter-Finals_1')||{...TBD,id:'Quarter-Finals_1',round:'Quarter-Finals'},
                          actualKO.find(m=>m.id==='Quarter-Finals_3')||{...TBD,id:'Quarter-Finals_3',round:'Quarter-Finals'}];
             const lSF = [actualKO.find(m=>m.id==='Semi-Finals_0')||{...TBD,id:'Semi-Finals_0',round:'Semi-Finals'}];
             const rSF = [actualKO.find(m=>m.id==='Semi-Finals_1')||{...TBD,id:'Semi-Finals_1',round:'Semi-Finals'}];
