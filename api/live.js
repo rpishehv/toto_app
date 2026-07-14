@@ -4,6 +4,14 @@
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
+  // Tournament ended July 20 — block all API calls after that
+  const TOURNAMENT_END = new Date('2026-07-20T00:00:00-04:00').getTime();
+  if (Date.now() > TOURNAMENT_END) {
+    return new Response(JSON.stringify({ error: 'Tournament has ended', closed: true }), {
+      status: 410, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   const apiKey = process.env.RAPIDAPI_KEY;
   if (!apiKey) {
     return new Response(JSON.stringify({ error: 'API key not configured.' }), { status: 500 });
@@ -38,12 +46,12 @@ export default async function handler(req) {
     ]);
     const [todayData, tomorrowData] = await Promise.all([todayRes.json(), tomorrowRes.json()]);
     const combined = [...(todayData.response||[]), ...(tomorrowData.response||[])];
-    // Filter to PT day window: midnight PT to midnight PT
-    const ptDayStart = new Date(today + 'T07:00:00Z').getTime(); // midnight PT = 07:00 UTC
-    const ptDayEnd = ptDayStart + 24 * 60 * 60 * 1000;
+    // Filter to next 24h window so rest days show upcoming matches
+    const windowStart = Date.now() - 3 * 60 * 60 * 1000; // include matches from 3h ago
+    const windowEnd = Date.now() + 28 * 60 * 60 * 1000;  // up to 28h ahead
     const filtered = combined.filter(f => {
       const ko = new Date(f.fixture?.date).getTime();
-      return ko >= ptDayStart && ko < ptDayEnd;
+      return ko >= windowStart && ko < windowEnd;
     });
     return new Response(JSON.stringify({ response: filtered, results: filtered.length }), {
       status: 200, headers: { 'Content-Type': 'application/json' }

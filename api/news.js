@@ -5,6 +5,10 @@
 export const config = { maxDuration: 60, api: { bodyParser: { sizeLimit: '1mb' } } };
 
 export default async function handler(req, res) {
+  const TOURNAMENT_END = new Date('2026-07-20T00:00:00-04:00').getTime();
+  if (Date.now() > TOURNAMENT_END) {
+    return res.status(410).json({ error: 'Tournament has ended', closed: true });
+  }
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

@@ -3,6 +3,14 @@
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
+  // Tournament ended July 20 — block all API calls after that
+  const TOURNAMENT_END = new Date('2026-07-20T00:00:00-04:00').getTime();
+  if (Date.now() > TOURNAMENT_END) {
+    return new Response(JSON.stringify({ error: 'Tournament has ended', closed: true }), {
+      status: 410, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }

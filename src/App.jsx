@@ -4008,6 +4008,38 @@ export default function App(){
   const TABS=[...TABS_MAIN,...TABS_ADVANCED];
   const advancedTabActive = TABS_ADVANCED.some(t=>t.id===tab);
 
+  // Tournament ends July 20 — show closed state after that
+  const TOURNAMENT_END = new Date('2026-07-20T00:00:00-04:00').getTime();
+  if (Date.now() > TOURNAMENT_END) {
+    const winner = actualPodium?.first || null;
+    return(
+      <div style={{minHeight:"100vh",background:"#0a0d12",
+        backgroundImage:"radial-gradient(ellipse 70% 38% at 50% 0%,rgba(0,90,48,0.3) 0%,transparent 65%)",
+        fontFamily:"'DM Sans',sans-serif",color:"#e8e8e8",
+        display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+        padding:"40px 24px",textAlign:"center"}}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;700&display=swap');`}</style>
+        <div style={{fontSize:64,marginBottom:16}}>🏆</div>
+        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:36,letterSpacing:3,
+          color:"#fcb900",marginBottom:8}}>FIFA World Cup 2026</div>
+        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,
+          color:"#22c55e",marginBottom:24}}>Tournament Complete</div>
+        {winner&&(
+          <div style={{marginBottom:24,padding:"16px 32px",borderRadius:12,
+            background:"rgba(252,185,0,0.08)",border:"1px solid rgba(252,185,0,0.2)"}}>
+            <div style={{fontSize:12,color:"#555",marginBottom:4}}>World Champion</div>
+            <div style={{fontSize:28,fontWeight:700,color:"#fcb900"}}>{FLAGS[winner]||"🏆"} {winner}</div>
+          </div>
+        )}
+        <div style={{fontSize:13,color:"#555",maxWidth:280,lineHeight:1.6,marginBottom:32}}>
+          Thanks for playing! The prediction challenge has ended.
+          Final standings and certificates are preserved.
+        </div>
+        <div style={{fontSize:11,color:"#444"}}>toto-app-oqdi.vercel.app</div>
+      </div>
+    );
+  }
+
   return(
     <div style={{minHeight:"100vh",background:"#0a0d12",
       backgroundImage:"radial-gradient(ellipse 70% 38% at 50% 0%,rgba(0,90,48,0.3) 0%,transparent 65%)",
@@ -7769,7 +7801,7 @@ export default function App(){
           {todayMatches.length>0&&(
             <div style={{marginBottom:20}}>
               <div style={{fontSize:11,fontWeight:700,color:"#555",marginBottom:10}}>
-                📅 TODAY'S MATCHES
+                📅 {todayMatches.some(f=>new Date(f.fixture?.date).toDateString()===new Date().toDateString())?"TODAY'S MATCHES":"UPCOMING MATCHES"}
               </div>
               {todayMatches.filter(f=>f.fixture?.status?.short!=="1H"&&
                 f.fixture?.status?.short!=="2H"&&f.fixture?.status?.short!=="HT").map(f=>{
@@ -7894,7 +7926,15 @@ export default function App(){
             );
           })()}
 
-          {!liveLoading&&liveMatches.length===0&&todayMatches.length===0&&(()=>{
+          {!liveLoading&&liveMatches.length===0&&todayMatches.length===0&&Date.now()>=new Date('2026-06-11').getTime()&&(
+            <div style={{textAlign:"center",padding:"40px 20px"}}>
+              <div style={{fontSize:32,marginBottom:12}}>⚽</div>
+              <div style={{fontSize:14,fontWeight:700,color:"#555",marginBottom:6}}>Rest Day</div>
+              <div style={{fontSize:12,color:"#444"}}>No matches scheduled today — check back tomorrow</div>
+            </div>
+          )}
+
+          {!liveLoading&&liveMatches.length===0&&todayMatches.length===0&&Date.now()<new Date('2026-06-11').getTime()&&(()=>{
             const score = getSimScore(simMinute);
             const simEnded = simMinute >= 90;
             const userPred = matches.find(m=>

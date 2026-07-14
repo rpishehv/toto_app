@@ -1,13 +1,22 @@
 name: Daily AI Digest
 on:
   schedule:
-    - cron: '0 8 * * *'  # 8:00 AM UTC daily
+    - cron: '0 8 * * *'  # 8:00 AM UTC daily — auto-disabled by API gate after July 20
   workflow_dispatch:       # allows manual trigger from GitHub UI
 
 jobs:
   recap:
     runs-on: ubuntu-latest
     steps:
+      - name: Check tournament end
+        run: |
+          END_DATE="2026-07-20"
+          TODAY=$(date +%Y-%m-%d)
+          if [[ "$TODAY" > "$END_DATE" ]]; then
+            echo "Tournament has ended ($TODAY > $END_DATE). Skipping recap."
+            exit 0
+          fi
+          echo "Tournament active ($TODAY). Running recap..."
       - name: Trigger daily recap
         run: |
           curl -X POST https://toto-app-oqdi.vercel.app/api/daily-recap \
