@@ -2142,6 +2142,17 @@ export default function App(){
                 away: (actual.away && actual.away !== "TBD") ? actual.away : m.away,
               };
             });
+            // Add any new template entries not in saved data (e.g. Third Place added later)
+            KNOCKOUT_TEMPLATE.forEach(tmpl => {
+              if (!merged.find(m => m.id === tmpl.id)) {
+                const actual = actualKO.find(a => a.id === tmpl.id);
+                merged.push({
+                  ...tmpl,
+                  home: actual?.home || tmpl.home,
+                  away: actual?.away || tmpl.away,
+                });
+              }
+            });
             setKnockout(merged);
           }
           if(p.podium) setPodium(p.podium);
