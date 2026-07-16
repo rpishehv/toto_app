@@ -130,20 +130,20 @@ function generateGroupMatches(group, teams) {
 }
 
 const ALL_MATCHES = Object.entries(GROUPS).flatMap(([g,t])=>generateGroupMatches(g,t));
-const KO_ROUNDS = ["Round of 32","Round of 16","Quarter-Finals","Semi-Finals","Final"];
+const KO_ROUNDS = ["Round of 32","Round of 16","Quarter-Finals","Semi-Finals","Third Place","Final"];
 
 function makeKORound(name,count){
   return Array.from({length:count},(_,i)=>({
     id:`${name.replace(/\s/g,"_")}_${i}`,round:name,
     home:"TBD",away:"TBD",homeScore:null,awayScore:null,
-    homePenalty:null,awayPenalty:null, // penalty shootout score, if applicable
+    homePenalty:null,awayPenalty:null,
   }));
 }
 
 const KNOCKOUT_TEMPLATE = [
   ...makeKORound("Round of 32",16),...makeKORound("Round of 16",8),
   ...makeKORound("Quarter-Finals",4),...makeKORound("Semi-Finals",2),
-  ...makeKORound("Final",1),
+  ...makeKORound("Third Place",1),...makeKORound("Final",1),
 ];
 
 // ─── OFFICIAL FIFA BRACKET PROGRESSION ─────────────────────────────────────
@@ -191,6 +191,11 @@ const SF_TO_FINAL = {
   0: {next:0, slot:'home'},
   1: {next:0, slot:'away'},
 };
+// SF losers go to 3rd place match
+const SF_TO_THIRD = {
+  0: {next:0, slot:'home'},
+  1: {next:0, slot:'away'},
+};
 function getNextBracketSlot(round, matchIdx) {
   const map = round==="Round of 32" ? R32_TO_R16
             : round==="Round of 16" ? R16_TO_QF
@@ -198,6 +203,10 @@ function getNextBracketSlot(round, matchIdx) {
             : round==="Semi-Finals" ? SF_TO_FINAL
             : null;
   return map ? map[matchIdx] : null;
+}
+function getThirdPlaceSlot(round, matchIdx) {
+  if (round==="Semi-Finals") return SF_TO_THIRD[matchIdx]||null;
+  return null;
 }
 
 // FIFA 2026 official Round of 32 bracket seeding
@@ -2300,22 +2309,34 @@ export default function App(){
   const adminUpdateKO = u => {
     setActualKO(prev => {
       const updated = prev.map(m=>m.id===u.id?u:m);
-      // Propagate winner to next round if this match now has a determined winner
       const winner = getKOWinner(u);
       if (winner) {
-        const roundOrder = ["Round of 32","Round of 16","Quarter-Finals","Semi-Finals","Final"];
-        const roundIdx = roundOrder.indexOf(u.round);
-        if (roundIdx >= 0 && roundIdx < roundOrder.length-1) {
+        const roundIdx = KO_ROUNDS.indexOf(u.round);
+        if (roundIdx >= 0 && roundIdx < KO_ROUNDS.length-1) {
           const matchIdx = parseInt(u.id.split('_').pop());
-          const nextRound = roundOrder[roundIdx+1];
+          const nextRound = KO_ROUNDS[roundIdx+1];
           const slot = getNextBracketSlot(u.round, matchIdx);
+          let result = updated;
           if (slot) {
             const nextId = `${nextRound.replace(/\s/g,"_")}_${slot.next}`;
-            return updated.map(m => {
+            result = result.map(m => {
               if (m.id !== nextId) return m;
-              return slot.slot === 'home' ? { ...m, home: winner } : { ...m, away: winner };
+              return slot.slot==='home' ? {...m, home:winner} : {...m, away:winner};
             });
           }
+          // SF losers go to 3rd place
+          if (u.round==="Semi-Finals") {
+            const loser = winner===u.home ? u.away : u.home;
+            const thirdSlot = getThirdPlaceSlot(u.round, matchIdx);
+            if (thirdSlot && loser) {
+              const thirdId = `Third_Place_${thirdSlot.next}`;
+              result = result.map(m => {
+                if (m.id !== thirdId) return m;
+                return thirdSlot.slot==='home' ? {...m, home:loser} : {...m, away:loser};
+              });
+            }
+          }
+          return result;
         }
       }
       return updated;
@@ -2573,23 +2594,34 @@ export default function App(){
 
       // Apply to state — admin reviews before saving
       setActualMatches(applied.matches);
-      // Propagate winners through the bracket for any newly-determined KO results
       let propagatedKO = applied.ko;
-      const roundOrder = ["Round of 32","Round of 16","Quarter-Finals","Semi-Finals","Final"];
       propagatedKO.forEach(m => {
         const winner = getKOWinner(m);
         if (!winner) return;
-        const roundIdx = roundOrder.indexOf(m.round);
-        if (roundIdx < 0 || roundIdx >= roundOrder.length-1) return;
+        const roundIdx = KO_ROUNDS.indexOf(m.round);
+        if (roundIdx < 0 || roundIdx >= KO_ROUNDS.length-1) return;
         const matchIdx = parseInt(m.id.split('_').pop());
-        const nextRound = roundOrder[roundIdx+1];
+        const nextRound = KO_ROUNDS[roundIdx+1];
         const slot = getNextBracketSlot(m.round, matchIdx);
-        if (!slot) return;
-        const nextId = `${nextRound.replace(/\s/g,"_")}_${slot.next}`;
-        propagatedKO = propagatedKO.map(nm => {
-          if (nm.id !== nextId) return nm;
-          return slot.slot === 'home' ? { ...nm, home: winner } : { ...nm, away: winner };
-        });
+        if (slot) {
+          const nextId = `${nextRound.replace(/\s/g,"_")}_${slot.next}`;
+          propagatedKO = propagatedKO.map(nm => {
+            if (nm.id !== nextId) return nm;
+            return slot.slot==='home' ? {...nm, home:winner} : {...nm, away:winner};
+          });
+        }
+        // SF losers to 3rd place
+        if (m.round==="Semi-Finals") {
+          const loser = winner===m.home ? m.away : m.home;
+          const thirdSlot = getThirdPlaceSlot(m.round, matchIdx);
+          if (thirdSlot && loser) {
+            const thirdId = `Third_Place_${thirdSlot.next}`;
+            propagatedKO = propagatedKO.map(nm => {
+              if (nm.id !== thirdId) return nm;
+              return thirdSlot.slot==='home' ? {...nm, home:loser} : {...nm, away:loser};
+            });
+          }
+        }
       });
       setActualKO(propagatedKO);
       setActualPodium(applied.podium);
@@ -4768,6 +4800,7 @@ export default function App(){
             const lSF = [actualKO.find(m=>m.id==='Semi-Finals_0')||{...TBD,id:'Semi-Finals_0',round:'Semi-Finals'}];
             const rSF = [actualKO.find(m=>m.id==='Semi-Finals_1')||{...TBD,id:'Semi-Finals_1',round:'Semi-Finals'}];
             const finM = actualKO.find(m=>m.round==='Final') || TBD;
+            const thirdM = actualKO.find(m=>m.round==='Third Place') || {...TBD,id:'Third_Place_0',round:'Third Place'};
 
             const Team = ({name,score,won,flip}) => {
               const hasName = name && name!=='TBD';
@@ -4896,6 +4929,13 @@ export default function App(){
                       </div>
                       <div style={{fontSize:8,color:"#555",marginTop:4}}>Jul 19 · NJ</div>
                       <div style={{fontSize:18,marginTop:4}}>🏆</div>
+                      {/* 3rd place match */}
+                      <div style={{marginTop:20,width:"100%"}}>
+                        <div style={{fontSize:9,fontWeight:500,color:"#f97316",marginBottom:4,
+                          letterSpacing:0.5,textTransform:"uppercase",textAlign:"center"}}>3rd Place</div>
+                        <Match m={thirdM}/>
+                        <div style={{fontSize:8,color:"#555",marginTop:4,textAlign:"center"}}>Jul 18 · Miami</div>
+                      </div>
                     </div>
                     <svg style={{flexShrink:0,marginTop:16}} width="24" height={H} viewBox={`0 0 24 ${H}`} preserveAspectRatio="none">
                       <line x1="0" y1={midY} x2="24" y2={midY} stroke="rgba(96,165,250,0.3)" strokeWidth="0.8"/>
