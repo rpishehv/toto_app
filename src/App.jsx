@@ -1877,7 +1877,8 @@ export default function App(){
   const firedRemindersRef = React.useRef(new Set());
   const [adminActiveGroup,setAdminActiveGroup]=useState("A");
   const [adminActiveRound,setAdminActiveRound]=useState("Round of 32");
-  const [koKickoffs,setKoKickoffs]=useState({}); // "matchId" -> UTC ms
+  const [koKickoffs,setKoKickoffs]=useState({});
+  const [forceUnlockKO,setForceUnlockKO]=useState(false); // "matchId" -> UTC ms
   const [livePredictions,setLivePredictions]=useState({}); // admin-editable shared predictions
   const [podiumSearch,setPodiumSearch]=useState({first:"",second:"",third:""});
   const [newPredKey,setNewPredKey]=useState("");
@@ -1956,6 +1957,7 @@ export default function App(){
         const analyticsData = await sbGetAnalytics(gc);
         if(analyticsData?.analytics){ setGroupAnalytics(analyticsData.analytics); setAnalyticsGeneratedBy(analyticsData.analytics_generated_by); setAnalyticsGeneratedAt(analyticsData.analytics_generated_at); }
         if(analyticsData?.projection){ setProjection(analyticsData.projection); setProjectionGeneratedBy(analyticsData.projection_generated_by); setProjectionGeneratedAt(analyticsData.projection_generated_at); }
+        if(analyticsData?.ko_force_unlock) setForceUnlockKO(true);
         // Load rank history
         if(session?.username) {
           const rh = await sbGetRankHistory(session.username, gc);
@@ -2008,6 +2010,7 @@ export default function App(){
         if(d.news?.length){ setNewsStories(d.news);      setNewsUpdatedBy(d.news_updated_by); setNewsUpdatedAt(d.news_updated_at); }
         if(d.analytics)  { setGroupAnalytics(d.analytics); setAnalyticsGeneratedBy(d.analytics_generated_by); setAnalyticsGeneratedAt(d.analytics_generated_at); }
         if(d.projection) { setProjection(d.projection); setProjectionGeneratedBy(d.projection_generated_by); setProjectionGeneratedAt(d.projection_generated_at); }
+        if(typeof d.ko_force_unlock !== 'undefined') setForceUnlockKO(!!d.ko_force_unlock);
       })
       .subscribe();
 
@@ -4779,7 +4782,9 @@ export default function App(){
 
         {/* ── KNOCKOUT ── */}
         {tab==="knockout"&&<div>
-          <div style={{marginBottom:18}}><AdminPill/></div>
+          <div style={{marginBottom:18}}>
+            <AdminPill/>
+          </div>
 
           {/* ── Live Bracket Diagram — FIFA style two-sided ── */}
           {(()=>{
@@ -5021,7 +5026,7 @@ export default function App(){
                       return ko?[[`${ko.home}||${ko.away}`,ms],[`${ko.away}||${ko.home}`,ms]]:[];
                     }).flat().filter(e=>e.length)
                   )};
-                  const locked=isMatchLocked({...m,home:liveHome,away:liveAway},allKickoffs,koKickoffs);
+                  const locked=forceUnlockKO?false:isMatchLocked({...m,home:liveHome,away:liveAway},allKickoffs,koKickoffs);
                   const countdown=!locked?timeUntilLock({...m,home:liveHome,away:liveAway},allKickoffs,koKickoffs):null;
                   return(
                     <div key={m.id} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${locked?"rgba(239,68,68,0.2)":"rgba(255,255,255,0.06)"}`,
@@ -9254,6 +9259,34 @@ export default function App(){
           <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,color:"#fcb900",marginTop:0}}>
             Admin Panel
           </h2>
+
+          {/* Force Unlock KO Predictions */}
+          <div style={{marginBottom:16,padding:"10px 14px",borderRadius:8,
+            background:forceUnlockKO?"rgba(34,197,94,0.06)":"rgba(255,255,255,0.03)",
+            border:`1px solid ${forceUnlockKO?"rgba(34,197,94,0.2)":"rgba(255,255,255,0.07)"}`,
+            display:"flex",alignItems:"center",gap:12}}>
+            <div style={{flex:1}}>
+              <div style={{fontSize:11,fontWeight:700,color:forceUnlockKO?"#22c55e":"#888"}}>
+                {forceUnlockKO?"🔓 KO Predictions Unlocked":"🔒 KO Prediction Lock"}
+              </div>
+              <div style={{fontSize:10,color:"#555",marginTop:2}}>
+                {forceUnlockKO
+                  ?"All KO matches are editable for all users — remember to turn off after"
+                  :"Override the kickoff lock to allow editing of locked KO matches"}
+              </div>
+            </div>
+            <button onClick={async()=>{
+              const next = !forceUnlockKO;
+              setForceUnlockKO(next);
+              await sbMergeAIContent({ko_force_unlock: next}, groupCode);
+            }} style={{
+              fontSize:11,padding:"6px 14px",borderRadius:6,cursor:"pointer",
+              fontFamily:"inherit",fontWeight:700,flexShrink:0,
+              background:forceUnlockKO?"rgba(239,68,68,0.12)":"rgba(34,197,94,0.1)",
+              border:`1px solid ${forceUnlockKO?"rgba(239,68,68,0.3)":"rgba(34,197,94,0.3)"}`,
+              color:forceUnlockKO?"#ef4444":"#22c55e",
+            }}>{forceUnlockKO?"🔒 Re-lock":"🔓 Force Unlock"}</button>
+          </div>
           {/* Load prediction counts for all users — only once when admin opens */}
           {adminMode&&(()=>{
             if(leaderboard.length>0 && Object.keys(predCounts).length===0){
