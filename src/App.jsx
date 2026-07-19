@@ -5233,7 +5233,77 @@ export default function App(){
                 )}
               </div>
 
-              {/* Points reminder */}
+              {/* Your picks summary — shown when champion locked */}
+              {champLocked && (podium.first||podium.second||podium.third||podium.topScorer) && (
+                <div style={{marginBottom:20,padding:"12px 14px",borderRadius:12,
+                  background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#888",marginBottom:10,letterSpacing:0.5}}>
+                    YOUR PICKS
+                  </div>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    {places.map(place=>{
+                      const pick = podium[place.key];
+                      if(!pick) return null;
+                      const scored = place.freeText
+                        ? (()=>{
+                            if(!place.actual) return null;
+                            const norm=s=>(s||'').toLowerCase().trim().replace(/[^a-z\s]/g,'');
+                            const normS=s=>{const c=(s||'').trim().split(/\s+/).pop()||s;return c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');};
+                            const editDist=(a,b)=>{const m=a.length,n=b.length;const dp=Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i||j));for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);return dp[m][n];};
+                            const p=norm(pick),a=norm(place.actual);
+                            const pL=normS(pick),aL=normS(place.actual);
+                            return p===a||a.includes(p)||p.includes(a)||
+                              p.split(' ').some(w=>w.length>=4&&a.split(' ').some(a2=>a2.length>=4&&(a2.startsWith(w)||w.startsWith(a2))))||
+                              (pL.length>=5&&aL.length>=5&&editDist(pL,aL)<=2);
+                          })()
+                        : (place.actual ? pick===place.actual : null);
+                      const anyPodium = !place.freeText && place.actual &&
+                        pick!==place.actual &&
+                        [actualPodium?.first,actualPodium?.second,actualPodium?.third].includes(pick);
+                      return(
+                        <div key={place.key} style={{
+                          flex:1,minWidth:70,textAlign:"center",padding:"8px 6px",borderRadius:8,
+                          background:scored?"rgba(34,197,94,0.08)":anyPodium?"rgba(252,185,0,0.06)":"rgba(255,255,255,0.03)",
+                          border:`1px solid ${scored?"rgba(34,197,94,0.25)":anyPodium?"rgba(252,185,0,0.2)":"rgba(255,255,255,0.06)"}`,
+                        }}>
+                          <div style={{fontSize:13,marginBottom:2}}>{place.label.split(' ')[1]||"⚽"}</div>
+                          <div style={{fontSize:10,fontWeight:700,color:scored?"#22c55e":anyPodium?"#fcb900":"#ccc",
+                            lineHeight:1.3,marginBottom:4}}>
+                            {place.freeText?pick:(FLAGS[pick]||"")+' '+pick}
+                          </div>
+                          <div style={{fontSize:11,fontWeight:700,
+                            color:scored?"#22c55e":anyPodium?"#fcb900":"#555"}}>
+                            {scored?`+${place.pts}`:anyPodium?"+10":place.actual?"0":"—"}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Total podium pts */}
+                  {(actualPodium?.first||actualPodium?.second||actualPodium?.third||actualPodium?.topScorer)&&(()=>{
+                    let total=0;
+                    places.forEach(place=>{
+                      const pick=podium[place.key];
+                      if(!pick||!place.actual) return;
+                      if(place.freeText){
+                        const norm=s=>(s||'').toLowerCase().trim().replace(/[^a-z\s]/g,'');
+                        const normS=s=>{const c=(s||'').trim().split(/\s+/).pop()||s;return c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');};
+                        const editDist=(a,b)=>{const m=a.length,n=b.length;const dp=Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i||j));for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);return dp[m][n];};
+                        const p=norm(pick),a=norm(place.actual),pL=normS(pick),aL=normS(place.actual);
+                        if(p===a||a.includes(p)||p.includes(a)||p.split(' ').some(w=>w.length>=4&&a.split(' ').some(a2=>a2.length>=4&&(a2.startsWith(w)||w.startsWith(a2))))||(pL.length>=5&&aL.length>=5&&editDist(pL,aL)<=2)) total+=place.pts;
+                      } else {
+                        if(pick===place.actual) total+=place.pts;
+                        else if([actualPodium?.first,actualPodium?.second,actualPodium?.third].includes(pick)) total+=10;
+                      }
+                    });
+                    return total>0?(
+                      <div style={{marginTop:10,textAlign:"center",fontSize:12,fontWeight:700,color:"#22c55e"}}>
+                        🎉 +{total} podium bonus pts
+                      </div>
+                    ):null;
+                  })()}
+                </div>
+              )}
               <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:24,flexWrap:"wrap"}}>
                 {places.map(p=>(
                   <div key={p.key} style={{
@@ -5703,7 +5773,7 @@ export default function App(){
                     <div style={{marginBottom:18,padding:"12px 14px",
                       background:"rgba(139,92,246,0.07)",border:"1px solid rgba(139,92,246,0.2)",borderRadius:10}}>
                       <div style={{fontSize:11,color:"#a78bfa",fontWeight:700,marginBottom:8}}>👑 Podium Picks</div>
-                      <div style={{display:"flex",gap:8}}>
+                      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                         {[
                           {key:"first", label:"🥇",pts:50, color:"#f59e0b",actual:actualPodium?.first},
                           {key:"second",label:"🥈",pts:25, color:"#c0c0c0",actual:actualPodium?.second},
@@ -5711,17 +5781,51 @@ export default function App(){
                         ].map(place=>{
                           const pick = p.podium[place.key];
                           const correct = pick && place.actual && pick===place.actual;
+                          const anyPodium = pick && place.actual && !correct &&
+                            [actualPodium?.first,actualPodium?.second,actualPodium?.third].includes(pick);
                           return(
-                            <div key={place.key} style={{flex:1,textAlign:"center",
-                              background:`${place.color}10`,border:`1px solid ${correct?"#22c55e":place.color}30`,
+                            <div key={place.key} style={{flex:1,minWidth:60,textAlign:"center",
+                              background:`${place.color}10`,
+                              border:`1px solid ${correct?"#22c55e":anyPodium?"#fcb900":place.color}30`,
                               borderRadius:8,padding:"8px 6px"}}>
                               <div style={{fontSize:11,color:place.color}}>{place.label}</div>
                               <div style={{fontSize:13,marginTop:2}}>{FLAGS[pick]||"?"}</div>
-                              <div style={{fontSize:11,fontWeight:700,color:correct?"#22c55e":"#ccc",marginTop:2}}>{pick||"—"}</div>
-                              {place.actual&&<div style={{fontSize:10,color:correct?"#22c55e":"#ef4444",marginTop:2}}>{correct?`+${place.pts}pts`:"✗"}</div>}
+                              <div style={{fontSize:11,fontWeight:700,color:correct?"#22c55e":anyPodium?"#fcb900":"#ccc",marginTop:2}}>{pick||"—"}</div>
+                              {place.actual&&<div style={{fontSize:10,color:correct?"#22c55e":anyPodium?"#fcb900":"#ef4444",marginTop:2}}>
+                                {correct?`+${place.pts}pts`:anyPodium?"+10pts":"✗"}
+                              </div>}
                             </div>
                           );
                         })}
+                        {/* Top scorer */}
+                        {(()=>{
+                          const pick = p.podium.topScorer;
+                          if(!pick) return null;
+                          const act = actualPodium?.topScorer;
+                          let scored = false;
+                          if(pick && act) {
+                            const norm=s=>(s||'').toLowerCase().trim().replace(/[^a-z\s]/g,'').replace(/\s+/g,' ');
+                            const normS=s=>{const c=(s||'').trim().split(/\s+/).pop()||s;return c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');};
+                            const editDist=(a,b)=>{const m=a.length,n=b.length;const dp=Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i||j));for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);return dp[m][n];};
+                            const pr=norm(pick),ac=norm(act),pL=normS(pick),aL=normS(act);
+                            scored=pr===ac||ac.includes(pr)||pr.includes(ac)||
+                              pr.split(' ').some(w=>w.length>=4&&ac.split(' ').some(a2=>a2.length>=4&&(a2.startsWith(w)||w.startsWith(a2))))||
+                              (pL.length>=5&&aL.length>=5&&editDist(pL,aL)<=2);
+                          }
+                          return(
+                            <div style={{flex:1,minWidth:60,textAlign:"center",
+                              background:"rgba(96,165,250,0.08)",
+                              border:`1px solid ${scored?"#22c55e":"rgba(96,165,250,0.25)"}`,
+                              borderRadius:8,padding:"8px 6px"}}>
+                              <div style={{fontSize:11,color:"#60a5fa"}}>⚽</div>
+                              <div style={{fontSize:11,fontWeight:700,color:scored?"#22c55e":"#ccc",marginTop:4,lineHeight:1.3}}>{pick}</div>
+                              {act&&<div style={{fontSize:10,color:scored?"#22c55e":"#ef4444",marginTop:2}}>
+                                {scored?"+20pts":"✗"}
+                              </div>}
+                              {!act&&<div style={{fontSize:9,color:"#555",marginTop:2}}>pending</div>}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}
