@@ -4534,24 +4534,29 @@ export default function App(){
         <div style={{display:"flex"}}>
           {TABS_MAIN.map(t=>{
             const isActive = tab===t.id;
+            const isOver = Date.now() > TOURNAMENT_END;
+            const isDisabled = isOver && t.id !== 'leaderboard';
             const name = t.full.split(" ").slice(1).join(" ");
             return(
-              <button key={t.id} onClick={()=>{handleTabChange(t.id);setShowAdvancedTray(false);}}
+              <button key={t.id}
+                onClick={()=>{ if(isDisabled) return; handleTabChange(t.id); setShowAdvancedTray(false); }}
+                disabled={isDisabled}
                 style={{
                   flex:1,padding:"6px 4px",background:"transparent",border:"none",
                   borderBottom:`2px solid ${isActive?"#fcb900":"transparent"}`,
-                  color:isActive?"#fcb900":"#ccc",
-                  cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit",
+                  color:isDisabled?"#333":isActive?"#fcb900":"#ccc",
+                  cursor:isDisabled?"not-allowed":"pointer",transition:"all 0.2s",fontFamily:"inherit",
                   display:"flex",flexDirection:"column",alignItems:"center",gap:1,
+                  opacity:isDisabled?0.3:1,
                 }}>
-                <span style={{fontSize:22,lineHeight:1,opacity:1}}>{t.label}</span>
+                <span style={{fontSize:22,lineHeight:1}}>{t.label}</span>
                 <span style={{fontSize:11,fontWeight:isActive?700:400,
-                  color:isActive?"#fcb900":"#fff",letterSpacing:0.3}}>{name}</span>
+                  color:isDisabled?"#333":isActive?"#fcb900":"#fff",letterSpacing:0.3}}>{name}</span>
               </button>
             );
           })}
-          {/* More button */}
-          {(()=>{
+          {/* More button — hidden after tournament */}
+          {Date.now() > TOURNAMENT_END ? null : (()=>{
             const trayOpen = showAdvancedTray || advancedTabActive;
             const hasUnread = chatUnread > 0;
             return(
@@ -4588,8 +4593,8 @@ export default function App(){
           })()}
         </div>
 
-        {/* Collapsible advanced tray */}
-        {(showAdvancedTray||advancedTabActive)&&(
+        {/* Collapsible advanced tray — hidden after tournament */}
+        {Date.now() <= TOURNAMENT_END && (showAdvancedTray||advancedTabActive)&&(
           <div style={{borderTop:"1px solid rgba(255,255,255,0.06)",
             background:"rgba(96,165,250,0.03)"}}>
             <div style={{padding:"3px 6px 4px",
