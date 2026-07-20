@@ -4062,26 +4062,58 @@ export default function App(){
       <div style={{minHeight:"100vh",background:"#0a0d12",
         backgroundImage:"radial-gradient(ellipse 70% 38% at 50% 0%,rgba(0,90,48,0.3) 0%,transparent 65%)",
         fontFamily:"'DM Sans',sans-serif",color:"#e8e8e8",
-        display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-        padding:"40px 24px",textAlign:"center"}}>
+        padding:"40px 24px",maxWidth:480,margin:"0 auto"}}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;700&display=swap');`}</style>
-        <div style={{fontSize:64,marginBottom:16}}>🏆</div>
-        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:36,letterSpacing:3,
-          color:"#fcb900",marginBottom:8}}>FIFA World Cup 2026</div>
-        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,
-          color:"#22c55e",marginBottom:24}}>Tournament Complete</div>
-        {winner&&(
-          <div style={{marginBottom:24,padding:"16px 32px",borderRadius:12,
-            background:"rgba(252,185,0,0.08)",border:"1px solid rgba(252,185,0,0.2)"}}>
-            <div style={{fontSize:12,color:"#555",marginBottom:4}}>World Champion</div>
-            <div style={{fontSize:28,fontWeight:700,color:"#fcb900"}}>{FLAGS[winner]||"🏆"} {winner}</div>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontSize:64,marginBottom:16}}>🏆</div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:36,letterSpacing:3,
+            color:"#fcb900",marginBottom:8}}>FIFA World Cup 2026</div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:2,
+            color:"#22c55e",marginBottom:24}}>Tournament Complete</div>
+          {winner&&(
+            <div style={{marginBottom:24,padding:"16px 32px",borderRadius:12,
+              background:"rgba(252,185,0,0.08)",border:"1px solid rgba(252,185,0,0.2)"}}>
+              <div style={{fontSize:12,color:"#555",marginBottom:4}}>World Champion</div>
+              <div style={{fontSize:28,fontWeight:700,color:"#fcb900"}}>{FLAGS[winner]||"🏆"} {winner}</div>
+            </div>
+          )}
+          <div style={{fontSize:13,color:"#555",maxWidth:280,lineHeight:1.6,margin:"0 auto 32px"}}>
+            Thanks for playing! Final standings below.
+          </div>
+        </div>
+
+        {/* Final Standings */}
+        {leaderboard.length>0&&(
+          <div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,letterSpacing:2,
+              color:"#fcb900",marginBottom:16,textAlign:"center"}}>🥇 Final Standings</div>
+            {leaderboard.map((e,i)=>{
+              const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`;
+              const isMe = e.username===userName;
+              return(
+                <div key={e.username} style={{
+                  display:"flex",alignItems:"center",gap:10,
+                  padding:"10px 14px",marginBottom:6,borderRadius:10,
+                  background:isMe?"rgba(252,185,0,0.08)":"rgba(255,255,255,0.03)",
+                  border:`1px solid ${isMe?"rgba(252,185,0,0.25)":"rgba(255,255,255,0.07)"}`,
+                }}>
+                  <span style={{fontSize:16,minWidth:28}}>{medal}</span>
+                  <span style={{flex:1,fontSize:13,fontWeight:isMe?700:500,
+                    color:isMe?"#fcb900":"#ccc"}}>{e.username}</span>
+                  <span style={{fontSize:16,fontWeight:700,
+                    color:i===0?"#fcb900":i===1?"#c0c0c0":i===2?"#cd7f32":"#777"}}>
+                    {e.points||0}
+                  </span>
+                  <span style={{fontSize:10,color:"#555"}}>pts</span>
+                </div>
+              );
+            })}
           </div>
         )}
-        <div style={{fontSize:13,color:"#555",maxWidth:280,lineHeight:1.6,marginBottom:32}}>
-          Thanks for playing! The prediction challenge has ended.
-          Final standings and certificates are preserved.
+
+        <div style={{fontSize:11,color:"#333",textAlign:"center",marginTop:32}}>
+          toto-app-oqdi.vercel.app
         </div>
-        <div style={{fontSize:11,color:"#444"}}>toto-app-oqdi.vercel.app</div>
       </div>
     );
   }
